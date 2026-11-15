@@ -165,6 +165,15 @@ main {
   padding-bottom: 3rem;
 }
 
+/* The work page shows two wide tables, so it may use more of a large screen.
+   The header, notice and footer widen with it so the edges stay aligned. */
+.wide .site-header,
+.wide main,
+.wide .site-footer,
+.wide .notice {
+  max-width: 1840px;
+}
+
 h1 {
   font-size: 1.75rem;
   margin: 0.5rem 0 1rem;
@@ -299,7 +308,7 @@ caption {
 
 th,
 td {
-  padding: 0.4rem 0.6rem;
+  padding: 0.4rem 0.5rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
   white-space: nowrap;
@@ -332,8 +341,9 @@ td.wrap {
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Side by side only when there is room for both tables. */
-@media (min-width: 1400px) {
+/* Side by side only when both tables fit without scrolling sideways; below
+   this width they stack, each using the full width. */
+@media (min-width: 1800px) {
   .panels {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
@@ -400,6 +410,35 @@ details summary {
   cursor: pointer;
   font-weight: 600;
   padding: 0.5rem 0;
+}
+
+/* The work page's instructions: boxed so they read as help, not page text. */
+details.help {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.25rem 1rem 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* The steps and the processor rules sit side by side when there is room,
+   which keeps the tables closer to the top of the page. */
+@media (min-width: 1000px) {
+  .help-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 2rem;
+  }
+}
+
+/* The worked example on the start page. */
+.example {
+  margin: 1rem 0 1.5rem;
+  max-width: 70ch;
+}
+
+.example figcaption {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
 }
 
 code {

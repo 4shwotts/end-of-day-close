@@ -11,7 +11,7 @@
   <script src="/static/vendor/htmx-2.0.4.min.js" defer></script>
   <script src="/static/game.js" defer></script>
 </head>
-<body>
+<body{% block body_attrs %}{% endblock %}>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="/">End-of-Day Close</a>

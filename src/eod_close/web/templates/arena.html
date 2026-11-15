@@ -3,9 +3,21 @@
 {% block content %}
 <h1>Algorithm arena</h1>
 <p class="lede">
-  The naive approach compares every bank entry with every ledger entry, which is O(n²). The
-  engine indexes entries in hash maps and sorted lists first, so most lookups are constant or
-  logarithmic time. Pick some sizes and race them on synthetic days.
+  The game days are small, but a real bank file can have tens of thousands of entries. This
+  page shows why the engine is built the way it is, by racing it against the obvious approach
+  on days of different sizes.
+</p>
+<ul class="lede">
+  <li><strong>Naive pairwise:</strong> for each bank entry, search the whole ledger for its
+    partner. Twice as many entries means about four times the work (O(n²)).</li>
+  <li><strong>Engine:</strong> first builds indexes of the ledger, like the index at the back
+    of a book, so finding a partner is a quick lookup instead of a search. Twice as many
+    entries means only a little over twice the work.</li>
+</ul>
+<p class="lede">
+  Pick some sizes and run the race. On tiny days the naive approach can win, because building
+  the indexes has a fixed cost; watch how the gap opens as the days grow. Times are measured
+  live on this server, so they vary from run to run.
 </p>
 
 <form method="post" action="/arena/run" hx-post="/arena/run" hx-target="#arena-results" hx-swap="innerHTML">

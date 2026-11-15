@@ -1,0 +1,2 @@
+# Normalise line endings so files built into Linux containers later are not broken by CRLF.
+* text=auto eol=lf

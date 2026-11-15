@@ -1,0 +1,100 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "end-of-day-close"
+version = "0.1.0"
+description = "A payment reconciliation engine with a game layer. All data is fictional."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "jinja2>=3.1",
+    # Needed by FastAPI to parse HTML form posts and file uploads.
+    "python-multipart>=0.0.18",
+    "uvicorn>=0.32",
+]
+
+[project.optional-dependencies]
+dev = [
+    # FastAPI's TestClient is built on httpx.
+    "httpx>=0.28",
+    "hypothesis>=6.120",
+    "mypy>=1.13",
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "pytest-playwright>=0.6",
+    # Parses the Docker Compose file and CI workflow in the config tests.
+    "pyyaml>=6.0",
+    "ruff>=0.8",
+    "types-pyyaml>=6.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eod_close"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",  # pycodestyle
+    "F",       # pyflakes
+    "I",       # import order
+    "B",       # bugbear
+    "UP",      # pyupgrade
+    "SIM",     # simplifications
+    "N",       # naming
+    "D",       # docstrings
+    "C4",      # comprehensions
+    "PT",      # pytest style
+    "RUF",     # ruff-specific
+]
+# D105/D107: Google style documents constructor arguments in the class docstring,
+# and dunder methods such as __add__ are self-describing.
+ignore = ["D105", "D107"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Money is a frozen value object, so a shared default instance is safe.
+extend-immutable-calls = ["eod_close.domain.money.Money.zero", "eod_close.domain.money.Money.of"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are documented by their names; a docstring is added only where the scenario needs it.
+"tests/**" = ["D100", "D101", "D102", "D103", "D104"]
+
+[tool.mypy]
+strict = true
+python_version = "3.13"
+files = ["src", "tests"]
+mypy_path = "src"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "accuracy: scores the engine against seeded answer keys; fails below the set thresholds",
+    "e2e: drives the web interface in a real browser with Playwright",
+]
+filterwarnings = [
+    # TODO: move the API tests to Starlette's recommended test transport once
+    # it is checked and stable; until then httpx works and this is noise.
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
+
+[tool.coverage.run]
+source = ["eod_close"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+# Measured at about 96%; the floor allows some slack for thin glue code.
+fail_under = 90
+# The __main__ guard lines only run when a module is executed as a script.
+exclude_also = ["if __name__ == .__main__.:"]

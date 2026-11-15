@@ -1,0 +1,120 @@
+# Continuous integration.
+#
+# Every push and pull request: lint, type check, tests with coverage, the
+# accuracy regression test, browser tests, and a container build with a smoke
+# test. Deployment is not done here: Render builds the Dockerfile itself when
+# main changes, and waits for these checks to pass first.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Least privilege: jobs can read the code and nothing else.
+permissions:
+  contents: read
+
+# A newer push to the same branch cancels the older run, so only the latest
+# commit is tested.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHON_VERSION: "3.13"
+
+jobs:
+  quality:
+    name: Lint and type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+
+  test:
+    name: Tests and coverage
+    runs-on: ubuntu-latest
+    env:
+      # More Hypothesis examples in CI than locally.
+      HYPOTHESIS_PROFILE: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      # The accuracy and browser tests have their own jobs. Coverage fails
+      # the job below the floor set in pyproject.toml.
+      - run: pytest -m "not e2e and not accuracy" --cov --cov-report=term --cov-report=xml
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  accuracy:
+    name: Accuracy regression
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      # Fails if precision or recall drops below the thresholds set in
+      # tests/accuracy/test_accuracy.py.
+      - run: pytest -m accuracy -v
+
+  e2e:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      # --with-deps installs the system libraries Chromium needs on Ubuntu.
+      - run: python -m playwright install --with-deps chromium
+      - run: pytest -m e2e
+
+  container:
+    name: Build and smoke-test the image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build --tag eod-close:ci .
+      # Run with the same restrictions as Compose, so a change that needs a
+      # writable filesystem or root fails here first.
+      - run: >
+          docker run --detach --name app --publish 8080:8080
+          --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges
+          eod-close:ci
+      - name: Wait for the health check
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl --silent --fail http://127.0.0.1:8080/api/health; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs app
+          exit 1
+      - name: Check the image does not run as root
+        run: |
+          user="$(docker inspect --format '{{.Config.User}}' eod-close:ci)"
+          case "$user" in
+            "" | 0 | 0:* | root | root:*) echo "The image runs as root ($user)"; exit 1 ;;
+          esac
+

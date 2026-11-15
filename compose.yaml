@@ -1,0 +1,28 @@
+# Run everything locally with one command:
+#   docker compose up --build
+# then open http://localhost:8080. Stop with Ctrl+C, and remove with
+#   docker compose down
+
+services:
+  web:
+    build: .
+    image: eod-close:local
+    ports:
+      # host:container. Only bound to localhost, so the game is not exposed
+      # to other machines on the network.
+      - "127.0.0.1:8080:8080"
+    environment:
+      PORT: "8080"
+    # Hardened as CI runs the image: an immutable filesystem, no extra
+    # Linux capabilities and no privilege escalation.
+    read_only: true
+    tmpfs:
+      # Uploads larger than 1 MB are spooled to a temporary file, so /tmp
+      # must stay writable even though the rest of the filesystem is not.
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # The image's HEALTHCHECK is used as-is; restart if the process exits.
+    restart: unless-stopped

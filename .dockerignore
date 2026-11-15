@@ -1,0 +1,19 @@
+# Keep the build context small and free of local state. Only pyproject.toml,
+# README.md and src/ are needed to build the image.
+.git
+.venv
+.vscode
+.idea
+**/__pycache__
+**/*.pyc
+.mypy_cache
+.pytest_cache
+.ruff_cache
+.hypothesis
+.coverage
+htmlcov
+cases
+tests
+.github
+*.md
+!README.md

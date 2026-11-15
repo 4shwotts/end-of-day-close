@@ -4,8 +4,10 @@ Usage::
 
     python -m eod_close.evaluation accuracy --seeds 20
     python -m eod_close.evaluation benchmark --sizes 1000 10000 100000
+    python -m eod_close.evaluation benchmark --save
 
 Both print Markdown tables, so the output can be pasted into the README.
+``--save`` instead stores the timings for the home page (see ``headline``).
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from collections.abc import Sequence
 
 from eod_close.evaluation.accuracy import AccuracyResult, evaluate_seeds
 from eod_close.evaluation.benchmark import run_benchmark
+from eod_close.evaluation.headline import SNAPSHOT_PATH, save_benchmark_snapshot
 from eod_close.generator import Difficulty, DiscrepancyKind
 
 
@@ -80,10 +83,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     accuracy.add_argument("--seeds", type=int, default=20)
     benchmark = commands.add_parser("benchmark", help="engine against naive pairwise")
     benchmark.add_argument("--sizes", type=int, nargs="+", default=[1_000, 10_000, 100_000])
+    benchmark.add_argument(
+        "--save", action="store_true", help="also save the timings for the home page"
+    )
     args = parser.parse_args(argv)
 
     if args.command == "accuracy":
         print_accuracy(args.seeds)
+    elif args.save:
+        save_benchmark_snapshot(args.sizes)
+        print(f"Saved the benchmark to {SNAPSHOT_PATH}")
     else:
         print_benchmark(args.sizes)
     return 0

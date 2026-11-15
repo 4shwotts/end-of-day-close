@@ -11,7 +11,9 @@ The engine makes financial decisions, so the tests check behaviour from several 
   result, and money arithmetic stays exact.
 - **Accuracy** is measured against the generator's answer key on a held-out set of seeds,
   with fixed thresholds, so a change that makes the engine worse fails the build.
-- **The real interface** is driven in Chromium with Playwright, including keyboard use.
+- **The real interface** is driven in Chromium with Playwright, including keyboard use
+  and file drag and drop, and every page is scanned with axe-core for accessibility
+  problems at phone, tablet and desktop widths in both colour themes.
 - **The deployment files** are parsed and checked, so dropping the non-root user, the
   health check or the Compose hardening fails in CI rather than on the live host.
 
@@ -26,7 +28,7 @@ now guards it.
 | `tests/property/` | Hypothesis properties: invariants that must hold for any input |
 | `tests/accuracy/` | Precision and recall on held-out seeds; fails below the thresholds (marker `accuracy`) |
 | `tests/api/` | The JSON API and the HTML pages, through FastAPI's test client |
-| `tests/e2e/` | The game flow in a real Chromium browser with Playwright (marker `e2e`) |
+| `tests/e2e/` | The reconcile pages, training mode and How it works in a real Chromium browser with Playwright, and the axe-core accessibility scan (marker `e2e`) |
 
 Branch coverage is about 96%, and the run fails below 90%.
 
@@ -71,6 +73,7 @@ python -m eod_close.generator --seed 42 --difficulty head-of-ops --out cases/dem
 python -m eod_close.engine --seed 42 --difficulty head-of-ops
 python -m eod_close.evaluation accuracy --seeds 20
 python -m eod_close.evaluation benchmark --sizes 1000 10000 100000
+python -m eod_close.evaluation benchmark --save   # refresh the home page's speed figures
 ```
 
 The generator writes a day as CSV files with its answer key. The engine command

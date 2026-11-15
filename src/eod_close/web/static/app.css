@@ -1,65 +1,123 @@
 /* End-of-Day Close: one stylesheet for every page.
-   Colours are defined once as tokens; dark mode redefines the tokens rather
-   than the rules. Text colours meet WCAG AA contrast (4.5:1) on their surface. */
 
-:root {
-  color-scheme: light;
-  --surface: #fcfcfb;
-  --surface-raised: #f1f0ed;
-  --border: #c9c8c3;
-  --text: #0b0b0b;
-  --text-secondary: #52514e;
-  --accent: #1f5fae;
-  --accent-text: #ffffff;
-  --good: #0a6b2a;
-  --bad: #a32020;
-  --notice-bg: #fff4d6;
-  --notice-text: #4a3500;
-  --focus: #1f5fae;
-  /* Chart series: validated categorical slots 1 and 2 for this surface. */
-  --series-engine: #2a78d6;
-  --series-naive: #eb6834;
-  --grid: #e3e2de;
+   Everything visual is a token on :root: colours, the type scale, spacing
+   and radii. The light theme redefines the colour tokens rather than the
+   rules. Dark is the designed-for theme; light follows the visitor's system
+   setting. Text colours meet WCAG AA contrast (4.5:1) on every surface they
+   sit on, and status is always carried by an icon and words as well as by
+   colour. */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/static/fonts/inter-latin-wght.woff2") format("woff2");
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --surface: #1a1a19;
-    --surface-raised: #262624;
-    --border: #4a4a46;
-    --text: #f0efec;
-    --text-secondary: #c3c2b7;
-    --accent: #8bb8f0;
-    --accent-text: #0b0b0b;
-    --good: #6fd08c;
-    --bad: #f08a8a;
-    --notice-bg: #3a3014;
-    --notice-text: #f5e3b0;
-    --focus: #8bb8f0;
-    --series-engine: #3987e5;
-    --series-naive: #d95926;
-    --grid: #33332f;
+:root {
+  color-scheme: dark;
+  /* Colour: one accent (teal) plus three status colours. */
+  --page: #0c1015;
+  --surface: #131920;
+  --surface-raised: #1b232c;
+  --border: #2b3540;
+  --text: #e9eef3;
+  --text-secondary: #a3b0bd;
+  --accent: #3fd0b6;
+  --accent-strong: #6fe0cb;
+  --accent-text: #04201b;
+  --accent-soft: rgba(63, 208, 182, 0.12);
+  --good: #5fd590;
+  --good-soft: rgba(95, 213, 144, 0.12);
+  --warn: #f3bd5e;
+  --warn-soft: rgba(243, 189, 94, 0.12);
+  --bad: #f6918a;
+  --bad-soft: rgba(246, 145, 138, 0.12);
+  --focus: #6fe0cb;
+  /* Chart series: validated categorical slots 1 and 2 for this surface. */
+  --series-engine: #3987e5;
+  --series-naive: #d95926;
+  --grid: #26303a;
+
+  /* Type scale, a major third (1.25), with the hero heading fluid. */
+  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5625rem;
+  --text-2xl: 1.953rem;
+  --text-hero: clamp(2.1rem, 1.3rem + 3.2vw, 3.6rem);
+
+  /* Spacing on a 4px grid. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4.5rem;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --content: 1280px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --page: #f4f6f8;
+    --surface: #ffffff;
+    --surface-raised: #eef2f5;
+    --border: #d3dae1;
+    --text: #0e1720;
+    --text-secondary: #4a5867;
+    --accent: #0a7466;
+    --accent-strong: #075a4f;
+    --accent-text: #ffffff;
+    --accent-soft: rgba(10, 116, 102, 0.09);
+    --good: #12733a;
+    --good-soft: rgba(18, 115, 58, 0.09);
+    --warn: #8a5300;
+    --warn-soft: rgba(176, 106, 0, 0.1);
+    --bad: #b42318;
+    --bad-soft: rgba(180, 35, 24, 0.08);
+    --focus: #0a7466;
+    --series-engine: #2a78d6;
+    --series-naive: #eb6834;
+    --grid: #e3e7eb;
+    --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 18px rgba(16, 24, 40, 0.06);
   }
 }
 
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --surface: #1a1a19;
-  --surface-raised: #262624;
-  --border: #4a4a46;
-  --text: #f0efec;
-  --text-secondary: #c3c2b7;
-  --accent: #8bb8f0;
-  --accent-text: #0b0b0b;
-  --good: #6fd08c;
-  --bad: #f08a8a;
-  --notice-bg: #3a3014;
-  --notice-text: #f5e3b0;
-  --focus: #8bb8f0;
-  --series-engine: #3987e5;
-  --series-naive: #d95926;
-  --grid: #33332f;
+:root[data-theme="light"] {
+  color-scheme: light;
+  --page: #f4f6f8;
+  --surface: #ffffff;
+  --surface-raised: #eef2f5;
+  --border: #d3dae1;
+  --text: #0e1720;
+  --text-secondary: #4a5867;
+  --accent: #0a7466;
+  --accent-strong: #075a4f;
+  --accent-text: #ffffff;
+  --accent-soft: rgba(10, 116, 102, 0.09);
+  --good: #12733a;
+  --good-soft: rgba(18, 115, 58, 0.09);
+  --warn: #8a5300;
+  --warn-soft: rgba(176, 106, 0, 0.1);
+  --bad: #b42318;
+  --bad-soft: rgba(180, 35, 24, 0.08);
+  --focus: #0a7466;
+  --series-engine: #2a78d6;
+  --series-naive: #eb6834;
+  --grid: #e3e7eb;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 18px rgba(16, 24, 40, 0.06);
 }
 
 *,
@@ -70,15 +128,21 @@
 
 body {
   margin: 0;
-  background: var(--surface);
+  background: var(--page);
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: 1rem;
-  line-height: 1.5;
+  font-family: var(--font);
+  font-size: var(--text-md);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
   color: var(--accent);
+  text-underline-offset: 0.15em;
+}
+
+a:hover {
+  color: var(--accent-strong);
 }
 
 /* A visible focus ring on every interactive element, for keyboard users. */
@@ -111,83 +175,166 @@ a {
   top: 0.5rem;
 }
 
-.site-header,
+.icon {
+  flex: none;
+  width: 1.15em;
+  height: 1.15em;
+  vertical-align: -0.2em;
+}
+
+/* Every amount and count uses tabular figures, so columns of money line up. */
+.amount,
+.num,
+.stat-value,
+.figure-value,
+.count,
+.review-entries,
+.example-line,
+.preview-amounts,
+.tile-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Page frame ------------------------------------------------------- */
+
+.site-header-inner,
 main,
 .site-footer,
 .notice {
-  max-width: 1280px;
+  max-width: var(--content);
   margin: 0 auto;
   padding-left: 16px;
   padding-right: 16px;
 }
 
 .site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.site-header-inner {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem 1.5rem;
-  padding-top: 1rem;
-  padding-bottom: 0.75rem;
+  gap: var(--space-2) var(--space-5);
+  padding-top: var(--space-3);
+  padding-bottom: var(--space-3);
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
   font-weight: 700;
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
+  letter-spacing: -0.01em;
   color: var(--text);
   text-decoration: none;
+}
+
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-text);
+  font-size: var(--text-md);
 }
 
 .site-header nav ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  gap: var(--space-1);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-/* The current section, shown by more than colour for colour-blind readers. */
-.site-header nav a[aria-current="page"] {
-  font-weight: 700;
-  text-decoration-thickness: 3px;
+.site-header nav a {
+  display: inline-block;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-decoration: none;
 }
 
-.streak {
-  margin: 0;
+.site-header nav a:hover {
+  color: var(--text);
+  background: var(--surface-raised);
+}
+
+/* On a phone the three sections still fit on one line under the brand. */
+@media (max-width: 480px) {
+  .site-header nav a {
+    padding: var(--space-2) var(--space-2);
+    font-size: var(--text-sm);
+  }
+}
+
+/* The current section, shown by more than colour: weight and an underline bar. */
+.site-header nav a[aria-current="page"] {
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 var(--accent);
+}
+
+/* The fictional-data notice: one quiet line under the header. */
+.notice {
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-1);
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
-.notice {
-  background: var(--notice-bg);
-  color: var(--notice-text);
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-radius: 6px;
-}
-
 main {
-  padding-top: 1rem;
-  padding-bottom: 3rem;
+  padding-top: var(--space-5);
+  padding-bottom: var(--space-7);
 }
 
 /* The work page shows two wide tables, so it may use more of a large screen.
    The header, notice and footer widen with it so the edges stay aligned. */
-.wide .site-header,
+.wide .site-header-inner,
 .wide main,
 .wide .site-footer,
 .wide .notice {
   max-width: 1840px;
 }
 
+.site-footer {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-6);
+}
+
+/* ---- Type ------------------------------------------------------------- */
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
 h1 {
-  font-size: 1.75rem;
-  margin: 0.5rem 0 1rem;
+  font-size: var(--text-2xl);
+  margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
-  font-size: 1.25rem;
-  margin: 2rem 0 0.75rem;
+  font-size: var(--text-xl);
+  margin: var(--space-6) 0 var(--space-3);
+}
+
+h3 {
+  font-size: var(--text-lg);
 }
 
 .lede {
@@ -196,69 +343,109 @@ h2 {
 }
 
 .lede-large {
-  color: var(--text);
-  font-size: 1.2rem;
-}
-
-.site-footer {
   color: var(--text-secondary);
-  font-size: 0.875rem;
-  border-top: 1px solid var(--border);
-  padding-top: 1rem;
-  padding-bottom: 2rem;
+  font-size: var(--text-lg);
+  max-width: 38ch;
+  margin: 0 0 var(--space-5);
 }
 
-/* Forms */
+.eyebrow {
+  margin: 0 0 var(--space-3);
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--surface-raised);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+/* ---- Surfaces --------------------------------------------------------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+/* A home-page section. */
+.band {
+  margin-top: var(--space-8);
+}
+
+.band > h2 {
+  margin-top: 0;
+}
+
+/* ---- Buttons and forms ------------------------------------------------ */
 
 fieldset {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 0 0 1rem;
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin: 0 0 var(--space-4);
+  background: var(--surface);
 }
 
 legend {
   font-weight: 600;
-  padding: 0 0.25rem;
+  padding: 0 var(--space-1);
 }
 
 .choice {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: flex-start;
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
 }
 
 .choice input {
   margin-top: 0.3rem;
   width: 1.25rem;
   height: 1.25rem;
+  accent-color: var(--accent);
 }
 
 .choice-hint {
   display: block;
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  margin-bottom: 1rem;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
   max-width: 24rem;
 }
 
 input[type="text"],
 input[type="number"],
-input[type="file"],
 select {
   font: inherit;
   color: var(--text);
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.6rem;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--accent);
 }
 
 .button,
@@ -267,7 +454,7 @@ button {
   font-weight: 600;
   min-height: 44px;
   padding: 0.5rem 1.1rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--accent);
   background: var(--accent);
   color: var(--accent-text);
@@ -275,19 +462,39 @@ button {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+  gap: var(--space-2);
+}
+
+.button:hover,
+button:hover {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+  color: var(--accent-text);
 }
 
 .button-secondary {
   background: transparent;
-  color: var(--accent);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.button-secondary:hover {
+  background: var(--surface-raised);
+  border-color: var(--text-secondary);
+  color: var(--text);
+}
+
+.button-large {
+  min-height: 48px;
+  padding: 0.65rem 1.35rem;
 }
 
 .toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: center;
-  margin: 1rem 0;
+  margin: var(--space-4) 0;
 }
 
 .status {
@@ -296,37 +503,387 @@ button {
   margin: 0;
 }
 
-/* Tables: each sits in its own scroll box, so a wide table never makes the
-   whole page scroll sideways on a phone. */
+/* File drop zones. The real input is stretched invisibly over the whole
+   zone, so a click or a dropped file anywhere reaches it; the zone shows its
+   focus ring and drag state instead of the input's own. */
+.upload-form {
+  padding: var(--space-5);
+}
 
+.dropzones {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.dropzone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.dropzone-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.dropzone:hover,
+.dropzone.is-dragover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.dropzone:focus-within {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.dropzone.has-file {
+  border-style: solid;
+  border-color: var(--good);
+}
+
+.dropzone-icon {
+  color: var(--accent);
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.dropzone-title {
+  font-weight: 600;
+}
+
+.dropzone-hint {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.dropzone-chosen {
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.has-file .dropzone-chosen {
+  color: var(--good);
+}
+
+/* ---- Home: hero ------------------------------------------------------- */
+
+.hero {
+  display: grid;
+  gap: var(--space-6);
+  align-items: center;
+  padding-top: var(--space-5);
+}
+
+@media (min-width: 960px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: var(--space-7);
+    padding-top: var(--space-6);
+  }
+}
+
+.hero h1 {
+  font-size: var(--text-hero);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0 0 var(--space-4);
+  max-width: 14ch;
+}
+
+/* The preview card: a slice of the real results page. */
+.preview {
+  margin: 0;
+  padding: var(--space-5);
+}
+
+.preview-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.preview-title {
+  font-weight: 600;
+}
+
+.badge {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+}
+
+.preview .summary-bar {
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.preview .stat-value {
+  font-size: var(--text-lg);
+}
+
+.preview-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.preview-row {
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+}
+
+.preview-row p {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.preview-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.preview-amounts {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  font-weight: 600;
+}
+
+/* ---- Home: steps, figures, what it handles ---------------------------- */
+
+.steps,
+.handles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--space-4);
+}
+
+.steps {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  counter-reset: none;
+}
+
+.step {
+  padding: var(--space-5);
+}
+
+.step h3 {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-2);
+}
+
+.step p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.step-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius);
+  color: var(--accent);
+  background: var(--accent-soft);
+  font-size: 1.2rem;
+}
+
+.step-number {
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.figures {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  margin: 0 0 var(--space-3);
+}
+
+/* The figure reads big-number-first, though the markup keeps the term
+   before its value as a description list requires. */
+.figure {
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-5);
+}
+
+.figure dt {
+  font-weight: 600;
+}
+
+.figure dd {
+  margin: 0;
+}
+
+.figure-value {
+  order: -1;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  line-height: 1.15;
+}
+
+.figure-note {
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.handles {
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+}
+
+.handle {
+  padding: var(--space-4) var(--space-5);
+}
+
+.handle h3 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  margin: 0 0 var(--space-2);
+}
+
+.handle h3 .icon {
+  color: var(--accent);
+}
+
+.handle p {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.handle .example-line {
+  margin-top: var(--space-3);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* The two format tables sit side by side and share a height, so the shorter
+   bank table stretches its rows instead of leaving a gap below it. Each
+   title is a heading outside its table, named by aria-labelledby, rather
+   than a caption: a caption is not counted in a table's percentage height,
+   so a stretched table with one would be clipped at the bottom. */
+.format-tables {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.format-column {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.format-column h3 {
+  font-size: var(--text-md);
+  margin: 0 0 var(--space-2);
+}
+
+@media (min-width: 900px) {
+  .format-tables {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .format-column .table-scroll {
+    flex: 1;
+  }
+
+  .format-column table {
+    height: 100%;
+  }
+}
+
+/* ---- Tables ----------------------------------------------------------- */
+
+/* Each table sits in its own scroll box, so a wide table never makes the
+   whole page scroll sideways on a phone. */
 .table-scroll {
   overflow-x: auto;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
 table {
   border-collapse: collapse;
   width: 100%;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
 }
 
 caption {
   text-align: left;
   font-weight: 600;
-  padding: 0.75rem;
+  padding: var(--space-3);
 }
 
 th,
 td {
-  padding: 0.4rem 0.5rem;
+  padding: 0.45rem 0.6rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
   white-space: nowrap;
 }
 
+tbody tr:last-child > * {
+  border-bottom: 0;
+}
+
 thead th {
   background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
   position: sticky;
   top: 0;
 }
@@ -334,7 +891,6 @@ thead th {
 td.num,
 th.num {
   text-align: right;
-  font-variant-numeric: tabular-nums;
 }
 
 td.wrap {
@@ -355,7 +911,7 @@ td.wrap-ids {
 
 .panels {
   display: grid;
-  gap: 1.5rem;
+  gap: var(--space-5);
   grid-template-columns: minmax(0, 1fr);
 }
 
@@ -376,40 +932,179 @@ td.wrap-ids {
   overflow-y: auto;
 }
 
-/* Close-the-day summary */
+/* ---- Results: headline and summary bar -------------------------------- */
+
+.results {
+  margin-top: var(--space-5);
+  padding: var(--space-5);
+}
+
+.headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.preview .headline {
+  font-size: var(--text-lg);
+}
+
+.headline-good {
+  color: var(--good);
+}
+
+.headline-bad {
+  color: var(--bad);
+}
+
+/* Two by two, or four across when there is room; never three and one. */
+.summary-bar {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+}
+
+@media (min-width: 720px) {
+  .results .summary-bar {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.stat {
+  min-width: 0;
+  border-radius: var(--radius);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-raised);
+  border-left: 4px solid var(--border);
+}
+
+.stat-good {
+  border-left-color: var(--good);
+}
+
+.stat-warn {
+  border-left-color: var(--warn);
+}
+
+.stat-bad {
+  border-left-color: var(--bad);
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.stat-good .stat-label .icon {
+  color: var(--good);
+}
+
+.stat-warn .stat-label .icon {
+  color: var(--warn);
+}
+
+.stat-bad .stat-label .icon {
+  color: var(--bad);
+}
+
+/* Never split an amount such as -£18,424.02 across lines; on a phone the
+   figure shrinks a little instead. */
+.stat-value {
+  display: block;
+  white-space: nowrap;
+  font-size: clamp(1.2rem, 4.5vw, var(--text-xl));
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.results-note {
+  color: var(--text-secondary);
+  max-width: 80ch;
+}
+
+.results-note .amount {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-6) 0 var(--space-2);
+}
+
+/* Type labels: a tinted pill with an icon and a word. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.chip-good {
+  color: var(--good);
+  background: var(--good-soft);
+}
+
+.chip-warn {
+  color: var(--warn);
+  background: var(--warn-soft);
+}
+
+.count {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+/* ---- Close-the-day summary (training mode) ---------------------------- */
 
 .tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: 1rem;
-  margin: 1rem 0;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
 }
 
 .tile {
-  background: var(--surface-raised);
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: var(--space-4);
 }
 
 .tile-label {
   display: block;
   color: var(--text-secondary);
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
-/* Never split an amount such as -£18,424.02 across lines; on a phone the
-   figure shrinks a little instead. */
 .tile-value {
   display: block;
   white-space: nowrap;
   font-size: clamp(1.25rem, 5vw, 1.75rem);
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
 }
 
 .verdict {
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   font-weight: 600;
+}
+
+.streak {
+  color: var(--text-secondary);
 }
 
 .result-good {
@@ -423,22 +1118,28 @@ td.wrap-ids {
 }
 
 .error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
   color: var(--bad);
   font-weight: 600;
 }
 
+/* ---- Disclosure groups ------------------------------------------------ */
+
 details summary {
   cursor: pointer;
   font-weight: 600;
-  padding: 0.5rem 0;
+  padding: var(--space-2) 0;
 }
 
 /* The work page's instructions: boxed so they read as help, not page text. */
 details.help {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.25rem 1rem 0.5rem;
-  margin-bottom: 1rem;
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: var(--space-1) var(--space-4) var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 /* The steps and the processor rules sit side by side when there is room,
@@ -447,20 +1148,50 @@ details.help {
   .help-columns {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 2rem;
+    gap: var(--space-6);
   }
 }
 
-/* Reconcile results: problems as cards, so long reasons read well on a phone. */
 details.group {
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0 1rem;
-  margin-bottom: 0.75rem;
+  border-radius: var(--radius);
+  padding: 0 var(--space-4);
+  margin-bottom: var(--space-3);
+  background: var(--surface);
+}
+
+details.group > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  list-style: none;
+}
+
+details.group > summary::-webkit-details-marker {
+  display: none;
+}
+
+/* A flex summary loses the browser's own triangle, so draw a chevron that
+   turns when the group opens. */
+details.group > summary::before {
+  content: "";
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin: 0 0.15rem;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+details.group[open] > summary::before {
+  transform: rotate(45deg);
 }
 
 details.group[open] {
-  padding-bottom: 0.75rem;
+  padding-bottom: var(--space-3);
 }
 
 .review-list {
@@ -468,52 +1199,55 @@ details.group[open] {
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .review-item {
   background: var(--surface-raised);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  border-left: 4px solid var(--warn);
+  padding: var(--space-3) var(--space-4);
   max-width: 80ch;
 }
 
 .review-item p {
-  margin: 0.25rem 0;
+  margin: var(--space-1) 0;
 }
 
 .review-entries {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1.5rem;
+  gap: var(--space-1) var(--space-5);
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
 }
 
 .next-step {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
   color: var(--text-secondary);
 }
 
-/* The worked example on the start page. */
+.next-step .icon {
+  color: var(--accent);
+  align-self: center;
+}
+
+/* The worked example on the training start page. */
 .example {
-  margin: 1rem 0 1.5rem;
+  margin: var(--space-4) 0 var(--space-5);
   max-width: 70ch;
 }
 
 .example figcaption {
   font-weight: 600;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
 }
 
-code {
-  background: var(--surface-raised);
-  padding: 0.1rem 0.3rem;
-  border-radius: 4px;
-}
+/* ---- How it works: race chart ----------------------------------------- */
 
-/* Arena chart. Series colours come from validated tokens; text uses the
-   text tokens, never the series colour. */
-
+/* Series colours come from validated tokens; text uses the text tokens,
+   never the series colour. */
 .chart {
   width: 100%;
   max-width: 640px;
@@ -578,16 +1312,16 @@ code {
 
 .legend {
   display: flex;
-  gap: 1.5rem;
+  gap: var(--space-5);
   list-style: none;
   padding: 0;
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-2);
 }
 
 .legend li {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .swatch {
@@ -613,4 +1347,10 @@ code {
 .htmx-request .htmx-indicator,
 .htmx-request.htmx-indicator {
   display: inline;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
 }

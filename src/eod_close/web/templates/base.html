@@ -7,34 +7,35 @@
      Content-Security-Policy blocks. The equivalent rules are in app.css. #}
   <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
   <title>{% block title %}End-of-Day Close{% endblock %}</title>
+  {# Preloaded so the first paint already uses the self-hosted font. #}
+  <link rel="preload" href="/static/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/vendor/htmx-2.0.4.min.js" defer></script>
+  <script src="/static/app.js" defer></script>
   <script src="/static/game.js" defer></script>
 </head>
 <body{% block body_attrs %}{% endblock %}>
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
-    <a class="brand" href="/">End-of-Day Close</a>
-    {# Training also covers the pages of a day in progress (/play/...). #}
-    {% set path = request.url.path %}
-    {% set sections = [
-      ("/", "Reconcile", path == "/" or path.startswith("/sample")),
-      ("/training", "Training mode", path.startswith("/training") or path.startswith("/play")),
-      ("/arena", "Algorithm arena", path.startswith("/arena")),
-    ] %}
-    <nav aria-label="Main">
-      <ul>
-        {% for href, name, current in sections %}
-        <li><a href="{{ href }}"{% if current %} aria-current="page"{% endif %}>{{ name }}</a></li>
-        {% endfor %}
-      </ul>
-    </nav>
-    <p class="streak">Balanced-day streak: <strong id="streak-count">0</strong></p>
+    <div class="site-header-inner">
+      <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">£</span> End-of-Day Close</a>
+      {# Training also covers the pages of a day in progress (/play/...). #}
+      {% set path = request.url.path %}
+      {% set sections = [
+        ("/", "Reconcile", path == "/" or path.startswith("/sample")),
+        ("/training", "Training mode", path.startswith("/training") or path.startswith("/play")),
+        ("/how-it-works", "How it works", path.startswith("/how-it-works")),
+      ] %}
+      <nav aria-label="Main">
+        <ul>
+          {% for href, name, current in sections %}
+          <li><a href="{{ href }}"{% if current %} aria-current="page"{% endif %}>{{ name }}</a></li>
+          {% endfor %}
+        </ul>
+      </nav>
+    </div>
+    <p class="notice" role="note">All data here is fictional. This is a portfolio project, not real financial software.</p>
   </header>
-  <p class="notice" role="note">
-    All companies, banks, processors, people and figures here are fictional.
-    This is a portfolio project, not real financial software.
-  </p>
   <main id="main">
     {% block content %}{% endblock %}
   </main>

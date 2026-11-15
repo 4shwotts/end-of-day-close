@@ -160,6 +160,18 @@ class Summary:
         """True when nothing needs review, so every penny of the gap is explained."""
         return self.needs_review == 0
 
+    @property
+    def headline(self) -> str:
+        """One line saying whether the books balance, and by how much if not."""
+        if self.balances:
+            return "Books balance"
+        if self.unexplained_difference.is_zero():
+            # Problems can cancel out in total (a duplicate and a missing
+            # payment of the same amount), so the gap alone is not the test.
+            noun = "item needs" if self.needs_review == 1 else "items need"
+            return f"Books don't balance yet: {self.needs_review} {noun} review"
+        return f"Books don't balance by {abs(self.unexplained_difference)}"
+
 
 @dataclass(frozen=True)
 class ReportView:
@@ -183,6 +195,25 @@ class ReportView:
     def review_by_label(self) -> list[tuple[str, list[ReviewItem]]]:
         """Return the problems grouped by type, leaving out empty types."""
         return _grouped(self.review, REVIEW_LABELS.values())
+
+    def examples(self, rules: Iterable[MatchRule]) -> list[MatchRow]:
+        """Pick one example match of each rule, for a preview.
+
+        The shortest explanation of each type is chosen, since a preview has
+        little room; types the day does not contain are skipped.
+
+        Args:
+            rules: The match types wanted, in display order.
+
+        Returns:
+            At most one row per rule, in the order given.
+        """
+        picked = []
+        for rule in rules:
+            rows = [row for row in self.matches if row.rule is rule]
+            if rows:
+                picked.append(min(rows, key=lambda row: (len(row.reason), row.bank_ids)))
+        return picked
 
 
 def build_report_view(

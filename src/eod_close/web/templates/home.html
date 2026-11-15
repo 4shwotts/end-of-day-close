@@ -1,57 +1,167 @@
 {% extends "base.html" %}
-{% block title %}Reconcile · End-of-Day Close{% endblock %}
+{% from "_macros.html" import icon, summary_bar, headline, match_icons %}
+{% block title %}End-of-Day Close · Reconcile a day's payments{% endblock %}
+{% block body_attrs %} class="home"{% endblock %}
 {% block content %}
-<h1>Reconcile a day</h1>
-<p class="lede lede-large">
-  Upload a bank statement and your internal ledger, and this tool matches them automatically,
-  explains every match, and shows you what still needs checking.
-</p>
+{# The top of the page has to explain the tool without a click: what it
+   does on the left, a real result on the right, then how it works, how well
+   it works, and what it copes with. The working parts (upload and the file
+   format) come after. #}
+<section class="hero" aria-labelledby="hero-heading">
+  <div class="hero-copy">
+    <p class="eyebrow">Payment reconciliation engine</p>
+    <h1 id="hero-heading">Reconcile a day's payments in seconds</h1>
+    <p class="lede-large">
+      Upload a bank statement and your internal ledger, and this tool matches them automatically,
+      explains every match, and shows you what still needs checking.
+    </p>
+    <div class="toolbar">
+      <a class="button button-large" href="/sample">Try a sample day {{ icon("arrow-right") }}</a>
+      <a class="button button-large button-secondary" href="#upload">{{ icon("upload") }} Upload your own files</a>
+    </div>
+  </div>
 
-<div class="toolbar">
-  <a class="button" href="/sample">Try a sample day</a>
-  <a class="button button-secondary" href="#upload">Upload your own files</a>
-</div>
+  <figure class="preview card" aria-labelledby="preview-title">
+    <figcaption class="preview-head">
+      <span id="preview-title" class="preview-title">Sample day · {{ preview_case.business_date.strftime("%A %d %B %Y") }}</span>
+      <span class="badge">Real engine output</span>
+    </figcaption>
+    {{ headline(preview) }}
+    {{ summary_bar(preview) }}
+    <ul class="preview-list" aria-label="Example matches">
+      {% for row in preview_rows %}
+      <li class="preview-row">
+        <div class="preview-row-head">
+          <span class="chip chip-good">{{ icon(match_icons[row.label]) }} {{ row.label }}</span>
+          <span class="amount preview-amounts">{{ row.bank_amount }} <span class="muted">bank</span> · {{ row.ledger_amount }} <span class="muted">ledger</span></span>
+        </div>
+        <p>{{ row.reason }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    <a class="preview-link" href="/sample/{{ preview_case.seed }}">See the full results for this day {{ icon("arrow-right") }}</a>
+  </figure>
+</section>
 
-<p class="lede">
-  The <strong>bank statement</strong> is the bank's list of money that actually came in or went
-  out. The <strong>ledger</strong> is the company's own record of what it sold and refunded. On
-  a real day they rarely agree line for line: card processors keep a fee before paying out,
-  money takes a day or two to arrive (this is called <strong>settlement</strong>), and
-  sometimes an entry is missing, duplicated or mistyped. This tool works through those
-  differences for you and leaves only the ones a person needs to check.
-</p>
+<section class="band" aria-labelledby="steps-heading">
+  <h2 id="steps-heading">How it works</h2>
+  <ol class="steps">
+    <li class="card step">
+      <span class="step-icon">{{ icon("upload") }}</span>
+      <h3><span class="step-number">1</span> Upload both files</h3>
+      <p>The <strong>bank statement</strong> (the money that actually came in or went out) and the
+        <strong>ledger</strong> (the company's own record of what it sold and refunded).</p>
+    </li>
+    <li class="card step">
+      <span class="step-icon">{{ icon("spark") }}</span>
+      <h3><span class="step-number">2</span> The engine matches and explains</h3>
+      <p>It pairs what it can, allowing for fees, late <strong>settlement</strong> (money arriving a
+        day or two after the sale) and rounding, and says why in plain English.</p>
+    </li>
+    <li class="card step">
+      <span class="step-icon">{{ icon("search") }}</span>
+      <h3><span class="step-number">3</span> You review only the exceptions</h3>
+      <p>Anything it cannot explain, such as a missing, duplicated or mistyped entry, is listed with
+        a suggested next step.</p>
+    </li>
+  </ol>
+</section>
 
-<section id="upload" aria-labelledby="upload-heading">
+<section class="band" aria-labelledby="figures-heading">
+  <h2 id="figures-heading">Results</h2>
+  <dl class="figures">
+    <div class="card figure">
+      <dt>auto-match accuracy</dt>
+      <dd class="figure-value">{{ accuracy.overall|percent }}</dd>
+      <dd class="figure-note">of {{ "{:,}".format(accuracy.decisions) }} test decisions resolved exactly right, across {{ accuracy.days }} generated days</dd>
+    </div>
+    <div class="card figure">
+      <dt>on the hardest level</dt>
+      <dd class="figure-value">{{ accuracy.hardest|percent }}</dd>
+      <dd class="figure-note">with blank references, look-alike amounts and mistyped figures</dd>
+    </div>
+    {% if benchmark %}
+    <div class="card figure">
+      <dt>entries reconciled per second</dt>
+      <dd class="figure-value">{{ "{:,}".format(benchmark.entries_per_second) }}</dd>
+      <dd class="figure-note">bank and ledger lines combined, on a {{ "{:,}".format(benchmark.largest.size) }}-entry day</dd>
+    </div>
+    <div class="card figure">
+      <dt>for {{ "{:,}".format(benchmark.largest.size) }} entries per side</dt>
+      <dd class="figure-value">{{ benchmark.largest.engine_seconds|seconds }}</dd>
+      <dd class="figure-note">about {{ "{:,.0f}".format(benchmark.largest.speedup) }} times faster than checking every pair</dd>
+    </div>
+    {% endif %}
+  </dl>
+  <p class="choice-hint">
+    Accuracy is measured live against the answer key of every generated day.
+    {% if benchmark %}Speed was measured on a development laptop on {{ benchmark.measured_on.strftime("%d %B %Y") }}; the slower approach is timed on a sample and scaled up.{% else %}Speed figures have not been measured yet.{% endif %}
+    <a href="/how-it-works">See the race for yourself</a>.
+  </p>
+</section>
+
+<section class="band" aria-labelledby="handles-heading">
+  <h2 id="handles-heading">What it handles</h2>
+  {% set cases = [
+    ("clock", "Delayed settlement", "Card money lands a working day or two after the sale.", "Booked Thu → arrived Fri"),
+    ("percent", "Processor fees", "Card processors keep their fee before paying out.", "£100.00 sale → £98.40 received"),
+    ("exchange", "Currency rounding", "Sales in euros, converted to pounds, can be a few pence out.", "€9.99 → £8.71 booked, £8.73 received"),
+    ("layers", "Batch payouts", "One bank payment covers many sales at once.", "6 sales → one £390.53 payout"),
+    ("undo", "Refunds and chargebacks", "Money going back to a customer, linked to the original order.", "−£35.92 = £20.92 disputed + £15.00 fee"),
+    ("copy", "Duplicates", "The same sale booked twice in the ledger.", "INV-3 £12.00 booked twice"),
+    ("missing", "Missing entries", "A payment on one side with nothing on the other.", "£25.00 received, never booked"),
+    ("typo", "Typos", "Digits swapped when an amount was typed in.", "£14.99 received, £41.99 booked"),
+  ] %}
+  <ul class="handles">
+    {% for name, title, text, example in cases %}
+    <li class="card handle">
+      <h3>{{ icon(name) }} {{ title }}</h3>
+      <p>{{ text }}</p>
+      <p class="example-line">{{ example }}</p>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+
+<section id="upload" class="band" aria-labelledby="upload-heading">
   <h2 id="upload-heading">Upload your own files</h2>
   <p class="lede">
-    Two CSV files in the <a href="#format">format described below</a>. Not sure what they
-    should look like? Download the examples, <a href="/samples/bank.csv">sample-bank.csv</a>
-    and <a href="/samples/ledger.csv">sample-ledger.csv</a>, and upload them. Files are
-    processed in memory and never stored; please use fictional data only.
+    Two CSV files in the <a href="#format">format described below</a>. Not sure what they should
+    look like? Download <a href="/samples/bank.csv">sample-bank.csv</a> and
+    <a href="/samples/ledger.csv">sample-ledger.csv</a> and upload them. Files are processed in
+    memory and never stored; please use fictional data only.
   </p>
 
-  <form method="post" action="/upload" enctype="multipart/form-data"
+  <form class="card upload-form" method="post" action="/upload" enctype="multipart/form-data"
         hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#results" hx-swap="innerHTML">
-    <div class="field">
-      <label for="bank_file">Bank statement (CSV)</label>
-      <input type="file" id="bank_file" name="bank_file" accept=".csv,text/csv" required>
-    </div>
-    <div class="field">
-      <label for="ledger_file">Ledger (CSV)</label>
-      <input type="file" id="ledger_file" name="ledger_file" accept=".csv,text/csv" required>
+    <div class="dropzones">
+      {% for field, title in (("bank_file", "Bank statement (CSV)"), ("ledger_file", "Ledger (CSV)")) %}
+      {# The real file input covers the whole zone, invisibly: clicking or
+         dropping a file anywhere on it works even without JavaScript, and
+         keyboard and screen-reader users meet an ordinary labelled input.
+         app.js only adds the highlight and the chosen file's name. #}
+      <div class="dropzone" data-dropzone>
+        <input class="dropzone-input" type="file" id="{{ field }}" name="{{ field }}" accept=".csv,text/csv" required
+               aria-describedby="{{ field }}-hint {{ field }}-chosen">
+        <span class="dropzone-icon">{{ icon("file") }}</span>
+        <label class="dropzone-title" for="{{ field }}">{{ title }}</label>
+        <span class="dropzone-hint" id="{{ field }}-hint">Drag the file here, or click to choose</span>
+        <span class="dropzone-chosen" id="{{ field }}-chosen" data-dropzone-chosen aria-live="polite">No file chosen</span>
+      </div>
+      {% endfor %}
     </div>
     <div class="toolbar">
-      <button type="submit">Reconcile</button>
+      <button type="submit" class="button-large">Reconcile</button>
       <span class="htmx-indicator status" role="status">Reconciling…</span>
     </div>
   </form>
+
+  <div id="results" aria-live="polite">
+    {% if view is defined or error is defined %}{% include "_results.html" %}{% endif %}
+  </div>
 </section>
 
-<div id="results" aria-live="polite">
-  {% if view is defined or error is defined %}{% include "_results.html" %}{% endif %}
-</div>
-
-<section id="format" aria-labelledby="format-heading">
+<section id="format" class="band" aria-labelledby="format-heading">
   <h2 id="format-heading">File format</h2>
   <p class="lede">
     UTF-8 CSV with a header row and exactly these columns, in this order. Dates are written
@@ -81,24 +191,28 @@
     "original_currency": "For example EUR; otherwise empty",
     "original_reference": "For refunds and chargebacks, the order being reversed"
   } %}
-  <div class="panels">
-    <div class="table-scroll">
-      <table>
-        <caption>Bank statement columns</caption>
-        <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
-        <tbody>
-          {% for column in bank_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ bank_help[column] }}</td></tr>{% endfor %}
-        </tbody>
-      </table>
+  <div class="format-tables">
+    <div class="format-column">
+      <h3 id="bank-columns-heading">Bank statement columns</h3>
+      <div class="table-scroll">
+        <table aria-labelledby="bank-columns-heading">
+          <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            {% for column in bank_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ bank_help[column] }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
-    <div class="table-scroll">
-      <table>
-        <caption>Ledger columns</caption>
-        <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
-        <tbody>
-          {% for column in ledger_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ ledger_help[column] }}</td></tr>{% endfor %}
-        </tbody>
-      </table>
+    <div class="format-column">
+      <h3 id="ledger-columns-heading">Ledger columns</h3>
+      <div class="table-scroll">
+        <table aria-labelledby="ledger-columns-heading">
+          <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            {% for column in ledger_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ ledger_help[column] }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </section>

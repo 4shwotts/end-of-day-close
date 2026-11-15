@@ -1,4 +1,4 @@
-"""Server-rendered SVG chart for the algorithm arena.
+"""Server-rendered SVG chart for the How it works race.
 
 The chart is drawn in Python and sent as inline SVG, so no chart library and
 no client-side code are needed, and nothing is loaded from a CDN. Both axes

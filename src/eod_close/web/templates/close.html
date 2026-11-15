@@ -4,6 +4,7 @@
 <section id="close-summary" data-case-id="{{ case.case_id }}" data-balanced="{{ 'true' if score.balanced else 'false' }}" aria-labelledby="summary-heading">
   <h1 id="summary-heading">{{ case.business_date.strftime("%A %d %B %Y") }}: day {{ "closed" if score.balanced else "not balanced" }}</h1>
   <p class="verdict">{{ score.verdict }}</p>
+  {% include "_streak.html" %}
   <div class="tiles">
     <div class="tile"><span class="tile-label">Your accuracy</span><span class="tile-value">{{ score.accuracy|percent }}</span></div>
     <div class="tile"><span class="tile-label">Engine accuracy</span><span class="tile-value">{{ score.engine_accuracy|percent }}</span></div>

@@ -118,13 +118,18 @@ same rules but scans the whole ledger for each bank entry:
 | Entries per side | Engine | Naive pairwise | Speed-up |
 |---:|---:|---:|---:|
 | 1,000 | 0.015 s | 0.03 s | 2× |
-| 10,000 | 0.16 s | 4.7 s (estimated) | 29× |
-| 100,000 | 4.0 s | 1,441 s (estimated) | 360× |
+| 10,000 | 0.21 s | 5.1 s (estimated) | 25× |
+| 100,000 | 4.3 s | 1,481 s (estimated) | 346× |
 
 Naive times above 1,000 entries are extrapolated from a measured sample, since the full
 run would take too long. Times are from one run on a development laptop and will vary;
-the shape matters more than the numbers. The game shows the same comparison as a live
-chart on its **Algorithm arena** page.
+the shape matters more than the numbers. The **How it works** page runs the same race
+live and charts it.
+
+The home page quotes these figures from a saved copy of this run,
+`src/eod_close/evaluation/benchmark_snapshot.json`, refreshed with
+`python -m eod_close.evaluation benchmark --save`. Its accuracy figures are not saved:
+they are measured from the answer keys when the app first needs them.
 
 ## Known limitations
 
@@ -169,14 +174,17 @@ can replay it or send it to someone else.
 
 The site also has:
 
-- **Algorithm arena:** runs the engine and the naive baseline on synthetic days of the
+- **Reconcile (the home page):** upload a bank and a ledger CSV in the documented format
+  (sample files are provided), or open a generated sample day, and get the engine's
+  report with every match explained and a next step for each problem.
+- **How it works:** runs the engine and the naive baseline on synthetic days of the
   sizes you choose and charts the times.
-- **Reconcile your own files:** upload a bank and a ledger CSV in the documented format
-  (sample files are provided) and get the engine's report.
 
-The pages work without JavaScript; the script only adds row linking, the timer and the
-streak. They are keyboard accessible, meet WCAG AA contrast in light and dark mode, and
-load nothing from another site under a strict Content Security Policy.
+The pages work without JavaScript; the scripts only add row linking, the timer, the
+streak and the upload drop zones' highlight and file names. They are keyboard accessible,
+meet WCAG AA contrast in light and dark mode (checked with axe-core on every page at
+phone, tablet and desktop widths), and load nothing from another site under a strict
+Content Security Policy. The font (Inter) and the icons are served from the app itself.
 
 ## API
 

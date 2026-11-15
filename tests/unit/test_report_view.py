@@ -174,3 +174,32 @@ def test_a_generated_day_is_fully_described_and_adds_up() -> None:
         sizes = [abs((i.bank_amount or i.ledger_amount or Money.zero()).amount) for i in items]
         assert sizes == sorted(sizes, reverse=True), "largest problems come first"
     assert all(row.reason.endswith(".") for row in view.matches)
+
+
+def test_the_headline_says_whether_the_books_balance() -> None:
+    assert mixed_day().summary.headline == "Books don't balance by £44.00"
+    balanced = build_report_view(
+        reconcile(
+            [bank("B1", "INV-1", "10.00", TUESDAY, "DIRECT")],
+            [ledger("L1", "INV-1", "10.00", TUESDAY, "DIRECT")],
+        )
+    )
+    assert balanced.summary.headline == "Books balance"
+
+
+def test_problems_that_cancel_out_still_do_not_balance() -> None:
+    """A payment missing from each side, same amount: no gap, but two problems."""
+    view = build_report_view(
+        reconcile(
+            [bank("B1", "INV-1", "10.00", TUESDAY, "DIRECT")],
+            [ledger("L1", "INV-2", "10.00", FRIDAY, "OTTERLINE")],
+        )
+    )
+    assert view.summary.unexplained_difference.is_zero()
+    assert view.summary.headline == "Books don't balance yet: 2 items need review"
+
+
+def test_examples_pick_one_short_match_per_type_in_order() -> None:
+    view = mixed_day()
+    picked = view.examples([MatchRule.DATE_WINDOW, MatchRule.BATCH, MatchRule.FEE_ADJUSTED])
+    assert [row.rule for row in picked] == [MatchRule.DATE_WINDOW, MatchRule.FEE_ADJUSTED]

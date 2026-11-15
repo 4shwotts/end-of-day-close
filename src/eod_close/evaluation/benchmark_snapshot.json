@@ -1,0 +1,23 @@
+{
+  "measured_on": "2026-11-15",
+  "rows": [
+    {
+      "size": 1000,
+      "engine_seconds": 0.01478800002951175,
+      "naive_seconds": 0.03310830006375909,
+      "naive_estimated": false
+    },
+    {
+      "size": 10000,
+      "engine_seconds": 0.20528280001599342,
+      "naive_seconds": 5.147279996890575,
+      "naive_estimated": true
+    },
+    {
+      "size": 100000,
+      "engine_seconds": 4.281579899950884,
+      "naive_seconds": 1480.639799963683,
+      "naive_estimated": true
+    }
+  ]
+}

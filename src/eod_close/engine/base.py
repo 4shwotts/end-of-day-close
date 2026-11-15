@@ -157,7 +157,7 @@ class MatchStrategy(ABC):
     @property
     @abstractmethod
     def name(self) -> str:
-        """A short name for logs and the algorithm arena."""
+        """A short name for logs and the How it works race."""
 
     @abstractmethod
     def propose(self, context: MatchContext) -> Iterable[Candidate]:

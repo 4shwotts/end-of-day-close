@@ -1,11 +1,13 @@
-"""The server-rendered pages: reconcile, training mode and the algorithm arena.
+"""The server-rendered pages: reconcile, training mode and how it works.
 
 Reconcile is the home page: upload two files, or open a generated sample
-day, and see every match explained and everything that needs review.
+day, and see every match explained and everything that needs review. Its
+top half previews a real result and shows figures from the real evaluators.
 Training mode is the game: work a day by hand and compare with the engine.
+How it works races the engine against the obvious approach.
 
 Pages are Jinja templates. HTMX swaps in partial responses for the progress
-check, the arena results and the upload results; every form also works as a
+check, the race results and the upload results; every form also works as a
 plain form post without JavaScript.
 """
 
@@ -25,8 +27,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from eod_close.csv_format import BANK_COLUMNS, LEDGER_COLUMNS, write_bank_csv, write_ledger_csv
-from eod_close.domain.results import ExceptionReason, ReconciliationReport
+from eod_close.domain.results import ExceptionReason, MatchRule, ReconciliationReport
 from eod_close.evaluation.benchmark import NAIVE_FULL_RUN_LIMIT, run_benchmark
+from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snapshot
 from eod_close.game import score_answers
 from eod_close.generator import Difficulty
 from eod_close.generator.answer_key import DiscrepancyKind
@@ -70,7 +73,7 @@ router = APIRouter(include_in_schema=False)
 
 # A fixed menu of sizes rather than free input, so nobody can ask a shared
 # instance to time a naive run on a million rows.
-ARENA_SIZES: Final = (100, 250, 500, 1_000, 2_500, 5_000)
+RACE_SIZES: Final = (100, 250, 500, 1_000, 2_500, 5_000)
 
 # The seed and difficulty of the example files offered beside the upload form.
 SAMPLE_SEED: Final = 1
@@ -79,6 +82,16 @@ SAMPLE_DIFFICULTY: Final = Difficulty.ANALYST
 # "Try a sample day" uses the hardest level, because it is the only one that
 # contains every kind of problem, including possible typos.
 SAMPLE_DAY_DIFFICULTY: Final = Difficulty.HEAD_OF_OPS
+
+# The home page previews a fixed sample day, so the preview is the same on
+# every visit and links to a results page that matches it exactly.
+PREVIEW_SEED: Final = 1
+PREVIEW_RULES: Final = (
+    MatchRule.FEE_ADJUSTED,
+    MatchRule.DATE_WINDOW,
+    MatchRule.CURRENCY_TOLERANCE,
+    MatchRule.BATCH,
+)
 
 # Read-only on purpose: TemplateResponse adds the current request to the
 # context it is given, so passing this mapping itself would keep the first
@@ -117,10 +130,30 @@ def _results_context(report: ReconciliationReport, csv_name: str) -> dict[str, o
     }
 
 
+def _home_context() -> dict[str, object]:
+    """Build the values the home page needs besides any upload results.
+
+    Returns:
+        The file format columns, the preview of a fixed sample day, and the
+        headline accuracy and benchmark figures (the benchmark is None if no
+        snapshot has been saved).
+    """
+    case, report = load_case(SAMPLE_DAY_DIFFICULTY, PREVIEW_SEED)
+    preview = build_report_view(report)
+    return {
+        **_FORMAT_CONTEXT,
+        "preview_case": case,
+        "preview": preview.summary,
+        "preview_rows": preview.examples(PREVIEW_RULES),
+        "accuracy": accuracy_figures(),
+        "benchmark": load_benchmark_snapshot(),
+    }
+
+
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
-    """Reconcile, the home page: upload two files or try a sample day."""
-    return templates.TemplateResponse(request, "home.html", dict(_FORMAT_CONTEXT))
+    """Reconcile, the home page: what the tool does, then upload or try a sample day."""
+    return templates.TemplateResponse(request, "home.html", _home_context())
 
 
 @router.get("/sample")
@@ -222,29 +255,35 @@ async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTML
     )
 
 
-@router.get("/arena", response_class=HTMLResponse)
-def arena(request: Request) -> HTMLResponse:
-    """The algorithm arena page."""
+@router.get("/how-it-works", response_class=HTMLResponse)
+def how_it_works(request: Request) -> HTMLResponse:
+    """How it works: race the engine against the obvious approach."""
     return templates.TemplateResponse(
         request,
-        "arena.html",
-        {"sizes": ARENA_SIZES, "naive_limit": NAIVE_FULL_RUN_LIMIT},
+        "how_it_works.html",
+        {"sizes": RACE_SIZES, "naive_limit": NAIVE_FULL_RUN_LIMIT},
     )
 
 
-@router.post("/arena/run", response_class=HTMLResponse)
-async def arena_run(request: Request) -> HTMLResponse:
+@router.get("/arena")
+def old_arena_page() -> RedirectResponse:
+    """The page was called the algorithm arena; old links still work."""
+    return RedirectResponse("/how-it-works", status_code=301)
+
+
+@router.post("/how-it-works/race", response_class=HTMLResponse)
+async def run_race(request: Request) -> HTMLResponse:
     """Time both approaches on the chosen sizes and return the chart."""
     form = await request.form()
     requested = {int(str(v)) for v in form.getlist("size") if str(v).isdigit()}
-    chosen = sorted(requested & set(ARENA_SIZES))
-    context: dict[str, object] = {"sizes": ARENA_SIZES, "naive_limit": NAIVE_FULL_RUN_LIMIT}
+    chosen = sorted(requested & set(RACE_SIZES))
+    context: dict[str, object] = {"sizes": RACE_SIZES, "naive_limit": NAIVE_FULL_RUN_LIMIT}
     if len(chosen) < 2:
         context["error"] = "Choose at least two sizes to compare."
     else:
         rows = [run_benchmark(size) for size in chosen]
         context.update(rows=rows, chart=build_timing_chart(rows))
-    template = "_arena_results.html" if _is_htmx(request) else "arena.html"
+    template = "_race_results.html" if _is_htmx(request) else "how_it_works.html"
     return templates.TemplateResponse(request, template, context)
 
 
@@ -261,7 +300,7 @@ async def upload(
     ledger_file: Annotated[UploadFile, File()],
 ) -> HTMLResponse:
     """Reconcile two uploaded files and show the results."""
-    context: dict[str, object] = dict(_FORMAT_CONTEXT)
+    context: dict[str, object] = {} if _is_htmx(request) else _home_context()
     try:
         _, _, report = reconcile_uploads(
             await bank_file.read(MAX_UPLOAD_BYTES + 1), await ledger_file.read(MAX_UPLOAD_BYTES + 1)

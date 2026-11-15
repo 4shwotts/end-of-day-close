@@ -9,12 +9,14 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snapshot
 from eod_close.generator import CaseGenerator, Difficulty
 from eod_close.web import pages
 from eod_close.web.app import create_app
-from eod_close.web.report_view import REPORT_COLUMNS
+from eod_close.web.report_view import REPORT_COLUMNS, build_report_view
+from eod_close.web.services import load_case
 
-PAGES = ["/", "/training", "/arena", "/sample/1", "/play/intern/1"]
+PAGES = ["/", "/training", "/how-it-works", "/sample/1", "/play/intern/1"]
 
 
 @pytest.fixture(scope="module")
@@ -87,24 +89,24 @@ def test_closing_an_empty_day_is_not_balanced(client: TestClient) -> None:
     assert 'data-balanced="false"' in html
 
 
-def test_arena_returns_a_chart_and_a_table(client: TestClient) -> None:
+def test_race_returns_a_chart_and_a_table(client: TestClient) -> None:
     response = client.post(
-        "/arena/run", data={"size": ["100", "250"]}, headers={"HX-Request": "true"}
+        "/how-it-works/race", data={"size": ["100", "250"]}, headers={"HX-Request": "true"}
     )
     assert "<svg" in response.text
     assert "<table>" in response.text
     assert "<html" not in response.text
 
 
-def test_arena_without_htmx_returns_the_full_page(client: TestClient) -> None:
-    response = client.post("/arena/run", data={"size": ["100", "250"]})
+def test_race_without_htmx_returns_the_full_page(client: TestClient) -> None:
+    response = client.post("/how-it-works/race", data={"size": ["100", "250"]})
     assert "<html" in response.text
     assert "<svg" in response.text
 
 
-def test_arena_ignores_sizes_outside_the_menu(client: TestClient) -> None:
+def test_race_ignores_sizes_outside_the_menu(client: TestClient) -> None:
     response = client.post(
-        "/arena/run", data={"size": ["100", "1000000"]}, headers={"HX-Request": "true"}
+        "/how-it-works/race", data={"size": ["100", "1000000"]}, headers={"HX-Request": "true"}
     )
     assert "Choose at least two sizes" in response.text
 
@@ -119,10 +121,57 @@ def report_from_page(html: str) -> list[dict[str, str]]:
 
 def test_home_page_leads_with_the_tool(client: TestClient) -> None:
     html = client.get("/").text
+    assert "Reconcile a day's payments in seconds" in html
     assert "Upload a bank statement and your internal ledger" in html
     assert 'href="/sample"' in html
     assert 'id="upload"' in html
     assert 'aria-current="page"' in html
+
+
+def test_home_page_previews_a_real_result(client: TestClient) -> None:
+    """The preview is the engine's own output for the fixed sample day."""
+    html = client.get("/").text
+    _, report = load_case(pages.SAMPLE_DAY_DIFFICULTY, pages.PREVIEW_SEED)
+    view = build_report_view(report)
+    assert f"/sample/{pages.PREVIEW_SEED}" in html
+    assert view.summary.headline.replace("'", "&#39;") in html
+    for row in view.examples(pages.PREVIEW_RULES):
+        assert row.reason in html
+    assert len(view.examples(pages.PREVIEW_RULES)) == len(pages.PREVIEW_RULES)
+
+
+def test_home_page_figures_come_from_the_evaluators(client: TestClient) -> None:
+    html = client.get("/").text
+    accuracy = accuracy_figures()
+    assert f"{accuracy.overall:.1%}" in html
+    assert f"{accuracy.hardest:.1%}" in html
+    snapshot = load_benchmark_snapshot()
+    assert snapshot is not None, "the benchmark snapshot ships with the app"
+    assert f"{snapshot.entries_per_second:,}" in html
+
+
+def test_home_page_has_a_drop_zone_for_each_file(client: TestClient) -> None:
+    html = client.get("/").text
+    for field in ("bank_file", "ledger_file"):
+        assert f'<label class="dropzone-title" for="{field}">' in html
+        assert f'aria-describedby="{field}-hint {field}-chosen"' in html
+    assert html.count("data-dropzone ") + html.count("data-dropzone>") == 2
+
+
+def test_old_arena_address_redirects_to_how_it_works(client: TestClient) -> None:
+    response = client.get("/arena", follow_redirects=False)
+    assert response.status_code == 301
+    assert response.headers["location"] == "/how-it-works"
+
+
+@pytest.mark.parametrize(
+    ("path", "has_streak"),
+    [("/", False), ("/sample/1", False), ("/how-it-works", False), ("/training", True)],
+)
+def test_streak_appears_in_training_mode_only(
+    client: TestClient, path: str, has_streak: bool
+) -> None:
+    assert ('id="streak-count"' in client.get(path).text) is has_streak
 
 
 def test_home_page_does_not_keep_an_earlier_request(client: TestClient) -> None:

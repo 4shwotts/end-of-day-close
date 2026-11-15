@@ -1,82 +1,45 @@
 {# The reconcile results, shared by the upload form and the sample day.
-   Problems come first because they are what an analyst acts on; the
-   matches are collapsed by type so a long day stays readable. Long groups
-   are capped on screen, and the CSV report always lists everything. #}
+   The order follows how an analyst reads a day: the verdict and the four
+   headline figures, then what the engine settled and why, then what is left
+   for a person, each with a next step. Long groups are capped on screen;
+   the CSV report always lists everything. #}
+{% from "_macros.html" import icon, summary_bar, headline, match_icons, review_icons %}
 {% if error is defined %}
-<p class="error" role="alert">{{ error }}</p>
+<p class="error" role="alert">{{ icon("alert") }} {{ error }}</p>
 {% else %}
 {% set s = view.summary %}
 {% set limit = 200 %}
 {# A busy day starts with its problem types collapsed, so the list of types
    and counts reads as an index; a quiet day shows every problem at once. #}
 {% set open_review = s.needs_review <= 12 %}
-<section class="results" aria-labelledby="results-heading">
-  <h2 id="results-heading">Results</h2>
+<section class="results card" aria-labelledby="results-heading">
+  <h2 id="results-heading" class="visually-hidden">Results</h2>
+  {{ headline(s) }}
+  {{ summary_bar(s, id="summary") }}
 
-  <div class="tiles" id="summary">
-    <div class="tile">
-      <span class="tile-label">Matched</span>
-      <span class="tile-value">{{ "{:,}".format(s.matched) }}</span>
-    </div>
-    <div class="tile">
-      <span class="tile-label">Needs review</span>
-      <span class="tile-value {{ 'result-good' if s.needs_review == 0 else '' }}">{{ "{:,}".format(s.needs_review) }}</span>
-    </div>
-    <div class="tile">
-      <span class="tile-label">Books balance</span>
-      <span class="tile-value {{ 'result-good' if s.balances else 'result-bad' }}">{{ "✓ Yes" if s.balances else "✗ Not yet" }}</span>
-    </div>
-    <div class="tile">
-      <span class="tile-label">Unexplained difference</span>
-      <span class="tile-value">{{ s.unexplained_difference }}</span>
-    </div>
-  </div>
-
-  <p class="lede">
-    The bank shows {{ s.bank_total }} and the ledger {{ s.ledger_total }}, a difference of
-    {{ s.total_difference }}. Matches such as processor fees and currency rounding explain
-    {{ s.explained_difference }} of it.
+  <p class="results-note">
+    The bank shows <span class="amount">{{ s.bank_total }}</span> and the ledger
+    <span class="amount">{{ s.ledger_total }}</span>, a difference of
+    <span class="amount">{{ s.total_difference }}</span>. Matches such as processor fees and
+    currency rounding explain <span class="amount">{{ s.explained_difference }}</span> of it.
     {% if s.balances %}
-    Nothing else is left: the books balance.
+    Nothing else is left.
     {% else %}
-    The remaining {{ s.unexplained_difference }} comes from the {{ s.needs_review }}
-    {{ "item" if s.needs_review == 1 else "items" }} below, which need a person to check.
+    The remaining <span class="amount">{{ s.unexplained_difference }}</span> comes from the
+    {{ s.needs_review }} {{ "item" if s.needs_review == 1 else "items" }} needing review, which a
+    person has to check.
     {% endif %}
   </p>
 
   <div class="toolbar">
-    <a class="button button-secondary" href="{{ csv_href }}" download="{{ csv_name }}">Download the report (CSV)</a>
+    <a class="button button-secondary" href="{{ csv_href }}" download="{{ csv_name }}">{{ icon("download") }} Download the report (CSV)</a>
   </div>
 
-  <h3 id="review-heading">Needs review ({{ "{:,}".format(s.needs_review) }})</h3>
-  {% if view.review and not open_review %}<p class="choice-hint">Open a type to see each problem and what to do about it. The largest amounts are listed first.</p>{% endif %}
-  {% if not view.review %}
-  <p>Nothing needs review. Every entry on both sides is matched.</p>
-  {% endif %}
-  {% for label, items in view.review_by_label() %}
-  <details class="group"{% if open_review %} open{% endif %}>
-    <summary>{{ label }} ({{ items|length }})</summary>
-    <ul class="review-list">
-      {% for item in items[:limit] %}
-      <li class="review-item">
-        <p class="review-entries">
-          {% if item.bank_ids %}<span>Bank {{ item.bank_ids|join(", ") }}{% if item.bank_amount is not none %}: {{ item.bank_amount }}{% endif %}</span>{% endif %}
-          {% if item.ledger_ids %}<span>Ledger {{ item.ledger_ids|join(", ") }}{% if item.ledger_amount is not none %}: {{ item.ledger_amount }}{% endif %}</span>{% endif %}
-        </p>
-        <p>{{ item.reason }}</p>
-        <p class="next-step"><strong>Next step:</strong> {{ item.next_step }}</p>
-      </li>
-      {% endfor %}
-    </ul>
-    {% if items|length > limit %}<p class="choice-hint">Showing {{ limit }} of {{ items|length }}; the CSV report lists them all.</p>{% endif %}
-  </details>
-  {% endfor %}
-
-  <h3 id="matched-heading">Matched ({{ "{:,}".format(s.matched) }})</h3>
+  <h3 id="matched-heading" class="section-title">{{ icon("check-circle") }} Matched ({{ "{:,}".format(s.matched) }})</h3>
   <p class="choice-hint">Open a type to see each match and why the engine paired the entries.</p>
   {% for label, rows in view.matches_by_label() %}
   <details class="group">
-    <summary>{{ label }} ({{ rows|length }})</summary>
+    <summary><span class="chip chip-good">{{ icon(match_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(rows|length) }}</span></summary>
     <div class="table-scroll">
       <table>
         <caption class="visually-hidden">{{ label }} matches</caption>
@@ -103,6 +66,31 @@
       </table>
     </div>
     {% if rows|length > limit %}<p class="choice-hint">Showing {{ limit }} of {{ rows|length }}; the CSV report lists them all.</p>{% endif %}
+  </details>
+  {% endfor %}
+
+  <h3 id="review-heading" class="section-title">{{ icon("alert") }} Needs review ({{ "{:,}".format(s.needs_review) }})</h3>
+  {% if not view.review %}
+  <p>{{ icon("check") }} Nothing needs review. Every entry on both sides is matched.</p>
+  {% elif not open_review %}
+  <p class="choice-hint">Open a type to see each problem and what to do about it. The largest amounts are listed first.</p>
+  {% endif %}
+  {% for label, items in view.review_by_label() %}
+  <details class="group"{% if open_review %} open{% endif %}>
+    <summary><span class="chip chip-warn">{{ icon(review_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(items|length) }}</span></summary>
+    <ul class="review-list">
+      {% for item in items[:limit] %}
+      <li class="review-item">
+        <p class="review-entries">
+          {% if item.bank_ids %}<span>Bank {{ item.bank_ids|join(", ") }}{% if item.bank_amount is not none %}: <span class="amount">{{ item.bank_amount }}</span>{% endif %}</span>{% endif %}
+          {% if item.ledger_ids %}<span>Ledger {{ item.ledger_ids|join(", ") }}{% if item.ledger_amount is not none %}: <span class="amount">{{ item.ledger_amount }}</span>{% endif %}</span>{% endif %}
+        </p>
+        <p>{{ item.reason }}</p>
+        <p class="next-step">{{ icon("arrow-right") }} <span><strong>Next step:</strong> {{ item.next_step }}</span></p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if items|length > limit %}<p class="choice-hint">Showing {{ limit }} of {{ items|length }}; the CSV report lists them all.</p>{% endif %}
   </details>
   {% endfor %}
 </section>

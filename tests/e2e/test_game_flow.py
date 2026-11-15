@@ -1,4 +1,4 @@
-"""Browser tests of the reconcile tool and training mode, using Playwright and Chromium."""
+"""Browser tests of the reconcile tool, training mode and How it works, using Playwright."""
 
 import re
 from pathlib import Path
@@ -57,20 +57,85 @@ def test_start_page_works_from_the_keyboard(page: Page, live_server: str) -> Non
     expect(page).to_have_url(re.compile(r"/play/analyst/\d+$"))
 
 
-def test_arena_draws_the_chart_with_htmx(page: Page, live_server: str) -> None:
-    page.goto(f"{live_server}/arena")
+def test_how_it_works_draws_the_race_chart_with_htmx(page: Page, live_server: str) -> None:
+    page.goto(live_server)
+    page.get_by_role("navigation", name="Main").get_by_role("link", name="How it works").click()
+    expect(page.get_by_role("heading", level=1)).to_have_text("How it works")
     for size in ("1,000", "2,500", "5,000"):
         page.get_by_label(size, exact=True).uncheck()
     page.get_by_role("button", name="Run the race").click()
-    expect(page.locator("#arena-results svg")).to_be_visible()
-    expect(page.locator("#arena-results table")).to_contain_text("500")
-    expect(page).to_have_url(f"{live_server}/arena")
+    expect(page.locator("#race-results svg")).to_be_visible()
+    expect(page.locator("#race-results table")).to_contain_text("500")
+    expect(page).to_have_url(f"{live_server}/how-it-works")
 
 
-@pytest.mark.parametrize("path", ["/", "/sample/1", "/training", "/play/senior-analyst/1"])
-def test_pages_fit_a_phone_screen(page: Page, live_server: str, path: str) -> None:
-    """At phone width no page may scroll sideways; wide tables scroll in their own box."""
-    page.set_viewport_size({"width": 375, "height": 800})
+def test_old_arena_link_lands_on_how_it_works(page: Page, live_server: str) -> None:
+    page.goto(f"{live_server}/arena")
+    expect(page).to_have_url(f"{live_server}/how-it-works")
+
+
+def test_home_page_shows_a_real_result_before_any_click(page: Page, live_server: str) -> None:
+    """The preview's summary and example matches, then its link to the full day."""
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(live_server)
+    preview = page.locator("figure.preview")
+    expect(preview).to_be_in_viewport()
+    expect(preview).to_contain_text("Books don't balance by")
+    expect(preview.locator(".preview-row")).to_have_count(4)
+    expect(preview).to_contain_text("Fee-adjusted")
+    expect(page.locator(".figures")).to_contain_text("auto-match accuracy")
+    preview.get_by_role("link", name="See the full results for this day").click()
+    expect(page).to_have_url(re.compile(r"/sample/1$"))
+    expect(page.locator(".headline")).to_contain_text("Books don't balance by")
+
+
+def test_streak_is_shown_in_training_mode_only(page: Page, live_server: str) -> None:
+    page.goto(live_server)
+    expect(page.locator("#streak-count")).to_have_count(0)
+    page.goto(f"{live_server}/training")
+    expect(page.locator("#streak-count")).to_be_visible()
+
+
+def test_drop_zone_shows_the_chosen_file(page: Page, live_server: str, tmp_path: Path) -> None:
+    """Choosing a file the ordinary way names it in the zone, for every user."""
+    csv_file = tmp_path / "my-bank.csv"
+    csv_file.write_bytes(page.request.get(f"{live_server}/samples/bank.csv").body())
+    page.goto(live_server)
+    page.get_by_label("Bank statement (CSV)").set_input_files(csv_file)
+    expect(page.locator("#bank_file-chosen")).to_have_text("Chosen: my-bank.csv")
+    expect(page.locator("#ledger_file-chosen")).to_have_text("No file chosen")
+
+
+def test_drop_zone_accepts_a_dropped_file(page: Page, live_server: str) -> None:
+    """Simulate dragging a file over the ledger zone and dropping it."""
+    page.goto(live_server)
+    zone = page.locator(".dropzone", has=page.locator("#ledger_file"))
+    transfer = page.evaluate_handle(
+        """() => {
+            const transfer = new DataTransfer();
+            transfer.items.add(new File(["entry_id"],"dropped-ledger.csv", {type: "text/csv"}));
+            return transfer;
+        }"""
+    )
+    zone.dispatch_event("dragenter", {"dataTransfer": transfer})
+    expect(zone).to_have_class(re.compile(r"\bis-dragover\b"))
+    zone.dispatch_event("drop", {"dataTransfer": transfer})
+    expect(zone).not_to_have_class(re.compile(r"\bis-dragover\b"))
+    expect(page.locator("#ledger_file-chosen")).to_have_text("Chosen: dropped-ledger.csv")
+    assert page.evaluate("document.getElementById('ledger_file').files[0].name") == (
+        "dropped-ledger.csv"
+    )
+
+
+@pytest.mark.parametrize("width", [375, 820, 1440])
+@pytest.mark.parametrize(
+    "path", ["/", "/sample/1", "/training", "/how-it-works", "/play/senior-analyst/1"]
+)
+def test_pages_fit_phone_tablet_and_desktop(
+    page: Page, live_server: str, path: str, width: int
+) -> None:
+    """No page may scroll sideways at any width; wide tables scroll in their own box."""
+    page.set_viewport_size({"width": width, "height": 800})
     page.goto(f"{live_server}{path}")
     overflow = page.evaluate(
         "document.documentElement.scrollWidth - document.documentElement.clientWidth"

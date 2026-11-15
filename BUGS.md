@@ -51,3 +51,23 @@ Real defects found by the test suite, with the test that now guards each one.
 - **Root cause:** the home page passed a module-level dictionary of the file-format columns straight to `TemplateResponse`, which adds the current request to the context it is given. The first request was stored in that shared dictionary, and every later home page was rendered with it. The crash came from the test client's request carrying a debug extension a real server does not support; in production the same fault would have rendered every visitor's page with the first visitor's request.
 - **Fix:** the shared columns are a read-only mapping, and each page passes `TemplateResponse` a fresh copy.
 - **Guarding tests:** `tests/api/test_pages.py::test_home_page_does_not_keep_an_earlier_request`, and the browser tests in `tests/e2e/test_game_flow.py` running after the API tests.
+
+## BUG-006: after an update, the home page showed with an old stylesheet
+
+- **Found by:** the owner, viewing the redesigned home page in a browser that had visited the site before.
+- **Steps to reproduce:** visit the site, then update it to a version with a changed `app.css`, then visit it again in the same browser without a hard refresh.
+- **Expected result:** the page uses the stylesheet that came with it.
+- **Actual result:** the new page was laid out with the previous stylesheet. Lists kept their bullets, label and value pairs kept the browser's default indentation, and icons sat out of line, because the old file had no rules for the new page's classes.
+- **Root cause:** pages linked `/static/app.css` at the same address for every version, and static files were served with `Last-Modified` and `ETag` but no `Cache-Control`. Browsers then treat a file as fresh for a share of its age (about a tenth of the time since it last changed) and reuse it without asking. A reproduction with Playwright confirmed it: after the stylesheet changed, the browser made no new request for it and rendered the new page with the old rules.
+- **Fix:** pages link the stylesheet and scripts as `/static/<file>?v=<content hash>`, so the address changes whenever the file does. Versioned addresses are sent with `Cache-Control: public, max-age=31536000, immutable`; anything requested without a version, such as the font, is sent with `no-cache`, so the browser checks it with the server each time.
+- **Guarding tests:** `tests/api/test_pages.py::test_pages_link_static_files_by_content_version`, `test_the_linked_stylesheet_loads_and_may_be_cached_for_good` and `test_unversioned_static_files_are_checked_every_time`, and `tests/e2e/test_styles.py::test_stylesheet_loads_and_is_applied`.
+
+## BUG-007: wide tables could not be scrolled from the keyboard
+
+- **Found by:** the axe-core accessibility scan (`tests/e2e/test_accessibility.py`), when it was added during the home page redesign.
+- **Steps to reproduce:** open the results of a day, or the file format tables, on a phone or tablet, then use only the keyboard to read the columns that are off screen.
+- **Expected result:** the table's box can take focus, and the arrow keys scroll it sideways (WCAG 2.1.1, keyboard).
+- **Actual result:** the box could not take focus and held nothing focusable, so the hidden columns could only be reached with a mouse or touch. axe reported `scrollable-region-focusable` at phone and tablet widths.
+- **Root cause:** each wide table sits in a `div` that scrolls sideways so the page itself never does, but the `div` had no `tabindex`. Boxes that contain form controls (the training work page) were reachable through those controls; the others were not.
+- **Fix:** every table box with nothing focusable inside is now `role="region"` with `tabindex="0"` and a name (its heading or caption), so it can be focused, scrolled and announced. The work page's boxes keep their existing names without the extra role, which would duplicate the section landmarks around them.
+- **Guarding tests:** `tests/e2e/test_accessibility.py`, which scans every page at phone, tablet and desktop widths in both themes and fails on any violation.

@@ -4,15 +4,17 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   {# Indicator styles off: htmx would inject an inline <style>, which the
-     Content-Security-Policy blocks. The equivalent rules are in app.css. #}
-  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
+     Content-Security-Policy blocks; the equivalent rules are in app.css.
+     "style" is left out of the attributes htmx carries across a swap, for
+     the same reason: copying one is an inline style the policy blocks. #}
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "attributesToSettle": ["class", "width", "height"]}'>
   <title>{% block title %}End-of-Day Close{% endblock %}</title>
   {# Preloaded so the first paint already uses the self-hosted font. #}
   <link rel="preload" href="/static/fonts/inter-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/static/app.css">
-  <script src="/static/vendor/htmx-2.0.4.min.js" defer></script>
-  <script src="/static/app.js" defer></script>
-  <script src="/static/game.js" defer></script>
+  <link rel="stylesheet" href="{{ static_url('app.css') }}">
+  <script src="{{ static_url('vendor/htmx-2.0.4.min.js') }}" defer></script>
+  <script src="{{ static_url('app.js') }}" defer></script>
+  <script src="{{ static_url('game.js') }}" defer></script>
 </head>
 <body{% block body_attrs %}{% endblock %}>
   <a class="skip-link" href="#main">Skip to content</a>

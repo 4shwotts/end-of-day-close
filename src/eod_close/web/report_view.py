@@ -196,25 +196,6 @@ class ReportView:
         """Return the problems grouped by type, leaving out empty types."""
         return _grouped(self.review, REVIEW_LABELS.values())
 
-    def examples(self, rules: Iterable[MatchRule]) -> list[MatchRow]:
-        """Pick one example match of each rule, for a preview.
-
-        The shortest explanation of each type is chosen, since a preview has
-        little room; types the day does not contain are skipped.
-
-        Args:
-            rules: The match types wanted, in display order.
-
-        Returns:
-            At most one row per rule, in the order given.
-        """
-        picked = []
-        for rule in rules:
-            rows = [row for row in self.matches if row.rule is rule]
-            if rows:
-                picked.append(min(rows, key=lambda row: (len(row.reason), row.bank_ids)))
-        return picked
-
 
 def build_report_view(
     report: ReconciliationReport,

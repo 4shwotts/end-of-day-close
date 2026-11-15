@@ -40,7 +40,7 @@
   {% for label, rows in view.matches_by_label() %}
   <details class="group">
     <summary><span class="chip chip-good">{{ icon(match_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(rows|length) }}</span></summary>
-    <div class="table-scroll">
+    <div class="table-scroll" role="region" tabindex="0" aria-label="{{ label }} matches">
       <table>
         <caption class="visually-hidden">{{ label }} matches</caption>
         <thead>

@@ -1,4 +1,4 @@
-"""Browser tests of the reconcile tool, training mode and How it works, using Playwright."""
+"""Browser tests of upload, the harder day, training mode and How it works, using Playwright."""
 
 import re
 from pathlib import Path
@@ -74,21 +74,6 @@ def test_old_arena_link_lands_on_how_it_works(page: Page, live_server: str) -> N
     expect(page).to_have_url(f"{live_server}/how-it-works")
 
 
-def test_home_page_shows_a_real_result_before_any_click(page: Page, live_server: str) -> None:
-    """The preview's summary and example matches, then its link to the full day."""
-    page.set_viewport_size({"width": 1440, "height": 900})
-    page.goto(live_server)
-    preview = page.locator("figure.preview")
-    expect(preview).to_be_in_viewport()
-    expect(preview).to_contain_text("Books don't balance by")
-    expect(preview.locator(".preview-row")).to_have_count(4)
-    expect(preview).to_contain_text("Fee-adjusted")
-    expect(page.locator(".figures")).to_contain_text("auto-match accuracy")
-    preview.get_by_role("link", name="See the full results for this day").click()
-    expect(page).to_have_url(re.compile(r"/sample/1$"))
-    expect(page.locator(".headline")).to_contain_text("Books don't balance by")
-
-
 def test_streak_is_shown_in_training_mode_only(page: Page, live_server: str) -> None:
     page.goto(live_server)
     expect(page.locator("#streak-count")).to_have_count(0)
@@ -100,7 +85,7 @@ def test_drop_zone_shows_the_chosen_file(page: Page, live_server: str, tmp_path:
     """Choosing a file the ordinary way names it in the zone, for every user."""
     csv_file = tmp_path / "my-bank.csv"
     csv_file.write_bytes(page.request.get(f"{live_server}/samples/bank.csv").body())
-    page.goto(live_server)
+    page.goto(f"{live_server}/upload")
     page.get_by_label("Bank statement (CSV)").set_input_files(csv_file)
     expect(page.locator("#bank_file-chosen")).to_have_text("Chosen: my-bank.csv")
     expect(page.locator("#ledger_file-chosen")).to_have_text("No file chosen")
@@ -108,7 +93,7 @@ def test_drop_zone_shows_the_chosen_file(page: Page, live_server: str, tmp_path:
 
 def test_drop_zone_accepts_a_dropped_file(page: Page, live_server: str) -> None:
     """Simulate dragging a file over the ledger zone and dropping it."""
-    page.goto(live_server)
+    page.goto(f"{live_server}/upload")
     zone = page.locator(".dropzone", has=page.locator("#ledger_file"))
     transfer = page.evaluate_handle(
         """() => {
@@ -129,7 +114,8 @@ def test_drop_zone_accepts_a_dropped_file(page: Page, live_server: str) -> None:
 
 @pytest.mark.parametrize("width", [375, 820, 1440])
 @pytest.mark.parametrize(
-    "path", ["/", "/sample/1", "/training", "/how-it-works", "/play/senior-analyst/1"]
+    "path",
+    ["/", "/upload", "/sample/1", "/training", "/how-it-works", "/play/senior-analyst/1"],
 )
 def test_pages_fit_phone_tablet_and_desktop(
     page: Page, live_server: str, path: str, width: int
@@ -143,10 +129,10 @@ def test_pages_fit_phone_tablet_and_desktop(
     assert overflow <= 0
 
 
-def test_sample_day_from_the_home_page(page: Page, live_server: str) -> None:
-    """Open a sample day, read the summary, open a match type and download the report."""
+def test_harder_day_from_the_home_page(page: Page, live_server: str) -> None:
+    """Open a harder day, read the summary, open a match type and download the report."""
     page.goto(live_server)
-    page.get_by_role("link", name="Try a sample day").click()
+    page.get_by_role("link", name="Try a harder day").click()
     expect(page).to_have_url(re.compile(r"/sample/\d+$"))
     expect(page.locator("#summary")).to_contain_text("Needs review")
     expect(page.locator("#summary")).to_contain_text("Books balance")
@@ -171,8 +157,9 @@ def test_upload_own_files_shows_results_in_place(
         (tmp_path / f"{name}.csv").write_bytes(content)
     page.goto(live_server)
     page.get_by_role("link", name="Upload your own files").click()
+    expect(page).to_have_url(f"{live_server}/upload")
     page.get_by_label("Bank statement (CSV)").set_input_files(tmp_path / "bank.csv")
     page.get_by_label("Ledger (CSV)").set_input_files(tmp_path / "ledger.csv")
     page.get_by_role("button", name="Reconcile").click()
     expect(page.locator("#results #summary")).to_contain_text("Matched")
-    expect(page).to_have_url(re.compile(rf"^{re.escape(live_server)}/(#upload)?$"))
+    expect(page).to_have_url(f"{live_server}/upload")

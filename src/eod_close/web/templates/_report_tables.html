@@ -1,7 +1,7 @@
 {# Shared by the close page and the upload results. Long reports are capped
    on screen; the API returns them in full. #}
 {% set limit = 500 %}
-<div class="table-scroll">
+<div class="table-scroll" role="region" tabindex="0" aria-label="Matches">
   <table>
     <caption>Matches{% if report.matches|length > limit %} (first {{ limit }} of {{ report.matches|length }}){% endif %}</caption>
     <thead>
@@ -27,7 +27,7 @@
   </table>
 </div>
 <h3>Exceptions</h3>
-<div class="table-scroll">
+<div class="table-scroll" role="region" tabindex="0" aria-label="Exceptions">
   <table>
     <caption>Exceptions{% if report.exceptions|length > limit %} (first {{ limit }} of {{ report.exceptions|length }}){% endif %}</caption>
     <thead>

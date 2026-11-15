@@ -1,23 +1,26 @@
 """The server-rendered pages: reconcile, training mode and how it works.
 
-Reconcile is the home page: upload two files, or open a generated sample
-day, and see every match explained and everything that needs review. Its
-top half previews a real result and shows figures from the real evaluators.
-Training mode is the game: work a day by hand and compare with the engine.
-How it works races the engine against the obvious approach.
+The home page is a small sample day's bank statement and ledger side by
+side, with a Reconcile button that puts the engine's outcome on every row.
+Upload runs the same engine on your own files; a generated harder day shows
+the full results view. Training mode is the game: work a day by hand and
+compare with the engine. How it works explains the approach and races the
+engine against the obvious one.
 
-Pages are Jinja templates. HTMX swaps in partial responses for the progress
-check, the race results and the upload results; every form also works as a
-plain form post without JavaScript.
+Pages are Jinja templates. HTMX swaps in partial responses for the
+reconciled workspace, the progress check, the race results and the upload
+results; every form also works as a plain form post without JavaScript.
 """
 
 from __future__ import annotations
 
 import base64
 import contextlib
+import hashlib
 import io
 import secrets
 import time
+from functools import cache
 from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, Final
@@ -27,7 +30,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from eod_close.csv_format import BANK_COLUMNS, LEDGER_COLUMNS, write_bank_csv, write_ledger_csv
-from eod_close.domain.results import ExceptionReason, MatchRule, ReconciliationReport
+from eod_close.domain.results import ExceptionReason, ReconciliationReport
 from eod_close.evaluation.benchmark import NAIVE_FULL_RUN_LIMIT, run_benchmark
 from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snapshot
 from eod_close.game import score_answers
@@ -43,9 +46,34 @@ from eod_close.web.services import (
     load_case,
     reconcile_uploads,
 )
+from eod_close.web.workspace import build_workspace, load_sample_day, sample_day_csv
+
+STATIC_DIR: Final = Path(__file__).parent / "static"
+
+
+@cache
+def static_url(path: str) -> str:
+    """Return a static file's address, versioned by a hash of its content.
+
+    Without a version, a browser may keep using a stylesheet it fetched
+    before the site changed, and render new pages with old styles (BUG-006).
+    The address changes whenever the file does, so a new version is always
+    fetched, and an unchanged file can be cached for good. Cached per path
+    because the files cannot change while the server runs.
+
+    Args:
+        path: The file's path inside the static folder, such as ``app.css``.
+
+    Returns:
+        The address to link to, such as ``/static/app.css?v=1a2b3c4d5e6f``.
+    """
+    digest = hashlib.sha256((STATIC_DIR / path).read_bytes()).hexdigest()[:12]
+    return f"/static/{path}?v={digest}"
+
 
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals.update(
+    static_url=static_url,
     difficulties=list(Difficulty),
     reasons=list(ExceptionReason),
     kinds=list(DiscrepancyKind),
@@ -79,19 +107,9 @@ RACE_SIZES: Final = (100, 250, 500, 1_000, 2_500, 5_000)
 SAMPLE_SEED: Final = 1
 SAMPLE_DIFFICULTY: Final = Difficulty.ANALYST
 
-# "Try a sample day" uses the hardest level, because it is the only one that
+# "Try a harder day" uses the hardest level, because it is the only one that
 # contains every kind of problem, including possible typos.
 SAMPLE_DAY_DIFFICULTY: Final = Difficulty.HEAD_OF_OPS
-
-# The home page previews a fixed sample day, so the preview is the same on
-# every visit and links to a results page that matches it exactly.
-PREVIEW_SEED: Final = 1
-PREVIEW_RULES: Final = (
-    MatchRule.FEE_ADJUSTED,
-    MatchRule.DATE_WINDOW,
-    MatchRule.CURRENCY_TOLERANCE,
-    MatchRule.BATCH,
-)
 
 # Read-only on purpose: TemplateResponse adds the current request to the
 # context it is given, so passing this mapping itself would keep the first
@@ -130,30 +148,46 @@ def _results_context(report: ReconciliationReport, csv_name: str) -> dict[str, o
     }
 
 
-def _home_context() -> dict[str, object]:
-    """Build the values the home page needs besides any upload results.
+def _workspace_context(*, reconciled: bool) -> dict[str, object]:
+    """Build the home page's workspace for the fixed sample day.
+
+    Args:
+        reconciled: Whether to show the engine's outcome on the rows.
 
     Returns:
-        The file format columns, the preview of a fixed sample day, and the
-        headline accuracy and benchmark figures (the benchmark is None if no
-        snapshot has been saved).
+        The workspace.
     """
-    case, report = load_case(SAMPLE_DAY_DIFFICULTY, PREVIEW_SEED)
-    preview = build_report_view(report)
-    return {
-        **_FORMAT_CONTEXT,
-        "preview_case": case,
-        "preview": preview.summary,
-        "preview_rows": preview.examples(PREVIEW_RULES),
-        "accuracy": accuracy_figures(),
-        "benchmark": load_benchmark_snapshot(),
-    }
+    statement, ledger, report = load_sample_day()
+    return {"workspace": build_workspace(statement, ledger, report if reconciled else None)}
 
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
-    """Reconcile, the home page: what the tool does, then upload or try a sample day."""
-    return templates.TemplateResponse(request, "home.html", _home_context())
+    """The home page: the sample day's two lists, ready to reconcile."""
+    return templates.TemplateResponse(request, "home.html", _workspace_context(reconciled=False))
+
+
+@router.post("/reconcile", response_class=HTMLResponse)
+def reconcile_sample_day(request: Request) -> HTMLResponse:
+    """Reconcile the sample day.
+
+    HTMX swaps in just the workspace; without JavaScript the same form posts
+    here and gets the whole page back, already reconciled.
+    """
+    template = "_workspace.html" if _is_htmx(request) else "home.html"
+    return templates.TemplateResponse(request, template, _workspace_context(reconciled=True))
+
+
+@router.get("/sample-day/{name}.csv")
+def sample_day_download(name: str) -> Response:
+    """Download the home page's sample day: its bank file, ledger file or report."""
+    if name in ("bank", "ledger"):
+        text = sample_day_csv("bank" if name == "bank" else "ledger")
+    elif name == "report":
+        text = report_csv(build_report_view(load_sample_day()[2]))
+    else:
+        raise HTTPException(status_code=404)
+    return _csv_response(text, f"sample-day-{name}.csv")
 
 
 @router.get("/sample")
@@ -255,14 +289,25 @@ async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTML
     )
 
 
+def _how_it_works_context() -> dict[str, object]:
+    """Build the values the How it works page always shows.
+
+    Returns:
+        The race's size menu, and the headline accuracy and benchmark figures
+        (the benchmark is None if no snapshot has been saved).
+    """
+    return {
+        "sizes": RACE_SIZES,
+        "naive_limit": NAIVE_FULL_RUN_LIMIT,
+        "accuracy": accuracy_figures(),
+        "benchmark": load_benchmark_snapshot(),
+    }
+
+
 @router.get("/how-it-works", response_class=HTMLResponse)
 def how_it_works(request: Request) -> HTMLResponse:
-    """How it works: race the engine against the obvious approach."""
-    return templates.TemplateResponse(
-        request,
-        "how_it_works.html",
-        {"sizes": RACE_SIZES, "naive_limit": NAIVE_FULL_RUN_LIMIT},
-    )
+    """How it works: the steps, the problem types, the figures and the race."""
+    return templates.TemplateResponse(request, "how_it_works.html", _how_it_works_context())
 
 
 @router.get("/arena")
@@ -277,7 +322,7 @@ async def run_race(request: Request) -> HTMLResponse:
     form = await request.form()
     requested = {int(str(v)) for v in form.getlist("size") if str(v).isdigit()}
     chosen = sorted(requested & set(RACE_SIZES))
-    context: dict[str, object] = {"sizes": RACE_SIZES, "naive_limit": NAIVE_FULL_RUN_LIMIT}
+    context = _how_it_works_context()
     if len(chosen) < 2:
         context["error"] = "Choose at least two sizes to compare."
     else:
@@ -287,10 +332,10 @@ async def run_race(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, template, context)
 
 
-@router.get("/upload")
-def upload_page() -> RedirectResponse:
-    """The upload form now lives on the home page; old links still work."""
-    return RedirectResponse("/#upload", status_code=301)
+@router.get("/upload", response_class=HTMLResponse)
+def upload_page(request: Request) -> HTMLResponse:
+    """Upload your own bank statement and ledger."""
+    return templates.TemplateResponse(request, "upload.html", dict(_FORMAT_CONTEXT))
 
 
 @router.post("/upload", response_class=HTMLResponse)
@@ -300,7 +345,7 @@ async def upload(
     ledger_file: Annotated[UploadFile, File()],
 ) -> HTMLResponse:
     """Reconcile two uploaded files and show the results."""
-    context: dict[str, object] = {} if _is_htmx(request) else _home_context()
+    context: dict[str, object] = {} if _is_htmx(request) else dict(_FORMAT_CONTEXT)
     try:
         _, _, report = reconcile_uploads(
             await bank_file.read(MAX_UPLOAD_BYTES + 1), await ledger_file.read(MAX_UPLOAD_BYTES + 1)
@@ -310,7 +355,7 @@ async def upload(
     except UploadError as exc:
         context["error"] = str(exc)
         status = 422
-    template = "_results.html" if _is_htmx(request) else "home.html"
+    template = "_results.html" if _is_htmx(request) else "upload.html"
     # HTMX does not swap error responses by default, so its partial is sent
     # with 200 and the error is shown in the page instead.
     return templates.TemplateResponse(

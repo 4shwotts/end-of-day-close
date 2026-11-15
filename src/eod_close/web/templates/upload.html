@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon %}
+{% block title %}Upload your own files · End-of-Day Close{% endblock %}
+{% block content %}
+{# Upload has its own page so the home page can stay the working example.
+   The results use the grouped view rather than side-by-side lists, because
+   a real file can have thousands of lines. #}
+<section id="upload" aria-labelledby="upload-heading">
+  <h1 id="upload-heading">Upload your own files</h1>
+  <p class="lede">
+    Two CSV files in the <a href="#format">format described below</a>. Not sure what they should
+    look like? Download <a href="/samples/bank.csv">sample-bank.csv</a> and
+    <a href="/samples/ledger.csv">sample-ledger.csv</a> and upload them. Files are processed in
+    memory and never stored; please use fictional data only.
+  </p>
+
+  <form class="card upload-form" method="post" action="/upload" enctype="multipart/form-data"
+        hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#results" hx-swap="innerHTML">
+    <div class="dropzones">
+      {% for field, title in (("bank_file", "Bank statement (CSV)"), ("ledger_file", "Ledger (CSV)")) %}
+      {# The real file input covers the whole zone, invisibly: clicking or
+         dropping a file anywhere on it works even without JavaScript, and
+         keyboard and screen-reader users meet an ordinary labelled input.
+         app.js only adds the highlight and the chosen file's name. #}
+      <div class="dropzone" data-dropzone>
+        <input class="dropzone-input" type="file" id="{{ field }}" name="{{ field }}" accept=".csv,text/csv" required
+               aria-describedby="{{ field }}-hint {{ field }}-chosen">
+        <span class="dropzone-icon">{{ icon("file") }}</span>
+        <label class="dropzone-title" for="{{ field }}">{{ title }}</label>
+        <span class="dropzone-hint" id="{{ field }}-hint">Drag the file here, or click to choose</span>
+        <span class="dropzone-chosen" id="{{ field }}-chosen" data-dropzone-chosen aria-live="polite">No file chosen</span>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="toolbar">
+      <button type="submit" class="button-large">Reconcile</button>
+      <span class="htmx-indicator status" role="status">Reconciling…</span>
+    </div>
+  </form>
+
+  <div id="results" aria-live="polite">
+    {% if view is defined or error is defined %}{% include "_results.html" %}{% endif %}
+  </div>
+</section>
+
+<section id="format" class="band" aria-labelledby="format-heading">
+  <h2 id="format-heading">File format</h2>
+  <p class="lede">
+    UTF-8 CSV with a header row and exactly these columns, in this order. Dates are written
+    year-month-day (<code>2026-11-13</code>). Amounts are plain numbers with no currency
+    symbol or thousands separator, negative for money going out (<code>-15.20</code>). Each
+    file can be up to 2 MB and 20,000 rows.
+  </p>
+  {% set bank_help = {
+    "entry_id": "Unique within the file, for example B0001",
+    "value_date": "The date the money moved",
+    "reference": "Payment reference; may be empty",
+    "counterparty": "Who paid or was paid: DIRECT for a bank transfer, or a processor code (OTTERLINE, BRAMBLE, QUILLFEATHER, FERNHOLLOW)",
+    "description": "Free text",
+    "amount": "Money in positive, money out negative",
+    "currency": "GBP"
+  } %}
+  {% set ledger_help = {
+    "entry_id": "Unique within the file, for example L0001",
+    "value_date": "The date the sale or refund was booked",
+    "reference": "Order or invoice reference",
+    "processor": "Who handled the payment, as in the bank file",
+    "kind": "payment, refund or chargeback (a payment the customer disputed with their bank)",
+    "description": "Free text",
+    "amount": "Payments positive; refunds and chargebacks negative",
+    "currency": "GBP",
+    "original_amount": "For a sale in another currency, the amount in that currency; otherwise empty",
+    "original_currency": "For example EUR; otherwise empty",
+    "original_reference": "For refunds and chargebacks, the order being reversed"
+  } %}
+  <div class="format-tables">
+    <div class="format-column">
+      <h3 id="bank-columns-heading">Bank statement columns</h3>
+      <div class="table-scroll" role="region" tabindex="0" aria-labelledby="bank-columns-heading">
+        <table aria-labelledby="bank-columns-heading">
+          <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            {% for column in bank_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ bank_help[column] }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="format-column">
+      <h3 id="ledger-columns-heading">Ledger columns</h3>
+      <div class="table-scroll" role="region" tabindex="0" aria-labelledby="ledger-columns-heading">
+        <table aria-labelledby="ledger-columns-heading">
+          <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
+          <tbody>
+            {% for column in ledger_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ ledger_help[column] }}</td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

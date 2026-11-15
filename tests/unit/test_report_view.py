@@ -197,9 +197,3 @@ def test_problems_that_cancel_out_still_do_not_balance() -> None:
     )
     assert view.summary.unexplained_difference.is_zero()
     assert view.summary.headline == "Books don't balance yet: 2 items need review"
-
-
-def test_examples_pick_one_short_match_per_type_in_order() -> None:
-    view = mixed_day()
-    picked = view.examples([MatchRule.DATE_WINDOW, MatchRule.BATCH, MatchRule.FEE_ADJUSTED])
-    assert [row.rule for row in picked] == [MatchRule.DATE_WINDOW, MatchRule.FEE_ADJUSTED]

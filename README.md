@@ -126,7 +126,7 @@ run would take too long. Times are from one run on a development laptop and will
 the shape matters more than the numbers. The **How it works** page runs the same race
 live and charts it.
 
-The home page quotes these figures from a saved copy of this run,
+The How it works page quotes these figures from a saved copy of this run,
 `src/eod_close/evaluation/benchmark_snapshot.json`, refreshed with
 `python -m eod_close.evaluation benchmark --save`. Its accuracy figures are not saved:
 they are measured from the answer keys when the app first needs them.
@@ -174,14 +174,21 @@ can replay it or send it to someone else.
 
 The site also has:
 
-- **Reconcile (the home page):** upload a bank and a ledger CSV in the documented format
-  (sample files are provided), or open a generated sample day, and get the engine's
-  report with every match explained and a next step for each problem.
-- **How it works:** runs the engine and the naive baseline on synthetic days of the
-  sizes you choose and charts the times.
+- **Reconcile (the home page):** a small sample day's bank statement and ledger side by
+  side. **Reconcile** tags every matched line with its type and a link to its partner,
+  selecting a line highlights its partner and says why they match, and a needs-review
+  panel lists the three problems with a next step for each and their effect on the gap.
+  A filter narrows the lists by outcome or match type; on a phone a switch shows one
+  list at a time.
+- **Upload your own files:** a bank and a ledger CSV in the documented format (sample
+  files are provided), with the engine's report grouped by type.
+- **Try a harder day:** a generated Head of Ops day with every kind of problem.
+- **How it works:** the steps, the problem types, the accuracy and speed figures, and a
+  race of the engine against the naive baseline on days of the sizes you choose.
 
-The pages work without JavaScript; the scripts only add row linking, the timer, the
-streak and the upload drop zones' highlight and file names. They are keyboard accessible,
+The pages work without JavaScript; the filter and the phone's list switch are plain radio
+buttons read by CSS. The scripts only add row selection, the reveal after Reconcile, row
+linking, the timer, the streak and the upload drop zones' highlight and file names. They are keyboard accessible,
 meet WCAG AA contrast in light and dark mode (checked with axe-core on every page at
 phone, tablet and desktop widths), and load nothing from another site under a strict
 Content Security Policy. The font (Inter) and the icons are served from the app itself.

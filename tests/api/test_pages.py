@@ -2,6 +2,7 @@
 
 import base64
 import csv
+import hashlib
 import io
 import re
 from collections.abc import Iterator
@@ -13,10 +14,9 @@ from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snaps
 from eod_close.generator import CaseGenerator, Difficulty
 from eod_close.web import pages
 from eod_close.web.app import create_app
-from eod_close.web.report_view import REPORT_COLUMNS, build_report_view
-from eod_close.web.services import load_case
+from eod_close.web.report_view import REPORT_COLUMNS
 
-PAGES = ["/", "/training", "/how-it-works", "/sample/1", "/play/intern/1"]
+PAGES = ["/", "/upload", "/training", "/how-it-works", "/sample/1", "/play/intern/1"]
 
 
 @pytest.fixture(scope="module")
@@ -119,29 +119,53 @@ def report_from_page(html: str) -> list[dict[str, str]]:
     return list(csv.DictReader(io.StringIO(text)))
 
 
-def test_home_page_leads_with_the_tool(client: TestClient) -> None:
+def test_home_page_shows_the_sample_day_ready_to_reconcile(client: TestClient) -> None:
     html = client.get("/").text
-    assert "Reconcile a day's payments in seconds" in html
-    assert "Upload a bank statement and your internal ledger" in html
-    assert 'href="/sample"' in html
-    assert 'id="upload"' in html
-    assert 'aria-current="page"' in html
+    assert "Match a bank statement against your ledger and see what doesn't add up." in html
+    assert "Not reconciled yet" in html
+    assert "24 bank lines" in html
+    assert "26 ledger lines" in html
+    assert 'hx-post="/reconcile"' in html
+    assert "data-select" not in html, "no outcomes before Reconcile is pressed"
+    for link in ('href="/upload"', 'href="/sample-day/report.csv"', 'href="/sample"'):
+        assert link in html
 
 
-def test_home_page_previews_a_real_result(client: TestClient) -> None:
-    """The preview is the engine's own output for the fixed sample day."""
-    html = client.get("/").text
-    _, report = load_case(pages.SAMPLE_DAY_DIFFICULTY, pages.PREVIEW_SEED)
-    view = build_report_view(report)
-    assert f"/sample/{pages.PREVIEW_SEED}" in html
-    assert view.summary.headline.replace("'", "&#39;") in html
-    for row in view.examples(pages.PREVIEW_RULES):
-        assert row.reason in html
-    assert len(view.examples(pages.PREVIEW_RULES)) == len(pages.PREVIEW_RULES)
+def test_reconcile_returns_the_workspace_with_every_outcome(client: TestClient) -> None:
+    html = client.post("/reconcile", headers={"HX-Request": "true"}).text
+    assert "<html" not in html
+    assert "22 matched" in html
+    assert "3 to review" in html
+    assert re.search(r'id="status-unexplained">-£42.50<', html)
+    assert re.search(r'id="problems-total">-£42.50<', html)
+    assert html.count('class="problem"') == 3
+    assert 'id="row-bank-B02"' in html
+    assert 'href="#row-ledger-L02"' in html
 
 
-def test_home_page_figures_come_from_the_evaluators(client: TestClient) -> None:
-    html = client.get("/").text
+def test_reconcile_without_htmx_returns_the_whole_page_reconciled(client: TestClient) -> None:
+    html = client.post("/reconcile").text
+    assert "<html" in html
+    assert "22 matched" in html
+
+
+@pytest.mark.parametrize("name", ["bank", "ledger", "report"])
+def test_home_sample_day_files_download(client: TestClient, name: str) -> None:
+    response = client.get(f"/sample-day/{name}.csv")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert f"sample-day-{name}.csv" in response.headers["content-disposition"]
+    if name == "report":
+        rows = list(csv.DictReader(io.StringIO(response.text)))
+        assert [r["status"] for r in rows].count("needs review") == 3
+
+
+def test_unknown_home_sample_day_file_is_not_found(client: TestClient) -> None:
+    assert client.get("/sample-day/answers.csv").status_code == 404
+
+
+def test_how_it_works_figures_come_from_the_evaluators(client: TestClient) -> None:
+    html = client.get("/how-it-works").text
     accuracy = accuracy_figures()
     assert f"{accuracy.overall:.1%}" in html
     assert f"{accuracy.hardest:.1%}" in html
@@ -150,12 +174,13 @@ def test_home_page_figures_come_from_the_evaluators(client: TestClient) -> None:
     assert f"{snapshot.entries_per_second:,}" in html
 
 
-def test_home_page_has_a_drop_zone_for_each_file(client: TestClient) -> None:
-    html = client.get("/").text
+def test_upload_page_has_a_drop_zone_for_each_file(client: TestClient) -> None:
+    html = client.get("/upload").text
     for field in ("bank_file", "ledger_file"):
         assert f'<label class="dropzone-title" for="{field}">' in html
         assert f'aria-describedby="{field}-hint {field}-chosen"' in html
     assert html.count("data-dropzone ") + html.count("data-dropzone>") == 2
+    assert "File format" in html
 
 
 def test_old_arena_address_redirects_to_how_it_works(client: TestClient) -> None:
@@ -166,7 +191,7 @@ def test_old_arena_address_redirects_to_how_it_works(client: TestClient) -> None
 
 @pytest.mark.parametrize(
     ("path", "has_streak"),
-    [("/", False), ("/sample/1", False), ("/how-it-works", False), ("/training", True)],
+    [("/", False), ("/upload", False), ("/how-it-works", False), ("/training", True)],
 )
 def test_streak_appears_in_training_mode_only(
     client: TestClient, path: str, has_streak: bool
@@ -198,7 +223,7 @@ def test_upload_shows_the_summary_and_offers_the_report(client: TestClient) -> N
     assert tuple(rows[0]) == REPORT_COLUMNS
 
 
-def test_upload_without_htmx_returns_the_home_page_with_results(client: TestClient) -> None:
+def test_upload_without_htmx_returns_the_upload_page_with_results(client: TestClient) -> None:
     bank = client.get("/samples/bank.csv").content
     ledger = client.get("/samples/ledger.csv").content
     html = client.post(
@@ -206,12 +231,6 @@ def test_upload_without_htmx_returns_the_home_page_with_results(client: TestClie
     ).text
     assert "<html" in html
     assert 'id="summary"' in html
-
-
-def test_old_upload_address_redirects_to_the_form(client: TestClient) -> None:
-    response = client.get("/upload", follow_redirects=False)
-    assert response.status_code == 301
-    assert response.headers["location"] == "/#upload"
 
 
 def test_sample_day_redirects_to_its_own_address(client: TestClient) -> None:
@@ -261,3 +280,29 @@ def test_blank_day_number_starts_a_random_day(client: TestClient) -> None:
 @pytest.mark.parametrize("seed", ["abc", "-1", "2000000000"])
 def test_invalid_day_number_is_rejected(client: TestClient, seed: str) -> None:
     assert client.get(f"/play?seed={seed}", follow_redirects=False).status_code == 422
+
+
+def test_pages_link_static_files_by_content_version(client: TestClient) -> None:
+    """BUG-006: a stylesheet's address must change when its content does."""
+    html = client.get("/").text
+    for name in ("app.css", "app.js", "game.js", "vendor/htmx-2.0.4.min.js"):
+        digest = hashlib.sha256((pages.STATIC_DIR / name).read_bytes()).hexdigest()[:12]
+        assert f'"/static/{name}?v={digest}"' in html
+    assert 'href="/static/app.css"' not in html
+
+
+def test_the_linked_stylesheet_loads_and_may_be_cached_for_good(client: TestClient) -> None:
+    href = re.search(r'<link rel="stylesheet" href="([^"]+)"', client.get("/").text)
+    assert href
+    response = client.get(href.group(1))
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert ".summary-bar" in response.text
+    assert "immutable" in response.headers["cache-control"]
+
+
+def test_unversioned_static_files_are_checked_every_time(client: TestClient) -> None:
+    """The font is fetched by the stylesheet without a version, so it must be revalidated."""
+    response = client.get("/static/fonts/inter-latin-wght.woff2")
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"

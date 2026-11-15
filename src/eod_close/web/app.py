@@ -60,6 +60,16 @@ def create_app() -> FastAPI:
         response = await call_next(request)
         if not request.url.path.startswith(_DOCS_PATHS):
             response.headers["Content-Security-Policy"] = _CSP
+        if request.url.path.startswith("/static/"):
+            # Pages link static files with a content hash (pages.static_url),
+            # so a versioned address never changes meaning and may be kept
+            # for good. Anything fetched without one, such as the font the
+            # stylesheet loads, must be checked with the server each time,
+            # or a browser can keep showing an old copy (BUG-006).
+            versioned = "v" in request.query_params
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable" if versioned else "no-cache"
+            )
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "same-origin"
         return response

@@ -2,8 +2,9 @@
 
 axe-core is stored in ``vendor/`` beside this file (MPL-2.0), so the scan
 needs no network. The pages forbid inline scripts in their Content Security
-Policy, so the scan runs in a browser context that bypasses the policy; that
-is the only thing the context changes.
+Policy, so the scan runs in a browser context that bypasses the policy. The
+context also asks for reduced motion, so the page is scanned as it settles
+rather than part-way through an animation.
 
 axe finds roughly a third to a half of accessibility problems. The rest
 (reading order, sensible labels, keyboard flow) is covered by the other
@@ -19,14 +20,18 @@ from playwright.sync_api import Browser, BrowserContext
 pytestmark = pytest.mark.e2e
 
 AXE = Path(__file__).parent / "vendor" / "axe-4.10.2.min.js"
-PAGES = ["/", "/sample/1", "/training", "/play/intern/1", "/how-it-works"]
+PAGES = ["/", "/upload", "/sample/1", "/training", "/play/intern/1", "/how-it-works"]
 WIDTHS = {"phone": 390, "tablet": 820, "desktop": 1440}
 RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]
 
 
 @pytest.fixture(params=["dark", "light"])
 def scan_context(browser: Browser, request: pytest.FixtureRequest) -> Iterator[BrowserContext]:
-    context = browser.new_context(bypass_csp=True, color_scheme=request.param)
+    # Reduced motion, so the scan sees the settled page: mid-way through the
+    # reveal after Reconcile, fading text would be measured at part opacity.
+    context = browser.new_context(
+        bypass_csp=True, color_scheme=request.param, reduced_motion="reduce"
+    )
     yield context
     context.close()
 
@@ -53,6 +58,28 @@ def test_page_has_no_axe_violations(
     scan_context: BrowserContext, live_server: str, path: str, width: int
 ) -> None:
     assert violations(scan_context, f"{live_server}{path}", width) == []
+
+
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_reconciled_home_page_has_no_axe_violations(
+    scan_context: BrowserContext, live_server: str, width: int
+) -> None:
+    """The workspace after Reconcile, with a row selected and a tooltip open."""
+    page = scan_context.new_page()
+    page.set_viewport_size({"width": width, "height": 900})
+    page.goto(live_server)
+    page.get_by_role("button", name="Reconcile").click()
+    page.locator("#status-matched").wait_for()
+    page.locator("#row-bank-B02 [data-select]").click()
+    page.get_by_role("button", name="What is unexplained?").focus()
+    page.add_script_tag(path=AXE)
+    found = page.evaluate(
+        "async rules => (await axe.run(document, {runOnly: rules})).violations"
+        ".map(v => `${v.id}: ${v.help} (${v.nodes.length}) e.g. ${v.nodes[0].target}`)",
+        RULES,
+    )
+    page.close()
+    assert found == []
 
 
 def test_results_and_close_pages_have_no_axe_violations(

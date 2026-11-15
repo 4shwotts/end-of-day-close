@@ -1,0 +1,143 @@
+{# The home page's workspace: status bar, filter, the two lists side by side
+   and, once reconciled, the needs-review panel. HTMX swaps this whole
+   fragment in when Reconcile is pressed; without JavaScript the form posts
+   and the full page comes back in the same state.
+
+   Filtering and the phone's list switch are radio buttons read by CSS
+   (:has), so both work without JavaScript. app.js adds row selection, the
+   staggered reveal and focus handling after the swap. #}
+{% from "_macros.html" import icon, tip, tag_icons %}
+{% set w = workspace %}
+{% set s = w.summary %}
+<section class="workspace{{ ' is-reconciled' if w.reconciled else '' }}" aria-labelledby="status-heading" data-workspace>
+  <div class="status-bar card">
+    <h2 id="status-heading" class="visually-hidden">Status</h2>
+    {% if not w.reconciled %}
+    <p class="status-line" id="status-line" tabindex="-1">
+      <span class="status-item status-pending">{{ icon("clock") }} Not reconciled yet</span>
+      <span class="status-sep" aria-hidden="true">·</span>
+      <span class="status-item">{{ w.bank_rows|length }} bank lines</span>
+      <span class="status-sep" aria-hidden="true">·</span>
+      <span class="status-item">{{ w.ledger_rows|length }} ledger lines</span>
+    </p>
+    <form method="post" action="/reconcile" hx-post="/reconcile" hx-target="#workspace" hx-swap="innerHTML">
+      <button type="submit" class="button-large reconcile-button">{{ icon("play") }} Reconcile</button>
+      <span class="htmx-indicator status" role="status">Matching…</span>
+    </form>
+    {% else %}
+    <p class="status-line" id="status-line" tabindex="-1">
+      <span class="status-item status-good" id="status-matched">{{ icon("check-circle") }} {{ s.matched }} matched</span>
+      <span class="status-sep" aria-hidden="true">·</span>
+      <a class="status-item status-warn" id="status-review" href="#review-heading">{{ icon("alert") }} {{ s.needs_review }} to review</a>
+      <span class="status-sep" aria-hidden="true">·</span>
+      <span class="status-item {{ 'status-good' if s.balances else 'status-bad' }}">{{ icon("check" if s.balances else "not-equal") }}
+        <span class="amount" id="status-unexplained">{{ s.unexplained_difference }}</span>&nbsp;unexplained
+        {{ tip("unexplained", "unexplained", "Bank minus ledger for the lines still to review. Fees and rounding inside matches are already explained, so they are not counted.") }}</span>
+    </p>
+    <a class="button button-secondary" href="/">Start again</a>
+    {% endif %}
+  </div>
+
+  <div class="controls">
+    {% if w.reconciled %}
+    <fieldset class="pills filter">
+      <legend>Show</legend>
+      {% set options = [("all", "All", none), ("matched", "Matched", "check-circle"), ("review", "Needs review", "alert")] %}
+      {% for key, label, name in options %}
+      <input class="pill-input" type="radio" name="show" id="show-{{ key }}" value="{{ key }}"{% if loop.first %} checked{% endif %}>
+      <label class="pill" for="show-{{ key }}">{% if name %}{{ icon(name) }} {% endif %}{{ label }}</label>
+      {% endfor %}
+      <span class="pill-divider" aria-hidden="true"></span>
+      {% for key, label in w.tags_present %}
+      <input class="pill-input" type="radio" name="show" id="show-{{ key }}" value="{{ key }}">
+      <label class="pill" for="show-{{ key }}">{{ icon(tag_icons[key]) }} {{ label }}</label>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+    <fieldset class="pills side-switch">
+      <legend class="visually-hidden">List to show</legend>
+      <input class="pill-input" type="radio" name="side" id="side-bank" value="bank" checked>
+      <label class="pill" for="side-bank">Bank statement</label>
+      <input class="pill-input" type="radio" name="side" id="side-ledger" value="ledger">
+      <label class="pill" for="side-ledger">Ledger</label>
+    </fieldset>
+  </div>
+
+  {% if w.reconciled %}
+  <p class="selection" id="selection" aria-live="polite">{{ icon("link") }} <span data-selection-text>Select a tag to see its partner and why they match.</span></p>
+  {% endif %}
+
+  <div class="lists">
+    {% for side, rows, title, help in [
+      ("bank", w.bank_rows, "Bank statement", "What the bank says actually came into or left the account."),
+      ("ledger", w.ledger_rows, "Ledger", "The company's own record of what it sold, refunded or had taken back.")
+    ] %}
+    {# A plain div: the scroll box below is the landmark, named by the heading. #}
+    <div class="list list-{{ side }} card">
+      <h3 class="list-title" id="{{ side }}-heading">{{ title }} {{ tip(side, title|lower, help) }}</h3>
+      <div class="table-scroll" role="region" aria-labelledby="{{ side }}-heading" tabindex="0">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">ID</th>
+              <th scope="col" class="col-date">Date</th>
+              <th scope="col">Reference</th>
+              <th scope="col" class="col-desc">Description</th>
+              <th scope="col" class="num">Amount</th>
+              {% if w.reconciled %}<th scope="col">Outcome</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in rows %}
+            <tr id="row-{{ side }}-{{ row.entry_id }}" class="row row-{{ row.status }}{% if row.tag_key %} tag-{{ row.tag_key }}{% endif %}"{% if row.group %} data-group="{{ row.group }}" data-reason="{{ row.reason }}" data-tag="{{ row.tag }}"{% endif %}>
+              <th scope="row" class="row-id">{{ row.entry_id }}</th>
+              <td class="row-date">{{ row.value_date.strftime("%d %b") }}</td>
+              <td class="row-ref">{{ row.reference or "—" }}</td>
+              <td class="row-desc" title="{{ row.description }}">{{ row.description }}</td>
+              <td class="num amount">{{ row.amount }}</td>
+              {% if w.reconciled %}
+              <td class="outcome">
+                <button type="button" class="tag tag-{{ row.tag_key or 'review' }}" data-select aria-pressed="false">{{ icon(tag_icons[row.tag_key or "review"]) }} {{ row.tag }}<span class="visually-hidden">: select {{ row.entry_id }}</span></button>
+                {% for partner in row.partners %}
+                <a class="partner" href="#row-{{ row.partner_side }}-{{ partner }}" data-partner-side="{{ row.partner_side }}">{{ partner }}<span class="visually-hidden"> on the {{ "ledger" if row.partner_side == "ledger" else "bank statement" }}</span></a>
+                {% endfor %}
+              </td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% if w.reconciled %}
+  <section class="review-panel card" aria-labelledby="review-heading">
+    <h3 class="section-title" id="review-heading" tabindex="-1">{{ icon("alert") }} Needs review ({{ w.problems|length }})</h3>
+    {% if not w.problems %}
+    <p>{{ icon("check") }} Nothing to review: every line is matched and the books balance.</p>
+    {% else %}
+    <ul class="problems">
+      {% for problem in w.problems %}
+      {% set item = problem.item %}
+      <li class="problem" data-group="{{ problem.group }}">
+        <div class="problem-head">
+          <span class="tag tag-review">{{ icon("alert") }} {{ item.label }}</span>
+          <span class="problem-ids">{{ (item.bank_ids + item.ledger_ids)|join(" · ") }}</span>
+          <button type="button" class="link-button" data-select-group="{{ problem.group }}">Show in the lists</button>
+          <span class="problem-effect amount" data-effect="{{ problem.effect.amount }}"><span class="visually-hidden">Effect on the gap: </span>{{ problem.effect }}</span>
+        </div>
+        <p>{{ item.reason }}</p>
+        <p class="next-step">{{ icon("arrow-right") }} <span><strong>Next step:</strong> {{ item.next_step }}</span></p>
+      </li>
+      {% endfor %}
+    </ul>
+    <p class="problems-total">
+      <span>Total effect on the gap, which is the unexplained difference</span>
+      <span class="amount" id="problems-total">{{ w.problems_total }}</span>
+    </p>
+    {% endif %}
+  </section>
+  {% endif %}
+</section>

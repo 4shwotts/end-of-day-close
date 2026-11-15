@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Upload files · End-of-Day Close{% endblock %}
+{% block content %}
+<h1>Reconcile your own files</h1>
+<p class="lede">
+  Upload a bank statement and a ledger in the format below, and the engine will reconcile them.
+  Files are processed in memory and not stored. Please use fictional data only.
+</p>
+
+<form method="post" action="/upload" enctype="multipart/form-data"
+      hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#upload-results" hx-swap="innerHTML">
+  <div class="field">
+    <label for="bank_file">Bank statement (CSV)</label>
+    <input type="file" id="bank_file" name="bank_file" accept=".csv,text/csv" required>
+  </div>
+  <div class="field">
+    <label for="ledger_file">Ledger (CSV)</label>
+    <input type="file" id="ledger_file" name="ledger_file" accept=".csv,text/csv" required>
+  </div>
+  <div class="toolbar">
+    <button type="submit">Reconcile</button>
+    <span class="htmx-indicator status" role="status">Reconciling…</span>
+  </div>
+</form>
+
+<div id="upload-results" aria-live="polite">
+  {% if report is defined or error is defined %}{% include "_upload_results.html" %}{% endif %}
+</div>
+
+<h2>File format</h2>
+<p class="lede">
+  UTF-8 CSV with a header row, exactly these columns in this order. Dates are ISO 8601
+  (<code>2026-11-13</code>). Amounts are signed decimals with no currency symbol or thousands
+  separator (<code>-15.20</code>). Up to 2 MB and 20,000 rows per file.
+  Download samples: <a href="/samples/bank.csv">sample-bank.csv</a> and
+  <a href="/samples/ledger.csv">sample-ledger.csv</a>.
+</p>
+{% set bank_help = {
+  "entry_id": "Unique within the file, for example B0001",
+  "value_date": "The date the money moved",
+  "reference": "Payment reference; may be empty",
+  "counterparty": "Processor code: DIRECT, OTTERLINE, BRAMBLE, QUILLFEATHER or FERNHOLLOW",
+  "description": "Free text",
+  "amount": "Credits positive, debits negative",
+  "currency": "GBP"
+} %}
+{% set ledger_help = {
+  "entry_id": "Unique within the file, for example L0001",
+  "value_date": "The booking date",
+  "reference": "Order or invoice reference",
+  "processor": "Processor code, as for the bank file",
+  "kind": "payment, refund or chargeback",
+  "description": "Free text",
+  "amount": "Payments positive; refunds and chargebacks negative",
+  "currency": "GBP",
+  "original_amount": "Foreign-currency amount, if any; otherwise empty",
+  "original_currency": "For example EUR; otherwise empty",
+  "original_reference": "For refunds and chargebacks, the order being reversed"
+} %}
+<div class="panels">
+  <div class="table-scroll">
+    <table>
+      <caption>Bank statement columns</caption>
+      <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
+      <tbody>
+        {% for column in bank_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ bank_help[column] }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="table-scroll">
+    <table>
+      <caption>Ledger columns</caption>
+      <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
+      <tbody>
+        {% for column in ledger_columns %}<tr><th scope="row"><code>{{ column }}</code></th><td class="wrap">{{ ledger_help[column] }}</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

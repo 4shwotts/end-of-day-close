@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  {# Indicator styles off: htmx would inject an inline <style>, which the
+     Content-Security-Policy blocks. The equivalent rules are in app.css. #}
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false}'>
+  <title>{% block title %}End-of-Day Close{% endblock %}</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="/static/vendor/htmx-2.0.4.min.js" defer></script>
+  <script src="/static/game.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="/">End-of-Day Close</a>
+    <nav aria-label="Main">
+      <ul>
+        <li><a href="/">Start a day</a></li>
+        <li><a href="/arena">Algorithm arena</a></li>
+        <li><a href="/upload">Upload files</a></li>
+        <li><a href="/docs">API docs</a></li>
+      </ul>
+    </nav>
+    <p class="streak">Balanced-day streak: <strong id="streak-count">0</strong></p>
+  </header>
+  <p class="notice" role="note">
+    All companies, banks, processors, people and figures here are fictional.
+    This is a portfolio project, not real financial software.
+  </p>
+  <main id="main">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="site-footer">
+    <p>End-of-Day Close: a payment reconciliation engine with a game layer. Fictional data only.</p>
+  </footer>
+</body>
+</html>

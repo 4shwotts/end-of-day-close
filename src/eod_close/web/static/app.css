@@ -1,0 +1,513 @@
+/* End-of-Day Close: one stylesheet for every page.
+   Colours are defined once as tokens; dark mode redefines the tokens rather
+   than the rules. Text colours meet WCAG AA contrast (4.5:1) on their surface. */
+
+:root {
+  color-scheme: light;
+  --surface: #fcfcfb;
+  --surface-raised: #f1f0ed;
+  --border: #c9c8c3;
+  --text: #0b0b0b;
+  --text-secondary: #52514e;
+  --accent: #1f5fae;
+  --accent-text: #ffffff;
+  --good: #0a6b2a;
+  --bad: #a32020;
+  --notice-bg: #fff4d6;
+  --notice-text: #4a3500;
+  --focus: #1f5fae;
+  /* Chart series: validated categorical slots 1 and 2 for this surface. */
+  --series-engine: #2a78d6;
+  --series-naive: #eb6834;
+  --grid: #e3e2de;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface: #1a1a19;
+    --surface-raised: #262624;
+    --border: #4a4a46;
+    --text: #f0efec;
+    --text-secondary: #c3c2b7;
+    --accent: #8bb8f0;
+    --accent-text: #0b0b0b;
+    --good: #6fd08c;
+    --bad: #f08a8a;
+    --notice-bg: #3a3014;
+    --notice-text: #f5e3b0;
+    --focus: #8bb8f0;
+    --series-engine: #3987e5;
+    --series-naive: #d95926;
+    --grid: #33332f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface: #1a1a19;
+  --surface-raised: #262624;
+  --border: #4a4a46;
+  --text: #f0efec;
+  --text-secondary: #c3c2b7;
+  --accent: #8bb8f0;
+  --accent-text: #0b0b0b;
+  --good: #6fd08c;
+  --bad: #f08a8a;
+  --notice-bg: #3a3014;
+  --notice-text: #f5e3b0;
+  --focus: #8bb8f0;
+  --series-engine: #3987e5;
+  --series-naive: #d95926;
+  --grid: #33332f;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--accent);
+}
+
+/* A visible focus ring on every interactive element, for keyboard users. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Hidden visually but still read by screen readers. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--accent-text);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: 0.5rem;
+}
+
+.site-header,
+main,
+.site-footer,
+.notice {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 1rem;
+  padding-bottom: 0.75rem;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-header nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.streak {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.notice {
+  background: var(--notice-bg);
+  color: var(--notice-text);
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-radius: 6px;
+}
+
+main {
+  padding-top: 1rem;
+  padding-bottom: 3rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  margin: 0.5rem 0 1rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 2rem 0 0.75rem;
+}
+
+.lede {
+  color: var(--text-secondary);
+  max-width: 70ch;
+}
+
+.site-footer {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+/* Forms */
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0 0 1rem;
+}
+
+legend {
+  font-weight: 600;
+  padding: 0 0.25rem;
+}
+
+.choice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.5rem 0;
+}
+
+.choice input {
+  margin-top: 0.3rem;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.choice-hint {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+  max-width: 24rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select {
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+}
+
+.button,
+button {
+  font: inherit;
+  font-weight: 600;
+  min-height: 44px;
+  padding: 0.5rem 1.1rem;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-text);
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.button-secondary {
+  background: transparent;
+  color: var(--accent);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.status {
+  min-height: 1.5rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Tables: each sits in its own scroll box, so a wide table never makes the
+   whole page scroll sideways on a phone. */
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+caption {
+  text-align: left;
+  font-weight: 600;
+  padding: 0.75rem;
+}
+
+th,
+td {
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+thead th {
+  background: var(--surface-raised);
+  position: sticky;
+  top: 0;
+}
+
+td.num,
+th.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+td.wrap {
+  white-space: normal;
+  min-width: 18rem;
+}
+
+.group-input {
+  width: 4.5rem;
+}
+
+.panels {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Side by side only when there is room for both tables. */
+@media (min-width: 1400px) {
+  .panels {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.panel h2 {
+  margin-top: 0;
+}
+
+.panel .table-scroll {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+/* Close-the-day summary */
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.tile {
+  background: var(--surface-raised);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.tile-label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.tile-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.verdict {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.result-good {
+  color: var(--good);
+  font-weight: 600;
+}
+
+.result-bad {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+.error {
+  color: var(--bad);
+  font-weight: 600;
+}
+
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.5rem 0;
+}
+
+code {
+  background: var(--surface-raised);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+}
+
+/* Arena chart. Series colours come from validated tokens; text uses the
+   text tokens, never the series colour. */
+
+.chart {
+  width: 100%;
+  max-width: 640px;
+  height: auto;
+}
+
+.chart-grid {
+  stroke: var(--grid);
+  stroke-width: 1;
+}
+
+.chart-axis {
+  stroke: var(--text-secondary);
+  stroke-width: 1;
+}
+
+.chart-tick {
+  fill: var(--text-secondary);
+  font-size: 12px;
+}
+
+.chart-label {
+  fill: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart-line-engine {
+  stroke: var(--series-engine);
+}
+
+/* Dashed as a second cue besides colour, for print and colour-blind readers. */
+.chart-line-naive {
+  stroke: var(--series-naive);
+  stroke-dasharray: 6 4;
+}
+
+.chart-dot {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.chart-dot-engine {
+  fill: var(--series-engine);
+}
+
+.chart-dot-naive {
+  fill: var(--series-naive);
+}
+
+/* Larger invisible targets carry the tooltips, so the dots are easy to hover. */
+.chart-hit {
+  fill: transparent;
+}
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0 0 0.5rem;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.swatch {
+  display: inline-block;
+  width: 1.5rem;
+  height: 0;
+  border-top: 3px solid;
+}
+
+.swatch-engine {
+  border-color: var(--series-engine);
+}
+
+.swatch-naive {
+  border-color: var(--series-naive);
+  border-top-style: dashed;
+}
+
+.htmx-indicator {
+  display: none;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  display: inline;
+}

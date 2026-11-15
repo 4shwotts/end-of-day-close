@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}{{ case.difficulty.label }} · {{ case.business_date.strftime("%d %b %Y") }} · End-of-Day Close{% endblock %}
+{% block content %}
+<h1>{{ case.business_date.strftime("%A %d %B %Y") }}</h1>
+<p class="lede">
+  {{ case.difficulty.label }} · day {{ case.seed }} ·
+  {{ case.bank_statement|length }} bank entries, {{ case.ledger|length }} ledger entries.
+  <span>Time: <span id="timer" role="timer" hidden>0:00</span></span>
+</p>
+
+<details>
+  <summary>How to work the case</summary>
+  <ul class="lede">
+    <li><strong>Link:</strong> give entries that belong together the same group label, such as <code>1</code>. A batch payout links one bank entry to several ledger entries.</li>
+    <li><strong>Explain:</strong> choose an exception reason for anything that cannot be matched. A likely transposition is marked on both entries, which also share a group.</li>
+    <li>Processor fees: Bramblecard settles net of 1.4% + £0.20; Quillfeather pays net of 1.9% in daily batches; Otterline pays gross, usually at T+2.</li>
+  </ul>
+</details>
+
+<form id="case-form" method="post" action="/play/{{ case.difficulty.value }}/{{ case.seed }}/close">
+  <input type="hidden" name="started_at" value="{{ started_at }}">
+
+  <div class="toolbar">
+    <button type="button" id="link-selected" class="button-secondary" hidden>Link selected</button>
+    <button type="button" class="button-secondary"
+            hx-post="/play/{{ case.difficulty.value }}/{{ case.seed }}/check"
+            hx-include="#case-form" hx-target="#progress" hx-swap="innerHTML">Check progress</button>
+    <button type="submit">Close the day</button>
+  </div>
+  <p id="link-status" class="status" role="status" aria-live="polite"></p>
+  <div id="progress" class="status" aria-live="polite"></div>
+
+  <div class="panels">
+    <section class="panel" aria-labelledby="bank-heading">
+      <h2 id="bank-heading">Bank statement · {{ case.bank_statement.bank_name }}</h2>
+      <div class="table-scroll" tabindex="0" aria-labelledby="bank-heading">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden">Select</span></th>
+              <th scope="col">ID</th>
+              <th scope="col">Date</th>
+              <th scope="col">Reference</th>
+              <th scope="col">From</th>
+              <th scope="col" class="num">Amount</th>
+              <th scope="col">Group</th>
+              <th scope="col">Exception</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in case.bank_statement %}
+            <tr>
+              <td><input type="checkbox" class="link-select" value="{{ e.entry_id }}" aria-label="Select {{ e.entry_id }}"></td>
+              <th scope="row">{{ e.entry_id }}</th>
+              <td>{{ e.value_date.strftime("%d %b") }}</td>
+              <td>{{ e.reference or "(none)" }}</td>
+              <td>{{ e.counterparty }}</td>
+              <td class="num">{{ e.amount }}</td>
+              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Group for {{ e.entry_id }}"></td>
+              <td>
+                <select name="reason-{{ e.entry_id }}" aria-label="Exception reason for {{ e.entry_id }}">
+                  <option value="">None</option>
+                  {% for r in reasons if r.side is none or r.side.value == "bank" %}
+                  <option value="{{ r.value }}">{{ r.label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="ledger-heading">
+      <h2 id="ledger-heading">Ledger · {{ case.ledger.entity_name }}</h2>
+      <div class="table-scroll" tabindex="0" aria-labelledby="ledger-heading">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col"><span class="visually-hidden">Select</span></th>
+              <th scope="col">ID</th>
+              <th scope="col">Booked</th>
+              <th scope="col">Reference</th>
+              <th scope="col">Processor</th>
+              <th scope="col">Kind</th>
+              <th scope="col" class="num">Amount</th>
+              <th scope="col">Group</th>
+              <th scope="col">Exception</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in case.ledger %}
+            <tr>
+              <td><input type="checkbox" class="link-select" value="{{ e.entry_id }}" aria-label="Select {{ e.entry_id }}"></td>
+              <th scope="row">{{ e.entry_id }}</th>
+              <td>{{ e.value_date.strftime("%d %b") }}</td>
+              <td>{{ e.reference }}{% if e.original_reference %} <span class="choice-hint">for {{ e.original_reference }}</span>{% endif %}</td>
+              <td>{{ e.processor_code }}</td>
+              <td>{{ e.kind.value }}</td>
+              <td class="num">{{ e.amount }}{% if e.original_amount %} <span class="choice-hint">({{ e.original_amount }})</span>{% endif %}</td>
+              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Group for {{ e.entry_id }}"></td>
+              <td>
+                <select name="reason-{{ e.entry_id }}" aria-label="Exception reason for {{ e.entry_id }}">
+                  <option value="">None</option>
+                  {% for r in reasons if r.side is none or r.side.value == "ledger" %}
+                  <option value="{{ r.value }}">{{ r.label }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <div class="toolbar">
+    <button type="submit">Close the day</button>
+  </div>
+</form>
+{% endblock %}

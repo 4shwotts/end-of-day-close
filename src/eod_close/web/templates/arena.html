@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Algorithm arena · End-of-Day Close{% endblock %}
+{% block content %}
+<h1>Algorithm arena</h1>
+<p class="lede">
+  The naive approach compares every bank entry with every ledger entry, which is O(n²). The
+  engine indexes entries in hash maps and sorted lists first, so most lookups are constant or
+  logarithmic time. Pick some sizes and race them on synthetic days.
+</p>
+
+<form method="post" action="/arena/run" hx-post="/arena/run" hx-target="#arena-results" hx-swap="innerHTML">
+  <fieldset>
+    <legend>Entries per side</legend>
+    {% for size in sizes %}
+    <div class="choice">
+      <input type="checkbox" id="size-{{ size }}" name="size" value="{{ size }}" checked>
+      <label for="size-{{ size }}">{{ "{:,}".format(size) }}</label>
+    </div>
+    {% endfor %}
+  </fieldset>
+  <div class="toolbar">
+    <button type="submit">Run the race</button>
+    <span class="htmx-indicator status" role="status">Timing both approaches…</span>
+  </div>
+  <p class="choice-hint">Above {{ "{:,}".format(naive_limit) }} entries the naive time is measured on a sample and scaled up, and marked as estimated.</p>
+</form>
+
+<div id="arena-results" aria-live="polite">
+  {% if rows is defined or error is defined %}{% include "_arena_results.html" %}{% endif %}
+</div>
+{% endblock %}

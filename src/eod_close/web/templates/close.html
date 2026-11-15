@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Day closed · End-of-Day Close{% endblock %}
+{% block content %}
+<section id="close-summary" data-case-id="{{ case.case_id }}" data-balanced="{{ 'true' if score.balanced else 'false' }}" aria-labelledby="summary-heading">
+  <h1 id="summary-heading">{{ case.business_date.strftime("%A %d %B %Y") }}: day {{ "closed" if score.balanced else "not balanced" }}</h1>
+  <p class="verdict">{{ score.verdict }}</p>
+  <div class="tiles">
+    <div class="tile"><span class="tile-label">Your accuracy</span><span class="tile-value">{{ score.accuracy|percent }}</span></div>
+    <div class="tile"><span class="tile-label">Engine accuracy</span><span class="tile-value">{{ score.engine_accuracy|percent }}</span></div>
+    <div class="tile"><span class="tile-label">Time</span><span class="tile-value">{{ score.elapsed_seconds|duration }}</span></div>
+    <div class="tile">
+      <span class="tile-label">Balanced</span>
+      <span class="tile-value {{ 'result-good' if score.balanced else 'result-bad' }}">{{ "✓ Yes" if score.balanced else "✗ No" }}</span>
+    </div>
+  </div>
+  <p>
+    You got {{ score.player_correct }} of {{ score.planted }} decisions right
+    ({{ score.player_claimed }} made).
+    {% if score.unassigned_ids %}{{ score.unassigned_ids|length }} {{ "entry was" if score.unassigned_ids|length == 1 else "entries were" }} left unassigned.{% endif %}
+    {% if score.one_sided_groups %}{{ score.one_sided_groups }} {{ "group had" if score.one_sided_groups == 1 else "groups had" }} entries on one side only.{% endif %}
+  </p>
+  <div class="toolbar">
+    <a class="button" href="/play?difficulty={{ case.difficulty.value }}">Next day</a>
+    <a class="button button-secondary" href="/play/{{ case.difficulty.value }}/{{ case.seed }}">Try this day again</a>
+  </div>
+</section>
+
+<h2>Every discrepancy, explained</h2>
+<div class="table-scroll">
+  <table>
+    <caption>{{ score.items|length }} planted items</caption>
+    <thead>
+      <tr>
+        <th scope="col">Problem</th>
+        <th scope="col">Entries</th>
+        <th scope="col">Explanation</th>
+        <th scope="col">You</th>
+        <th scope="col">Engine</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in score.items|sort(attribute="player_correct") %}
+      <tr>
+        <th scope="row">{{ item.kind.label }}</th>
+        <td>{{ (item.bank_ids + item.ledger_ids)|join(", ") }}</td>
+        <td class="wrap">{{ item.explanation }}</td>
+        <td class="{{ 'result-good' if item.player_correct else 'result-bad' }}">{{ "✓ Right" if item.player_correct else "✗ Missed" }}</td>
+        <td class="{{ 'result-good' if item.engine_correct else 'result-bad' }}">{{ "✓ Right" if item.engine_correct else "✗ Missed" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>The engine's solution</h2>
+<details>
+  <summary>{{ report.matches|length }} matches and {{ report.exceptions|length }} exceptions</summary>
+  {% include "_report_tables.html" %}
+</details>
+{% endblock %}

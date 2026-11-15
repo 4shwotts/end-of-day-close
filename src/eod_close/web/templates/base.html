@@ -15,12 +15,18 @@
   <a class="skip-link" href="#main">Skip to content</a>
   <header class="site-header">
     <a class="brand" href="/">End-of-Day Close</a>
+    {# Training also covers the pages of a day in progress (/play/...). #}
+    {% set path = request.url.path %}
+    {% set sections = [
+      ("/", "Reconcile", path == "/" or path.startswith("/sample")),
+      ("/training", "Training mode", path.startswith("/training") or path.startswith("/play")),
+      ("/arena", "Algorithm arena", path.startswith("/arena")),
+    ] %}
     <nav aria-label="Main">
       <ul>
-        <li><a href="/">Start a day</a></li>
-        <li><a href="/arena">Algorithm arena</a></li>
-        <li><a href="/upload">Upload files</a></li>
-        <li><a href="/docs">API docs</a></li>
+        {% for href, name, current in sections %}
+        <li><a href="{{ href }}"{% if current %} aria-current="page"{% endif %}>{{ name }}</a></li>
+        {% endfor %}
       </ul>
     </nav>
     <p class="streak">Balanced-day streak: <strong id="streak-count">0</strong></p>
@@ -33,7 +39,7 @@
     {% block content %}{% endblock %}
   </main>
   <footer class="site-footer">
-    <p>End-of-Day Close: a payment reconciliation engine with a game layer. Fictional data only.</p>
+    <p>End-of-Day Close: a payment reconciliation tool for operations analysts. Fictional data only. <a href="/docs">API documentation</a></p>
   </footer>
 </body>
 </html>

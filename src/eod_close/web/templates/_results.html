@@ -1,0 +1,109 @@
+{# The reconcile results, shared by the upload form and the sample day.
+   Problems come first because they are what an analyst acts on; the
+   matches are collapsed by type so a long day stays readable. Long groups
+   are capped on screen, and the CSV report always lists everything. #}
+{% if error is defined %}
+<p class="error" role="alert">{{ error }}</p>
+{% else %}
+{% set s = view.summary %}
+{% set limit = 200 %}
+{# A busy day starts with its problem types collapsed, so the list of types
+   and counts reads as an index; a quiet day shows every problem at once. #}
+{% set open_review = s.needs_review <= 12 %}
+<section class="results" aria-labelledby="results-heading">
+  <h2 id="results-heading">Results</h2>
+
+  <div class="tiles" id="summary">
+    <div class="tile">
+      <span class="tile-label">Matched</span>
+      <span class="tile-value">{{ "{:,}".format(s.matched) }}</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Needs review</span>
+      <span class="tile-value {{ 'result-good' if s.needs_review == 0 else '' }}">{{ "{:,}".format(s.needs_review) }}</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Books balance</span>
+      <span class="tile-value {{ 'result-good' if s.balances else 'result-bad' }}">{{ "✓ Yes" if s.balances else "✗ Not yet" }}</span>
+    </div>
+    <div class="tile">
+      <span class="tile-label">Unexplained difference</span>
+      <span class="tile-value">{{ s.unexplained_difference }}</span>
+    </div>
+  </div>
+
+  <p class="lede">
+    The bank shows {{ s.bank_total }} and the ledger {{ s.ledger_total }}, a difference of
+    {{ s.total_difference }}. Matches such as processor fees and currency rounding explain
+    {{ s.explained_difference }} of it.
+    {% if s.balances %}
+    Nothing else is left: the books balance.
+    {% else %}
+    The remaining {{ s.unexplained_difference }} comes from the {{ s.needs_review }}
+    {{ "item" if s.needs_review == 1 else "items" }} below, which need a person to check.
+    {% endif %}
+  </p>
+
+  <div class="toolbar">
+    <a class="button button-secondary" href="{{ csv_href }}" download="{{ csv_name }}">Download the report (CSV)</a>
+  </div>
+
+  <h3 id="review-heading">Needs review ({{ "{:,}".format(s.needs_review) }})</h3>
+  {% if view.review and not open_review %}<p class="choice-hint">Open a type to see each problem and what to do about it. The largest amounts are listed first.</p>{% endif %}
+  {% if not view.review %}
+  <p>Nothing needs review. Every entry on both sides is matched.</p>
+  {% endif %}
+  {% for label, items in view.review_by_label() %}
+  <details class="group"{% if open_review %} open{% endif %}>
+    <summary>{{ label }} ({{ items|length }})</summary>
+    <ul class="review-list">
+      {% for item in items[:limit] %}
+      <li class="review-item">
+        <p class="review-entries">
+          {% if item.bank_ids %}<span>Bank {{ item.bank_ids|join(", ") }}{% if item.bank_amount is not none %}: {{ item.bank_amount }}{% endif %}</span>{% endif %}
+          {% if item.ledger_ids %}<span>Ledger {{ item.ledger_ids|join(", ") }}{% if item.ledger_amount is not none %}: {{ item.ledger_amount }}{% endif %}</span>{% endif %}
+        </p>
+        <p>{{ item.reason }}</p>
+        <p class="next-step"><strong>Next step:</strong> {{ item.next_step }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% if items|length > limit %}<p class="choice-hint">Showing {{ limit }} of {{ items|length }}; the CSV report lists them all.</p>{% endif %}
+  </details>
+  {% endfor %}
+
+  <h3 id="matched-heading">Matched ({{ "{:,}".format(s.matched) }})</h3>
+  <p class="choice-hint">Open a type to see each match and why the engine paired the entries.</p>
+  {% for label, rows in view.matches_by_label() %}
+  <details class="group">
+    <summary>{{ label }} ({{ rows|length }})</summary>
+    <div class="table-scroll">
+      <table>
+        <caption class="visually-hidden">{{ label }} matches</caption>
+        <thead>
+          <tr>
+            <th scope="col">Bank</th>
+            <th scope="col">Ledger</th>
+            <th scope="col" class="num">Bank amount</th>
+            <th scope="col" class="num">Ledger amount</th>
+            <th scope="col">Why they match</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in rows[:limit] %}
+          <tr>
+            <th scope="row">{{ row.bank_ids|join(", ") }}</th>
+            <td class="wrap-ids">{{ row.ledger_ids|join(", ") }}</td>
+            <td class="num">{{ row.bank_amount }}</td>
+            <td class="num">{{ row.ledger_amount }}</td>
+            <td class="wrap">{{ row.reason }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if rows|length > limit %}<p class="choice-hint">Showing {{ limit }} of {{ rows|length }}; the CSV report lists them all.</p>{% endif %}
+  </details>
+  {% endfor %}
+</section>
+{% endif %}

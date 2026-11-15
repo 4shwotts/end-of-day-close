@@ -1,4 +1,8 @@
-"""The server-rendered game: start a day, work it, close it, plus the arena and upload.
+"""The server-rendered pages: reconcile, training mode and the algorithm arena.
+
+Reconcile is the home page: upload two files, or open a generated sample
+day, and see every match explained and everything that needs review.
+Training mode is the game: work a day by hand and compare with the engine.
 
 Pages are Jinja templates. HTMX swaps in partial responses for the progress
 check, the arena results and the upload results; every form also works as a
@@ -7,11 +11,13 @@ plain form post without JavaScript.
 
 from __future__ import annotations
 
+import base64
 import contextlib
 import io
 import secrets
 import time
 from pathlib import Path
+from types import MappingProxyType
 from typing import Annotated, Final
 
 from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
@@ -19,12 +25,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from eod_close.csv_format import BANK_COLUMNS, LEDGER_COLUMNS, write_bank_csv, write_ledger_csv
-from eod_close.domain.results import ExceptionReason
+from eod_close.domain.results import ExceptionReason, ReconciliationReport
 from eod_close.evaluation.benchmark import NAIVE_FULL_RUN_LIMIT, run_benchmark
 from eod_close.game import score_answers
 from eod_close.generator import Difficulty
 from eod_close.generator.answer_key import DiscrepancyKind
 from eod_close.web.chart import build_timing_chart
+from eod_close.web.report_view import build_report_view, report_csv
 from eod_close.web.schemas import MAX_SEED
 from eod_close.web.services import (
     MAX_UPLOAD_BYTES,
@@ -65,18 +72,93 @@ router = APIRouter(include_in_schema=False)
 # instance to time a naive run on a million rows.
 ARENA_SIZES: Final = (100, 250, 500, 1_000, 2_500, 5_000)
 
-# The seed and difficulty of the sample files offered on the upload page.
+# The seed and difficulty of the example files offered beside the upload form.
 SAMPLE_SEED: Final = 1
 SAMPLE_DIFFICULTY: Final = Difficulty.ANALYST
+
+# "Try a sample day" uses the hardest level, because it is the only one that
+# contains every kind of problem, including possible typos.
+SAMPLE_DAY_DIFFICULTY: Final = Difficulty.HEAD_OF_OPS
+
+# Read-only on purpose: TemplateResponse adds the current request to the
+# context it is given, so passing this mapping itself would keep the first
+# visitor's request and reuse it for every later page (BUG-005). Pages pass
+# a fresh copy instead, and a mutation attempt fails loudly.
+_FORMAT_CONTEXT: Final = MappingProxyType(
+    {"bank_columns": BANK_COLUMNS, "ledger_columns": LEDGER_COLUMNS}
+)
 
 
 def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
+def _results_context(report: ReconciliationReport, csv_name: str) -> dict[str, object]:
+    """Build the template values shared by every results page.
+
+    The CSV report travels inside the page as a ``data:`` link. Uploaded
+    files are never stored, so there is nothing a later download request
+    could fetch; embedding the report also keeps the upload form a single
+    form that works with or without JavaScript.
+
+    Args:
+        report: The engine's report.
+        csv_name: The file name the browser should save the report as.
+
+    Returns:
+        The report view, the report's download link and its file name.
+    """
+    view = build_report_view(report)
+    encoded = base64.b64encode(report_csv(view).encode("utf-8")).decode("ascii")
+    return {
+        "view": view,
+        "csv_href": f"data:text/csv;charset=utf-8;base64,{encoded}",
+        "csv_name": csv_name,
+    }
+
+
 @router.get("/", response_class=HTMLResponse)
-def start(request: Request) -> HTMLResponse:
-    """The start page: choose a difficulty."""
+def home(request: Request) -> HTMLResponse:
+    """Reconcile, the home page: upload two files or try a sample day."""
+    return templates.TemplateResponse(request, "home.html", dict(_FORMAT_CONTEXT))
+
+
+@router.get("/sample")
+def new_sample_day() -> RedirectResponse:
+    """Pick a random sample day and redirect to its own, shareable address."""
+    return RedirectResponse(f"/sample/{secrets.randbelow(MAX_SEED + 1)}", status_code=303)
+
+
+@router.get("/sample/{seed}", response_class=HTMLResponse)
+def sample_day(request: Request, seed: int) -> HTMLResponse:
+    """Reconcile a generated day and show the results."""
+    _check_seed(seed)
+    case, report = load_case(SAMPLE_DAY_DIFFICULTY, seed)
+    context = _results_context(report, f"sample-day-{seed}-report.csv")
+    context.update(case=case)
+    return templates.TemplateResponse(request, "sample.html", context)
+
+
+@router.get("/sample/{seed}/{name}.csv")
+def sample_day_file(seed: int, name: str) -> Response:
+    """Download a sample day's bank file, ledger file or report."""
+    _check_seed(seed)
+    case, report = load_case(SAMPLE_DAY_DIFFICULTY, seed)
+    buffer = io.StringIO()
+    if name == "bank":
+        write_bank_csv(case.bank_statement, buffer)
+    elif name == "ledger":
+        write_ledger_csv(case.ledger, buffer)
+    elif name == "report":
+        buffer.write(report_csv(build_report_view(report)))
+    else:
+        raise HTTPException(status_code=404)
+    return _csv_response(buffer.getvalue(), f"sample-day-{seed}-{name}.csv")
+
+
+@router.get("/training", response_class=HTMLResponse)
+def training(request: Request) -> HTMLResponse:
+    """Training mode: choose a level and start a day."""
     return templates.TemplateResponse(request, "start.html")
 
 
@@ -166,14 +248,10 @@ async def arena_run(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, template, context)
 
 
-@router.get("/upload", response_class=HTMLResponse)
-def upload_page(request: Request) -> HTMLResponse:
-    """The upload page, with the file format documented."""
-    return templates.TemplateResponse(
-        request,
-        "upload.html",
-        {"bank_columns": BANK_COLUMNS, "ledger_columns": LEDGER_COLUMNS},
-    )
+@router.get("/upload")
+def upload_page() -> RedirectResponse:
+    """The upload form now lives on the home page; old links still work."""
+    return RedirectResponse("/#upload", status_code=301)
 
 
 @router.post("/upload", response_class=HTMLResponse)
@@ -182,18 +260,18 @@ async def upload(
     bank_file: Annotated[UploadFile, File()],
     ledger_file: Annotated[UploadFile, File()],
 ) -> HTMLResponse:
-    """Reconcile two uploaded files and show the report."""
-    context: dict[str, object] = {"bank_columns": BANK_COLUMNS, "ledger_columns": LEDGER_COLUMNS}
+    """Reconcile two uploaded files and show the results."""
+    context: dict[str, object] = dict(_FORMAT_CONTEXT)
     try:
-        statement, ledger, report = reconcile_uploads(
+        _, _, report = reconcile_uploads(
             await bank_file.read(MAX_UPLOAD_BYTES + 1), await ledger_file.read(MAX_UPLOAD_BYTES + 1)
         )
-        context.update(report=report, bank_count=len(statement), ledger_count=len(ledger))
+        context.update(_results_context(report, "reconciliation-report.csv"))
         status = 200
     except UploadError as exc:
         context["error"] = str(exc)
         status = 422
-    template = "_upload_results.html" if _is_htmx(request) else "upload.html"
+    template = "_results.html" if _is_htmx(request) else "home.html"
     # HTMX does not swap error responses by default, so its partial is sent
     # with 200 and the error is shown in the page instead.
     return templates.TemplateResponse(
@@ -203,7 +281,7 @@ async def upload(
 
 @router.get("/samples/{name}.csv")
 def sample_file(name: str) -> Response:
-    """Download a sample bank or ledger file in the upload format."""
+    """Download an example bank or ledger file in the upload format."""
     case, _ = load_case(SAMPLE_DIFFICULTY, SAMPLE_SEED)
     buffer = io.StringIO()
     if name == "bank":
@@ -212,10 +290,14 @@ def sample_file(name: str) -> Response:
         write_ledger_csv(case.ledger, buffer)
     else:
         raise HTTPException(status_code=404)
+    return _csv_response(buffer.getvalue(), f"sample-{name}.csv")
+
+
+def _csv_response(text: str, filename: str) -> Response:
     return Response(
-        buffer.getvalue(),
+        text,
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="sample-{name}.csv"'},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

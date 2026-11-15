@@ -41,3 +41,13 @@ Real defects found by the test suite, with the test that now guards each one.
 - **Root cause:** browsers send an empty form field as `seed=` (an empty string) rather than leaving it out. The `/play` route declared `seed` as an optional integer, so FastAPI tried to parse `""` as a number and rejected the request. The API tests only ever sent a valid seed or none at all, so they did not cover the empty case.
 - **Fix:** `/play` takes `seed` as text. Empty means a random day; digits within range are used; anything else is rejected with a clear message.
 - **Guarding tests:** `tests/api/test_pages.py::test_blank_day_number_starts_a_random_day`, `tests/api/test_pages.py::test_invalid_day_number_is_rejected` and `tests/e2e/test_game_flow.py::test_start_page_works_from_the_keyboard`.
+
+## BUG-005: the home page kept the first visitor's request and reused it
+
+- **Found by:** the Playwright tests, when run after the API tests in the same session, while the reconcile tool was being made the home page. It never reached a release.
+- **Steps to reproduce:** request `/` once through FastAPI's test client, then request `/` from a real browser against a running server.
+- **Expected result:** the home page renders for the browser's own request.
+- **Actual result:** the server failed with `Expected ASGI message 'http.response.start', but got 'http.response.debug'`.
+- **Root cause:** the home page passed a module-level dictionary of the file-format columns straight to `TemplateResponse`, which adds the current request to the context it is given. The first request was stored in that shared dictionary, and every later home page was rendered with it. The crash came from the test client's request carrying a debug extension a real server does not support; in production the same fault would have rendered every visitor's page with the first visitor's request.
+- **Fix:** the shared columns are a read-only mapping, and each page passes `TemplateResponse` a fresh copy.
+- **Guarding tests:** `tests/api/test_pages.py::test_home_page_does_not_keep_an_earlier_request`, and the browser tests in `tests/e2e/test_game_flow.py` running after the API tests.

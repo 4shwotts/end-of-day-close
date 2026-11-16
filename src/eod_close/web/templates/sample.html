@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Sample day · End-of-Day Close{% endblock %}
+{% block title %}A harder day · End-of-Day Close{% endblock %}
 {% block content %}
-<h1>Sample day: {{ case.business_date.strftime("%A %d %B %Y") }}</h1>
+<h1>A harder day: {{ case.business_date.strftime("%A %d %B") }}</h1>
 <p class="lede">
-  A generated day for Copperkettle Homewares Ltd: {{ case.bank_statement|length }} entries on
-  the bank statement from Thistledown Bank and {{ case.ledger|length }} in the company's ledger,
-  with the kinds of problems a real day has. The tool has matched them below.
+  {{ case.bank_statement|length }} bank payments and {{ case.ledger|length }} in your records,
+  with every kind of problem a real day has.
 </p>
 <div class="toolbar">
+  <a class="button button-secondary" href="/sample">Try another day</a>
   <a class="button button-secondary" href="/sample/{{ case.seed }}/bank.csv">Download the bank file</a>
-  <a class="button button-secondary" href="/sample/{{ case.seed }}/ledger.csv">Download the ledger file</a>
-  <a class="button button-secondary" href="/sample">Try another sample day</a>
+  <a class="button button-secondary" href="/sample/{{ case.seed }}/ledger.csv">Download your records file</a>
 </div>
 
 {% include "_results.html" %}

@@ -70,7 +70,7 @@
     button.addEventListener("click", function () {
       var picked = Array.prototype.slice.call(document.querySelectorAll(".link-select:checked"));
       if (picked.length < 2) {
-        status.textContent = "Select at least two entries to link.";
+        status.textContent = "Select at least two lines to link.";
         return;
       }
       var group = String(nextGroupNumber());
@@ -82,7 +82,7 @@
         box.checked = false;
         return box.value;
       });
-      status.textContent = "Linked " + ids.join(", ") + " as group " + group + ".";
+      status.textContent = "Linked " + ids.join(", ") + " as pair " + group + ".";
     });
   }
 

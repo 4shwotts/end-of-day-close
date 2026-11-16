@@ -9,6 +9,7 @@ to zero and back without losing anyone's game.
 from __future__ import annotations
 
 import io
+import time
 from collections.abc import Mapping
 from functools import lru_cache
 from typing import Final
@@ -32,7 +33,31 @@ class UploadError(ValueError):
     """Raised when an uploaded file is too large or not in the documented format."""
 
 
+def timed_reconcile(statement: BankStatement, ledger: Ledger) -> tuple[ReconciliationReport, float]:
+    """Reconcile, and measure how long the engine took.
+
+    Only the engine is timed, not reading the files, so the figure the pages
+    show is the matching itself.
+
+    Args:
+        statement: The bank statement.
+        ledger: The ledger.
+
+    Returns:
+        The engine's report and its running time in seconds.
+    """
+    started = time.perf_counter()
+    report = _ENGINE.reconcile(statement, ledger)
+    return report, time.perf_counter() - started
+
+
 @lru_cache(maxsize=64)
+def _solved_case(difficulty: Difficulty, seed: int) -> tuple[Case, ReconciliationReport, float]:
+    case = CaseGenerator().generate(seed, difficulty)
+    report, seconds = timed_reconcile(case.bank_statement, case.ledger)
+    return case, report, seconds
+
+
 def load_case(difficulty: Difficulty, seed: int) -> tuple[Case, ReconciliationReport]:
     """Generate a case and the engine's report for it.
 
@@ -47,8 +72,13 @@ def load_case(difficulty: Difficulty, seed: int) -> tuple[Case, ReconciliationRe
     Returns:
         The case and the engine's report on it.
     """
-    case = CaseGenerator().generate(seed, difficulty)
-    return case, _ENGINE.reconcile(case.bank_statement, case.ledger)
+    case, report, _ = _solved_case(difficulty, seed)
+    return case, report
+
+
+def engine_seconds(difficulty: Difficulty, seed: int) -> float:
+    """How long the engine took on a case, measured on the run that produced its report."""
+    return _solved_case(difficulty, seed)[2]
 
 
 def reconcile_uploads(
@@ -67,6 +97,24 @@ def reconcile_uploads(
         UploadError: If a file is too large, not UTF-8 or not in the
             documented format, with a message fit to show the user.
     """
+    statement, ledger = parse_uploads(bank_csv, ledger_csv)
+    return statement, ledger, _ENGINE.reconcile(statement, ledger)
+
+
+def parse_uploads(bank_csv: bytes, ledger_csv: bytes) -> tuple[BankStatement, Ledger]:
+    """Parse and check two uploaded CSV files without reconciling them.
+
+    Args:
+        bank_csv: The raw bank file.
+        ledger_csv: The raw ledger file.
+
+    Returns:
+        The parsed statement and the parsed ledger.
+
+    Raises:
+        UploadError: If a file is too large, not UTF-8 or not in the
+            documented format, with a message fit to show the user.
+    """
     try:
         statement = read_bank_csv(_text(bank_csv, "bank"), bank_name="Uploaded bank statement")
         ledger = read_ledger_csv(_text(ledger_csv, "ledger"), entity_name="Uploaded ledger")
@@ -77,7 +125,7 @@ def reconcile_uploads(
             raise UploadError(
                 f"The {name} file has {count:,} rows; the limit is {MAX_UPLOAD_ROWS:,}."
             )
-    return statement, ledger, _ENGINE.reconcile(statement, ledger)
+    return statement, ledger
 
 
 def _text(raw: bytes, name: str) -> io.StringIO:

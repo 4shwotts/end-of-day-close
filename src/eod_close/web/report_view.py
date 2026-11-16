@@ -30,25 +30,13 @@ from eod_close.domain.results import (
     MatchRule,
     ReconciliationReport,
 )
+from eod_close.web.wording import MATCH_NAMES, PROBLEM_NAMES
 
-MATCH_LABELS: Final = {
-    MatchRule.EXACT: "Exact",
-    MatchRule.FEE_ADJUSTED: "Fee-adjusted",
-    MatchRule.DATE_WINDOW: "Delayed settlement",
-    MatchRule.CURRENCY_TOLERANCE: "Currency rounding",
-    MatchRule.BATCH: "Batch payout",
-    MatchRule.REFUND_LINK: "Refund",
-    MatchRule.CHARGEBACK_LINK: "Chargeback",
-}
-"""Plain names for each kind of match, in the order the page lists them."""
+MATCH_LABELS: Final = MATCH_NAMES
+"""Each match type's plain name, in display order."""
 
-REVIEW_LABELS: Final = {
-    ExceptionReason.LIKELY_TRANSPOSITION: "Possible typo",
-    ExceptionReason.DUPLICATE: "Duplicate",
-    ExceptionReason.MISSING_FROM_LEDGER: "Not in the ledger",
-    ExceptionReason.MISSING_FROM_BANK: "Not on the bank statement",
-}
-"""Plain names for each kind of problem, in the order the page lists them."""
+REVIEW_LABELS: Final = PROBLEM_NAMES
+"""Each problem type's plain name, in display order."""
 
 REPORT_COLUMNS: Final = (
     "status",
@@ -308,44 +296,39 @@ def _match_reason(found: Match, processors: Mapping[str, PaymentProcessor]) -> s
     gap = -found.difference
     delay = business_days_between(ledger.value_date, bank.value_date)
 
+    brand = _brand(name)
+
     match found.rule:
         case MatchRule.EXACT:
-            return "Same reference, amount and date on both sides."
+            return "Same reference, amount and date."
         case MatchRule.FEE_ADJUSTED:
             rule = processor.fee_rule.describe() if processor else "its fee"
-            if delay > 0:
-                return (
-                    f"Arrived {_days(delay)} after booking and {gap} lower, matching the fee "
-                    f"{name} charges ({rule})."
-                )
-            return f"{gap} lower than booked, matching the fee {name} charges ({rule})."
+            late = f"{_days(delay)} late and " if delay > 0 else ""
+            return f"{late.capitalize()}{gap} less: {brand}'s fee ({rule})."
         case MatchRule.DATE_WINDOW:
             if not bank.reference:
                 return (
-                    f"Same amount from {name}, {_days(delay)} after booking. The bank line "
-                    "had no reference, so it was matched on amount, sender and date."
+                    f"Same amount from {brand}, {_days(delay)} late. The bank line had no "
+                    "reference, so it was matched on amount, sender and date."
                 )
             return (
-                f"Same reference and amount; arrived {_days(delay)} after it was booked "
+                f"Same reference and amount, {_days(delay)} late "
                 f"({_short(ledger.value_date)} to {_short(bank.value_date)})."
             )
         case MatchRule.CURRENCY_TOLERANCE:
             original = f"A {ledger.original_amount} sale" if ledger.original_amount else "A sale"
-            return (
-                f"{original} converted to pounds; the two sides differ by {abs(found.difference)} "
-                "because of rounding in the conversion."
-            )
+            return f"{original} changed into pounds: {abs(found.difference)} apart from rounding."
         case MatchRule.BATCH:
             return (
-                f"One {name} payout covering {len(found.ledger_entries)} sales booked "
+                f"One {brand} payment for {len(found.ledger_entries)} sales "
                 f"{_date_span(e.value_date for e in found.ledger_entries)}, less {gap} in fees."
             )
         case MatchRule.REFUND_LINK:
-            return f"Refund of order {ledger.original_reference}, paid back to the customer."
+            return f"Refund of order {ledger.original_reference}."
         case MatchRule.CHARGEBACK_LINK:
             return (
-                f"The customer disputed order {ledger.original_reference} (a chargeback), so "
-                f"{name} took the payment back, plus a {gap} chargeback fee."
+                f"The customer disputed order {ledger.original_reference}, so {brand} took the "
+                f"money back, plus a {gap} fee."
             )
     raise AssertionError(f"Unhandled match rule: {found.rule}")  # pragma: no cover
 
@@ -384,7 +367,6 @@ def _typo(first: ExceptionItem, second: ExceptionItem) -> ReviewItem:
         (first, second) if isinstance(first.entry, BankEntry) else (second, first)
     )
     bank, ledger = bank_item.entry, ledger_item.entry
-    gap = abs(bank.amount - ledger.amount)
     return ReviewItem(
         reason_code=ExceptionReason.LIKELY_TRANSPOSITION,
         bank_ids=(bank.entry_id,),
@@ -392,13 +374,11 @@ def _typo(first: ExceptionItem, second: ExceptionItem) -> ReviewItem:
         bank_amount=bank.amount,
         ledger_amount=ledger.amount,
         reason=(
-            f"Same reference, but the ledger shows {ledger.amount} and the bank shows "
-            f"{bank.amount}. The difference of {gap} is a multiple of 9, which is what "
-            "swapping two digits produces."
+            f"Same reference, but {bank.amount} at the bank and {ledger.amount} in your "
+            "records: two digits look swapped."
         ),
         next_step=(
-            f"Check the original invoice. If the bank is right, correct the ledger from "
-            f"{ledger.amount} to {bank.amount}; the two will then match exactly."
+            f"Check the invoice. If the bank is right, change your records to {bank.amount}."
         ),
     )
 
@@ -426,40 +406,34 @@ def _explain(item: ExceptionItem, processors: Mapping[str, PaymentProcessor]) ->
     if isinstance(entry, BankEntry):
         if item.reason is ExceptionReason.DUPLICATE:
             return (
-                f"Appears twice on the bank statement: same reference, amount and date as "
-                f"{related}.",
-                "Ask the bank whether the payment really went through twice. If it did, "
-                "ask for the second one to be reversed.",
+                f"On the bank statement twice (the same as {related}).",
+                "Ask the bank whether it really went through twice.",
             )
         outgoing = entry.amount.is_negative()
         other_party = _other_party(entry.counterparty, processors, outgoing=outgoing)
         if outgoing:
             return (
-                f"{abs(entry.amount)} left the account {other_party} ({reference}), but "
-                "nothing in the ledger explains it.",
-                "Find out what the payment was for and book it in the ledger. If nobody "
-                "authorised it, dispute it with the bank.",
+                f"{abs(entry.amount)} left {other_party} ({reference}), but your records do "
+                "not show it.",
+                "Find out what it was for and record it, or dispute it with the bank.",
             )
         return (
-            f"{entry.amount} arrived {other_party} ({reference}), but nothing in the ledger "
-            "explains it.",
-            "Find out what the money is for and book it in the ledger. If it is not yours, "
-            "return it.",
+            f"{entry.amount} came in {other_party} ({reference}), but your records do not show it.",
+            "Find out what it is for and record it. If it is not yours, send it back.",
         )
 
     ledger: LedgerEntry = entry
     if item.reason is ExceptionReason.DUPLICATE:
         return (
-            f"Booked twice in the ledger: same reference, amount and date as {related}.",
-            f"Reverse the duplicate ledger entry {ledger.entry_id}.",
+            f"Recorded twice (the same as {related}).",
+            f"Delete the extra entry, {ledger.entry_id}.",
         )
     processor = processors.get(ledger.processor_code)
-    who = processor.name if processor and processor.code != "DIRECT" else "the customer"
+    who = _brand(processor.name) if processor and processor.code != "DIRECT" else "the customer"
     return (
-        f"{ledger.amount} booked on {_short(ledger.value_date)} ({reference}) is not on the "
-        "bank statement.",
-        f"Check with {who} whether it has been paid. If it is still on its way it will "
-        "match on a later day; if not, chase it.",
+        f"{ledger.amount} recorded on {_short(ledger.value_date)} ({reference}) has not reached "
+        "the bank.",
+        f"Check with {who} that it was paid. It may still arrive on a later day.",
     )
 
 
@@ -479,9 +453,15 @@ def _other_party(code: str, processors: Mapping[str, PaymentProcessor], *, outgo
     # "from DIRECT" reads as a code, not English; a direct transfer has no
     # processor in between, so it is described by how the money moved.
     if code == "DIRECT":
-        return "by direct bank transfer"
+        return "by bank transfer"
     processor = processors.get(code)
-    return f"{'to' if outgoing else 'from'} {processor.name if processor else code}"
+    return f"{'to' if outgoing else 'from'} {_brand(processor.name) if processor else code}"
+
+
+def _brand(name: str) -> str:
+    # "Bramblecard Merchant Services" reads as "Bramblecard" in a sentence;
+    # the full company name adds length and nothing a reader needs.
+    return name.split()[0]
 
 
 def _days(count: int) -> str:

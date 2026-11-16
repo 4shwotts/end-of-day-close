@@ -6,19 +6,19 @@
    starts. The lists stay hidden until the player chooses to begin. #}
 <h1>{{ case.business_date.strftime("%A %d %B %Y") }}: get ready</h1>
 <p class="lede">
-  {{ case.difficulty.label }} · {{ case.bank_statement|length }} bank entries,
-  {{ case.ledger|length }} ledger entries · day number {{ case.seed }}. The timer starts when
-  you choose <strong>Start the timer</strong>, so take as long as you like to read this first.
+  {{ case.difficulty.label }} · {{ case.bank_statement|length }} bank payments,
+  {{ case.ledger|length }} in your records. The clock only starts when you press
+  <strong>Start the timer</strong>.
 </p>
 {% include "_streak.html" %}
 
 <section class="card briefing" aria-labelledby="briefing-heading">
-  <h2 id="briefing-heading">How to work the case</h2>
+  <h2 id="briefing-heading">How to play</h2>
   {% include "_case_help.html" %}
 </section>
 
 <div class="toolbar">
   <a class="button button-large" href="/play/{{ case.difficulty.value }}/{{ case.seed }}/work">Start the timer</a>
-  <span class="choice-hint">The instructions stay available on the next page, folded away.</span>
+  <span class="choice-hint">You can open these instructions again while you play.</span>
 </div>
 {% endblock %}

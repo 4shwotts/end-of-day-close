@@ -1,75 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Start a day · End-of-Day Close{% endblock %}
+{% block title %}Training mode · End-of-Day Close{% endblock %}
 {% block content %}
-<h1>Close the day</h1>
-<p class="lede">
-  A puzzle game about reconciliation: the check a finance team runs every evening to prove
-  that the money the bank received matches what the company recorded.
-  Played before? <a href="#start-heading">Choose a level</a>.
+{# A challenge, not a lesson: one sentence, a level, a start button. How to
+   play is on the briefing page, read before the clock starts. #}
+<h1>Can you beat the engine?</h1>
+<p class="lede lede-short">
+  Match a day's payments by hand, then see how your accuracy and time compare with the engine's.
 </p>
-
-<h2>What you are doing</h2>
-<p class="lede">
-  You are an operations analyst at Copperkettle Homewares Ltd. You get two lists for one
-  business day: the <strong>bank statement</strong> from Thistledown Bank (what actually
-  arrived) and the company's <strong>ledger</strong> (what it booked). They never agree
-  exactly. Card processors keep fees, payments arrive a day or two late, and sometimes an entry
-  is missing, duplicated or mistyped. Your job is to pair up the entries that are the same
-  payment and explain the ones that are not.
-</p>
-
-<figure class="example">
-  <figcaption>Example: one payment, two different amounts</figcaption>
-  <div class="table-scroll" role="region" tabindex="0" aria-label="Example: one payment, two different amounts">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col">List</th>
-          <th scope="col">Reference</th>
-          <th scope="col">Processor</th>
-          <th scope="col" class="num">Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><th scope="row">Ledger</th><td>ORD-290771</td><td>BRAMBLE</td><td class="num">£89.97</td></tr>
-        <tr><th scope="row">Bank</th><td>ORD-290771</td><td>BRAMBLE</td><td class="num">£88.51</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <p class="lede">
-    Same reference, but £1.46 less arrived. Bramblecard keeps 1.4% + 20p, which on £89.97 is
-    exactly £1.46, so this is one payment: link the two entries.
-  </p>
-</figure>
-
-<h2>How to play</h2>
-<ol class="lede steps-list">
-  <li>Choose a level below and start the day.</li>
-  <li>Link each bank entry to the ledger entry, or entries, it belongs with: tick them and
-    choose <strong>Link selected</strong>.</li>
-  <li>For anything with no partner, choose a reason: missing, duplicate or a likely typo.</li>
-  <li>Choose <strong>Close the day</strong>. You get a score, an explanation of every problem in
-    the day, and the engine's answer to compare with yours.</li>
-</ol>
-
-<h2>Where the engine comes in</h2>
-<p class="lede">
-  The same day is also solved by a matching engine, the main part of this project. Each level
-  adds harder problems, and the close screen shows where you and the engine agreed and where
-  you differed. The <a href="/how-it-works">How it works</a> page shows how the engine stays fast on
-  files with thousands of entries.
-</p>
-
-<h2 id="start-heading">Start a day</h2>
 {% include "_streak.html" %}
-<form action="/play" method="get">
+
+<form action="/play" method="get" class="card start-form">
   <fieldset>
     <legend>Choose your level</legend>
     {% set hints = {
-      "intern": "15 problems: exact matches, late payments and processor fees.",
-      "analyst": "40 problems: adds euro rounding, refunds and missing entries.",
-      "senior-analyst": "100 problems: adds batch payouts, chargebacks, duplicates and missing references.",
-      "head-of-ops": "300 problems: every kind, including mistyped amounts, with more ambiguity."
+      "intern": "15 payments: card fees and late arrivals.",
+      "analyst": "40 payments: adds refunds, euro sales and missing payments.",
+      "senior-analyst": "100 payments: adds bundled payments, disputes and duplicates.",
+      "head-of-ops": "300 payments: every kind of problem, including typos."
     } %}
     {% for level in difficulties %}
     <div class="choice">
@@ -87,9 +34,9 @@
     <label for="seed">Day number (optional)</label>
     <input type="number" id="seed" name="seed" min="0" max="1000000000" inputmode="numeric"
            aria-describedby="seed-hint">
-    <span class="choice-hint" id="seed-hint">Leave empty for a random day. The same number always gives the same day, so you can replay it or share it.</span>
+    <span class="choice-hint" id="seed-hint">Leave it empty for a new day. The same number always gives the same day.</span>
   </div>
 
-  <button type="submit">Start the day</button>
+  <button type="submit" class="button-large">Start the day</button>
 </form>
 {% endblock %}

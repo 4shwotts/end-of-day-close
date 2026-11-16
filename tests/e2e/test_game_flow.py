@@ -32,10 +32,11 @@ def test_play_a_perfect_day_and_extend_the_streak(page: Page, live_server: str) 
         expect(page.locator("#link-status")).to_contain_text("Linked")
 
     page.get_by_role("button", name="Check progress").click()
-    expect(page.locator("#progress")).to_contain_text("Everything is linked or explained")
+    expect(page.locator("#progress")).to_contain_text("Everything is paired or explained")
 
     page.get_by_role("button", name="Close the day").first.click()
-    expect(page.get_by_role("heading", level=1)).to_contain_text("day closed")
+    expect(page.get_by_role("heading", level=1)).to_have_text("You vs the engine")
+    expect(page.locator("#close-summary")).to_contain_text("day closed")
     expect(page.locator("#close-summary")).to_contain_text("100.0%")
     expect(page.locator("#streak-count")).to_have_text("1")
 
@@ -44,7 +45,7 @@ def test_an_unbalanced_day_resets_the_streak(page: Page, live_server: str) -> No
     page.goto(f"{live_server}/play/intern/{SEED + 1}/work")
     page.evaluate("window.localStorage.setItem('eod-close.streak', '3')")
     page.get_by_role("button", name="Close the day").first.click()
-    expect(page.get_by_role("heading", level=1)).to_contain_text("not balanced")
+    expect(page.locator("#close-summary")).to_contain_text("day not balanced")
     expect(page.locator("#streak-count")).to_have_text("0")
 
 
@@ -141,13 +142,17 @@ def test_pages_fit_phone_tablet_and_desktop(
 
 
 def test_harder_day_from_the_home_page(page: Page, live_server: str) -> None:
-    """Open a harder day, read the summary, open a match type and download the report."""
+    """Open a harder day, read the headline, unfold the matches and download the report."""
     page.goto(live_server)
     page.get_by_role("link", name="Try a harder day").click()
     expect(page).to_have_url(re.compile(r"/sample/\d+$"))
-    expect(page.locator("#summary")).to_contain_text("Needs review")
-    expect(page.locator("#summary")).to_contain_text("Books balance")
+    expect(page.locator("#results-heading")).to_contain_text("The engine matched")
+    expect(page.locator("#results-heading")).to_contain_text("seconds")
+    expect(page.locator("#summary")).to_contain_text("For a person to check")
+    expect(page.locator("#summary")).to_contain_text("Time taken")
+    expect(page.get_by_role("columnheader", name="Why they match").first).to_be_hidden()
 
+    page.locator("details.fold summary", has_text="Show all").click()
     page.locator("details.group summary", has_text="Exact").click()
     expect(page.get_by_role("columnheader", name="Why they match").first).to_be_visible()
 
@@ -170,7 +175,7 @@ def test_upload_own_files_shows_results_in_place(
     page.get_by_role("link", name="Upload your own files").click()
     expect(page).to_have_url(f"{live_server}/upload")
     page.get_by_label("Bank statement (CSV)").set_input_files(tmp_path / "bank.csv")
-    page.get_by_label("Ledger (CSV)").set_input_files(tmp_path / "ledger.csv")
-    page.get_by_role("button", name="Reconcile").click()
+    page.get_by_label("Your records (CSV)").set_input_files(tmp_path / "ledger.csv")
+    page.get_by_role("button", name="Match them").click()
     expect(page.locator("#results #summary")).to_contain_text("Matched")
     expect(page).to_have_url(f"{live_server}/upload")

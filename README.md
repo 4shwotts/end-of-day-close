@@ -161,12 +161,11 @@ analyst would learn them:
 | Senior Analyst | 100 | Batch payouts, chargebacks, duplicates, blank references, shared prices |
 | Head of Ops | 300 | Transpositions, held-back batch sales, more noise |
 
-A day opens on a briefing with the instructions and the processors' rules; the timer
-starts only when you press **Start the timer**. On the work page you give bank and ledger entries that belong together the same group
-label (or tick them and choose **Link selected**), and mark the rest as exceptions with
-a reason. **Check progress** tells you whether every entry is accounted for; **Close
-the day** scores you and explains every planted discrepancy, item by item, alongside
-what the engine decided.
+Training mode is a contest: can you match a day as accurately as the engine, and how much
+slower are you? A day opens on a short briefing; the clock starts only when you press
+**Start the timer**. You pair bank lines with lines in your records (tick them and choose
+**Link selected**) and say why each leftover line has no partner. **Close the day** shows
+you against the engine on accuracy and time, then every problem explained.
 
 Accuracy is correct decisions divided by the larger of the planted items and the
 decisions you made, so splitting entries into lots of small guesses cannot raise your
@@ -175,24 +174,27 @@ can replay it or send it to someone else.
 
 The site also has:
 
-- **Reconcile (the home page):** a small sample day's bank statement and ledger side by
-  side. **Reconcile** tags every matched line with its type and a link to its partner,
-  selecting a line highlights its partner and says why they match, and a needs-review
-  panel lists the three problems with a next step for each and their effect on the gap.
-  A filter narrows the lists by outcome or match type; on a phone a switch shows one
-  list at a time.
-- **Upload your own files:** a bank and a ledger CSV in the documented format (sample
-  files are provided), with the engine's report grouped by type.
-- **Try a harder day:** a generated Head of Ops day with every kind of problem.
-- **How it works:** the steps, the problem types, the accuracy and speed figures, and a
-  race of the engine against the naive baseline on days of the sizes you choose.
+- **Reconcile (the home page):** a small sample day's bank statement and records side by
+  side. **Match them** tags every pair with its type ("Card fee", "Arrived late"), says
+  how long the engine took, and lists the three payments left for a person, each with a
+  next step. Selecting a tag highlights its partner and says why they match.
+- **Upload your own files**, and **Try a harder day** (a generated Head of Ops day): one
+  sentence and three numbers (matched, for a person to check, time taken), the problems
+  next, and every match folded away.
+- **How it works:** what the engine does, four headline figures, and a live race against
+  checking every pair.
+
+The pages are written for anyone, not accountants: they say "your records" rather than
+"ledger" and "Typo" rather than "transposition". One module, `web/wording.py`, holds the
+plain names; the domain, the API and this README keep the precise terms.
 
 The pages work without JavaScript; the filter and the phone's list switch are plain radio
-buttons read by CSS. The scripts only add row selection, the reveal after Reconcile, row
-linking, the timer, the streak and the upload drop zones' highlight and file names. They are keyboard accessible,
-meet WCAG AA contrast in light and dark mode (checked with axe-core on every page at
-phone, tablet and desktop widths), and load nothing from another site under a strict
-Content Security Policy. The font (Inter) and the icons are served from the app itself.
+buttons read by CSS. The scripts only add row selection, the reveal after matching, row
+linking, the timer, the streak and the upload drop zones' highlight and file names. They
+are keyboard accessible, meet WCAG AA contrast in light and dark mode (checked with
+axe-core on every page at phone, tablet and desktop widths), and load nothing from another
+site under a strict Content Security Policy. The font (Inter) and the icons are served
+from the app itself.
 
 ## API
 

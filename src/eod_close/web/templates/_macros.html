@@ -33,51 +33,40 @@
 <svg class="icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">{{ paths[name]|safe }}</svg>
 {%- endmacro %}
 
-{# The four headline figures of a reconciliation. Each state has its own
-   icon and words as well as its colour, for colour-blind readers. #}
-{% macro summary_bar(s, id=none) %}
+{# The three big numbers of a reconciliation: what the engine matched, what
+   is left for a person, and how long it took. Each has its own icon and
+   words as well as its colour, for colour-blind readers. #}
+{% macro summary_bar(s, seconds, id=none) %}
 <div class="summary-bar"{% if id %} id="{{ id }}"{% endif %}>
   <div class="stat stat-good">
     <span class="stat-label">{{ icon("check-circle") }} Matched</span>
     <span class="stat-value">{{ "{:,}".format(s.matched) }}</span>
   </div>
   <div class="stat {{ 'stat-good' if s.needs_review == 0 else 'stat-warn' }}">
-    <span class="stat-label">{{ icon("alert") }} Needs review</span>
+    <span class="stat-label">{{ icon("alert") }} For a person to check</span>
     <span class="stat-value">{{ "{:,}".format(s.needs_review) }}</span>
   </div>
-  <div class="stat {{ 'stat-good' if s.balances else 'stat-bad' }}">
-    <span class="stat-label">{{ icon("check" if s.balances else "not-equal") }} Books balance</span>
-    <span class="stat-value">{{ "Yes" if s.balances else "Not yet" }}</span>
-  </div>
   <div class="stat">
-    <span class="stat-label">{{ icon("pound") }} Unexplained difference</span>
-    <span class="stat-value">{{ s.unexplained_difference }}</span>
+    <span class="stat-label">{{ icon("clock") }} Time taken</span>
+    <span class="stat-value">{{ seconds|in_seconds }}</span>
   </div>
 </div>
-{% endmacro %}
-
-{# "Books balance" or "Books don't balance by £X", as a banner. #}
-{% macro headline(s) %}
-<p class="headline {{ 'headline-good' if s.balances else 'headline-bad' }}">
-  {{ icon("check-circle" if s.balances else "not-equal") }}
-  <span>{{ s.headline }}</span>
-</p>
 {% endmacro %}
 
 {# A match type's icon, used beside its label. #}
 {% set match_icons = {
   "Exact": "check",
-  "Fee-adjusted": "percent",
-  "Delayed settlement": "clock",
-  "Currency rounding": "exchange",
-  "Batch payout": "layers",
+  "Card fee": "percent",
+  "Arrived late": "clock",
+  "Euro rounding": "exchange",
+  "Bundled payment": "layers",
   "Refund": "undo",
-  "Chargeback": "undo"
+  "Disputed payment": "undo"
 } %}
 {% set review_icons = {
-  "Possible typo": "typo",
+  "Typo": "typo",
   "Duplicate": "copy",
-  "Not in the ledger": "missing",
+  "Not in your records": "missing",
   "Not on the bank statement": "missing"
 } %}
 

@@ -43,10 +43,18 @@ from eod_close.web.services import (
     MAX_UPLOAD_BYTES,
     UploadError,
     answers_from_form,
+    engine_seconds,
     load_case,
-    reconcile_uploads,
+    parse_uploads,
+    timed_reconcile,
 )
-from eod_close.web.workspace import build_workspace, load_sample_day, sample_day_csv
+from eod_close.web.wording import KIND_NAMES, MATCH_NAMES, PROBLEM_NAMES, REASON_CHOICES
+from eod_close.web.workspace import (
+    build_workspace,
+    load_sample_day,
+    sample_day_csv,
+    sample_day_seconds,
+)
 
 STATIC_DIR: Final = Path(__file__).parent / "static"
 
@@ -74,6 +82,10 @@ def static_url(path: str) -> str:
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
 templates.env.globals.update(
     static_url=static_url,
+    match_names=MATCH_NAMES,
+    problem_names=PROBLEM_NAMES,
+    kind_names=KIND_NAMES,
+    reason_choices=REASON_CHOICES,
     difficulties=list(Difficulty),
     reasons=list(ExceptionReason),
     kinds=list(DiscrepancyKind),
@@ -86,7 +98,7 @@ def _percent(value: float) -> str:
 
 def _duration(seconds: int | None) -> str:
     if seconds is None:
-        return "n/a"
+        return "not timed"
     minutes, rest = divmod(seconds, 60)
     return f"{minutes}:{rest:02d}"
 
@@ -95,7 +107,17 @@ def _seconds(value: float) -> str:
     return f"{value:,.2f} s" if value >= 1 else f"{value * 1000:,.1f} ms"
 
 
-templates.env.filters.update(percent=_percent, duration=_duration, seconds=_seconds)
+def _in_seconds(value: float) -> str:
+    # Everyday wording for the engine's time ("0.031 seconds"), where the
+    # race table uses the compact "31.0 ms" for engineers.
+    if value < 0.001:
+        return "under 0.001 seconds"
+    return f"{value:,.1f} seconds" if value >= 1 else f"{value:.3f} seconds"
+
+
+templates.env.filters.update(
+    percent=_percent, duration=_duration, seconds=_seconds, in_seconds=_in_seconds
+)
 
 router = APIRouter(include_in_schema=False)
 
@@ -124,7 +146,9 @@ def _is_htmx(request: Request) -> bool:
     return request.headers.get("HX-Request") == "true"
 
 
-def _results_context(report: ReconciliationReport, csv_name: str) -> dict[str, object]:
+def _results_context(
+    report: ReconciliationReport, csv_name: str, seconds: float
+) -> dict[str, object]:
     """Build the template values shared by every results page.
 
     The CSV report travels inside the page as a ``data:`` link. Uploaded
@@ -135,14 +159,17 @@ def _results_context(report: ReconciliationReport, csv_name: str) -> dict[str, o
     Args:
         report: The engine's report.
         csv_name: The file name the browser should save the report as.
+        seconds: How long the engine took.
 
     Returns:
-        The report view, the report's download link and its file name.
+        The report view, the engine's time, the report's download link and
+        its file name.
     """
     view = build_report_view(report)
     encoded = base64.b64encode(report_csv(view).encode("utf-8")).decode("ascii")
     return {
         "view": view,
+        "seconds": seconds,
         "csv_href": f"data:text/csv;charset=utf-8;base64,{encoded}",
         "csv_name": csv_name,
     }
@@ -158,7 +185,10 @@ def _workspace_context(*, reconciled: bool) -> dict[str, object]:
         The workspace.
     """
     statement, ledger, report = load_sample_day()
-    return {"workspace": build_workspace(statement, ledger, report if reconciled else None)}
+    return {
+        "workspace": build_workspace(statement, ledger, report if reconciled else None),
+        "seconds": sample_day_seconds(),
+    }
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -201,7 +231,9 @@ def sample_day(request: Request, seed: int) -> HTMLResponse:
     """Reconcile a generated day and show the results."""
     _check_seed(seed)
     case, report = load_case(SAMPLE_DAY_DIFFICULTY, seed)
-    context = _results_context(report, f"sample-day-{seed}-report.csv")
+    context = _results_context(
+        report, f"sample-day-{seed}-report.csv", engine_seconds(SAMPLE_DAY_DIFFICULTY, seed)
+    )
     context.update(case=case)
     return templates.TemplateResponse(request, "sample.html", context)
 
@@ -297,7 +329,14 @@ async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTML
         elapsed = None
     score = score_answers(case, answers_from_form(case, form, elapsed), report)
     return templates.TemplateResponse(
-        request, "close.html", {"case": case, "score": score, "report": report}
+        request,
+        "close.html",
+        {
+            "case": case,
+            "score": score,
+            "report": report,
+            "engine_seconds": engine_seconds(difficulty, seed),
+        },
     )
 
 
@@ -359,10 +398,11 @@ async def upload(
     """Reconcile two uploaded files and show the results."""
     context: dict[str, object] = {} if _is_htmx(request) else dict(_FORMAT_CONTEXT)
     try:
-        _, _, report = reconcile_uploads(
+        statement, ledger = parse_uploads(
             await bank_file.read(MAX_UPLOAD_BYTES + 1), await ledger_file.read(MAX_UPLOAD_BYTES + 1)
         )
-        context.update(_results_context(report, "reconciliation-report.csv"))
+        report, seconds = timed_reconcile(statement, ledger)
+        context.update(_results_context(report, "reconciliation-report.csv", seconds))
         status = 200
     except UploadError as exc:
         context["error"] = str(exc)

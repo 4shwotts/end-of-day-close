@@ -1,123 +1,85 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon %}
+{% from "_macros.html" import icon, tip %}
 {% block title %}How it works · End-of-Day Close{% endblock %}
 {% block content %}
-{# The explanations the home page leaves out: the three steps, the kinds of
-   problem the engine copes with, how well it does, and why it is fast. #}
+{# Three short answers: what the engine does, how good it is, and why it is
+   fast, with a race to prove the last one. Detail lives in tooltips and the
+   README, not here. #}
 <h1>How it works</h1>
-<p class="lede">
-  Every evening a finance team proves that the money the bank received matches what the
-  company recorded. This tool does the matching and leaves a person only the lines it cannot
-  explain.
+<p class="lede lede-short">
+  The engine pairs up a bank statement with your records, explains every pair, and hands a
+  person only the payments it cannot explain.
 </p>
 
 <section class="band" aria-labelledby="steps-heading">
-  <h2 id="steps-heading">Three steps</h2>
+  <h2 id="steps-heading">What it does</h2>
   <ol class="steps">
     <li class="card step">
       <span class="step-icon">{{ icon("upload") }}</span>
-      <h3><span class="step-number">1</span> Load both lists</h3>
-      <p>The <strong>bank statement</strong> (the money that actually came in or went out) and the
-        <strong>ledger</strong> (the company's own record of what it sold and refunded).</p>
+      <h3><span class="step-number">1</span> Load the two lists</h3>
+      <p>The bank statement and your records.</p>
     </li>
     <li class="card step">
       <span class="step-icon">{{ icon("spark") }}</span>
-      <h3><span class="step-number">2</span> The engine matches and explains</h3>
-      <p>It pairs what it can, allowing for fees, late <strong>settlement</strong> (money arriving a
-        day or two after the sale) and rounding, and says why in plain English.</p>
+      <h3><span class="step-number">2</span> The engine pairs them</h3>
+      <p>Allowing for card fees, late payments and rounding.</p>
     </li>
     <li class="card step">
       <span class="step-icon">{{ icon("search") }}</span>
-      <h3><span class="step-number">3</span> You review only the exceptions</h3>
-      <p>Anything it cannot explain, such as a missing, duplicated or mistyped entry, is listed with
-        a suggested next step.</p>
+      <h3><span class="step-number">3</span> You check the rest</h3>
+      <p>Each with what is wrong and what to do.</p>
     </li>
   </ol>
-</section>
-
-<section class="band" aria-labelledby="handles-heading">
-  <h2 id="handles-heading">What it handles</h2>
-  {% set cases = [
-    ("clock", "Delayed settlement", "Card money lands a working day or two after the sale.", "Booked Wed → arrived Fri"),
-    ("percent", "Processor fees", "Card processors keep their fee before paying out.", "£100.00 sale → £98.40 received"),
-    ("exchange", "Currency rounding", "Sales in euros, converted to pounds, can be a few pence out.", "€9.99 → £8.71 booked, £8.73 received"),
-    ("layers", "Batch payouts", "One bank payment covers many sales at once.", "3 sales → one £136.83 payout"),
-    ("undo", "Refunds and chargebacks", "Money going back to a customer, linked to the original order.", "−£59.99 = £44.99 disputed + £15.00 fee"),
-    ("copy", "Duplicates", "The same sale booked twice in the ledger.", "INV-40121 £75.50 booked twice"),
-    ("missing", "Missing entries", "A payment on one side with nothing on the other.", "£60.00 received, never booked"),
-    ("typo", "Typos", "Digits swapped when an amount was typed in.", "£14.99 received, £41.99 booked"),
-  ] %}
-  <ul class="handles">
-    {% for name, title, text, example in cases %}
-    <li class="card handle">
-      <h3>{{ icon(name) }} {{ title }}</h3>
-      <p>{{ text }}</p>
-      <p class="example-line">{{ example }}</p>
-    </li>
+  <ul class="copes" aria-label="What it copes with">
+    {% for name, label in [("percent", "Card fees"), ("clock", "Late payments"), ("exchange", "Euro rounding"), ("layers", "Bundled payments"), ("undo", "Refunds and disputes"), ("copy", "Duplicates"), ("missing", "Missing payments"), ("typo", "Typos")] %}
+    <li>{{ icon(name) }} {{ label }}</li>
     {% endfor %}
   </ul>
 </section>
 
 <section class="band" aria-labelledby="figures-heading">
-  <h2 id="figures-heading">How well it works</h2>
+  <h2 id="figures-heading">How good it is</h2>
   <dl class="figures">
     <div class="card figure">
-      <dt>auto-match accuracy</dt>
+      <dt>matched exactly right</dt>
       <dd class="figure-value">{{ accuracy.overall|percent }}</dd>
-      <dd class="figure-note">of {{ "{:,}".format(accuracy.decisions) }} test decisions resolved exactly right, across {{ accuracy.days }} generated days</dd>
+      <dd class="figure-note">across {{ accuracy.days }} test days</dd>
     </div>
     <div class="card figure">
-      <dt>on the hardest level</dt>
+      <dt>on the hardest days</dt>
       <dd class="figure-value">{{ accuracy.hardest|percent }}</dd>
-      <dd class="figure-note">with blank references, look-alike amounts and mistyped figures</dd>
+      <dd class="figure-note">full of typos and look-alikes</dd>
     </div>
     {% if benchmark %}
     <div class="card figure">
-      <dt>entries reconciled per second</dt>
+      <dt>payments a second</dt>
       <dd class="figure-value">{{ "{:,}".format(benchmark.entries_per_second) }}</dd>
-      <dd class="figure-note">bank and ledger lines combined, on a {{ "{:,}".format(benchmark.largest.size) }}-entry day</dd>
+      <dd class="figure-note">bank and records lines together</dd>
     </div>
     <div class="card figure">
-      <dt>for {{ "{:,}".format(benchmark.largest.size) }} entries per side</dt>
-      <dd class="figure-value">{{ benchmark.largest.engine_seconds|seconds }}</dd>
-      <dd class="figure-note">about {{ "{:,.0f}".format(benchmark.largest.speedup) }} times faster than checking every pair</dd>
+      <dt>for {{ "{:,}".format(benchmark.largest.size) }} payments a side</dt>
+      <dd class="figure-value">{{ benchmark.largest.engine_seconds|in_seconds }}</dd>
+      <dd class="figure-note">{{ "{:,.0f}".format(benchmark.largest.speedup) }} times faster than checking every pair</dd>
     </div>
     {% endif %}
   </dl>
   <p class="choice-hint">
-    Accuracy is measured against the answer keys of {{ accuracy.days }} generated days the first
-    time it is needed after the app starts.
-    {% if benchmark %}Speed was measured on a development laptop on {{ benchmark.measured_on.strftime("%d %B %Y") }}; the slower approach is timed on a sample and scaled up.{% else %}Speed figures have not been measured yet.{% endif %}
+    Accuracy is checked against the known answers for each test day.
+    {% if benchmark %}Speed was measured on a laptop on {{ benchmark.measured_on.strftime("%d %B %Y") }}.{% else %}Speed has not been measured yet.{% endif %}
   </p>
 </section>
 
 <section class="band" aria-labelledby="race-heading">
-  <h2 id="race-heading">Why it is fast: the race</h2>
-  <p class="lede">
-    A real bank file can have tens of thousands of lines, so the engine has to be fast as well as
-    right. Race it against the obvious approach on days of different sizes.
-  </p>
-  <div class="approaches">
-    <div class="card approach">
-      <h3>Checking every pair</h3>
-      <p>For each bank line, search the whole ledger for its partner. Twice as many lines means
-        about four times the work. <span class="muted">(Quadratic time, O(n²).)</span></p>
-    </div>
-    <div class="card approach">
-      <h3>The engine</h3>
-      <p>First builds indexes of the ledger, like the index at the back of a book, so finding a
-        partner is a quick lookup. Twice as many lines means only a little over twice the work.
-        <span class="muted">(Close to linear time.)</span></p>
-    </div>
-  </div>
-  <p class="lede">
-    On tiny days checking every pair can win, because building the indexes has a fixed cost;
-    watch the gap open as the days grow. Times are measured live on this server, so they vary.
+  <h2 id="race-heading">Why it is fast: race it</h2>
+  <p class="lede lede-short">
+    Checking every pair gets four times slower each time the day doubles in size. The engine
+    looks partners up in an index instead, so it only gets about twice as slow.
+    {{ tip("growth", "an index", "Like the index at the back of a book: instead of reading every page, you go straight to the right one. Engineers call the two approaches O(n²) and roughly O(n).") }}
   </p>
 
-  <form method="post" action="/how-it-works/race" hx-post="/how-it-works/race" hx-target="#race-results" hx-swap="innerHTML">
+  <form method="post" action="/how-it-works/race" hx-post="/how-it-works/race" hx-target="#race-results" hx-swap="innerHTML" class="card race-form">
     <fieldset>
-      <legend>Entries per side</legend>
+      <legend>Payments on each side</legend>
       <div class="size-choices">
         {% for size in sizes %}
         <div class="choice">
@@ -129,9 +91,8 @@
     </fieldset>
     <div class="toolbar">
       <button type="submit">Run the race</button>
-      <span class="htmx-indicator status" role="status">Timing both approaches…</span>
+      <span class="htmx-indicator status" role="status">Timing both…</span>
     </div>
-    <p class="choice-hint">Above {{ "{:,}".format(naive_limit) }} entries the naive time is measured on a sample and scaled up, and marked as estimated.</p>
   </form>
 
   <div id="race-results" aria-live="polite">

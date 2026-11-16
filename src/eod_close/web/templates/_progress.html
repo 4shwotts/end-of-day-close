@@ -1,8 +1,8 @@
 {% if unassigned == 0 and one_sided == 0 %}
-<p>Everything is linked or explained. You can close the day.</p>
+<p>Everything is paired or explained. You can close the day.</p>
 {% else %}
 <p>
-  {{ unassigned }} {{ "entry" if unassigned == 1 else "entries" }} still to link or explain.
-  {% if one_sided %}{{ one_sided }} {{ "group has" if one_sided == 1 else "groups have" }} entries on one side only.{% endif %}
+  {{ unassigned }} {{ "line" if unassigned == 1 else "lines" }} still to pair or explain.
+  {% if one_sided %}{{ one_sided }} {{ "pair has" if one_sided == 1 else "pairs have" }} lines on one side only.{% endif %}
 </p>
 {% endif %}

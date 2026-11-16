@@ -77,12 +77,11 @@ def mixed_day() -> ReportView:
 def test_each_match_is_explained_in_plain_english() -> None:
     reasons = {row.rule: row.reason for row in mixed_day().matches}
     assert reasons[MatchRule.FEE_ADJUSTED] == (
-        "Arrived 1 working day after booking and £1.60 lower, matching the fee "
-        "Bramblecard Merchant Services charges (1.4% + £0.20)."
+        "1 working day late and £1.60 less: Bramblecard's fee (1.4% + £0.20)."
     )
     assert "had no reference" in reasons[MatchRule.DATE_WINDOW]
-    assert "2 working days after booking" in reasons[MatchRule.DATE_WINDOW]
-    assert reasons[MatchRule.EXACT] == "Same reference, amount and date on both sides."
+    assert "2 working days late" in reasons[MatchRule.DATE_WINDOW]
+    assert reasons[MatchRule.EXACT] == "Same reference, amount and date."
 
 
 def test_a_likely_typo_is_one_problem_with_a_correction() -> None:
@@ -90,16 +89,16 @@ def test_a_likely_typo_is_one_problem_with_a_correction() -> None:
     assert len(typos) == 1
     typo = typos[0]
     assert (typo.bank_ids, typo.ledger_ids) == (("B3",), ("L3",))
-    assert typo.label == "Possible typo"
-    assert "correct the ledger from £41.99 to £14.99" in typo.next_step
+    assert typo.label == "Typo"
+    assert "change your records to £14.99" in typo.next_step
 
 
 def test_every_problem_has_a_reason_and_a_next_step() -> None:
     review = {item.ledger_ids or item.bank_ids: item for item in mixed_day().review}
-    assert "by direct bank transfer" in review[("B4",)].reason
-    assert "Otterline Payments" in review[("L4",)].next_step
+    assert "by bank transfer" in review[("B4",)].reason
+    assert "Otterline" in review[("L4",)].next_step
     duplicate = next(i for i in review.values() if i.reason_code is ExceptionReason.DUPLICATE)
-    assert duplicate.next_step.startswith("Reverse the duplicate ledger entry")
+    assert duplicate.next_step.startswith("Delete the extra entry")
     assert all(item.reason and item.next_step for item in review.values())
 
 
@@ -139,7 +138,7 @@ def test_the_csv_report_lists_every_match_and_problem_as_plain_numbers() -> None
         for column in ("bank_amount", "ledger_amount", "difference"):
             if row[column]:
                 Decimal(row[column])  # parses, so no currency symbol or separator
-    typo = next(r for r in rows if r["type"] == "Possible typo")
+    typo = next(r for r in rows if r["type"] == "Typo")
     assert (typo["bank_amount"], typo["ledger_amount"], typo["difference"]) == (
         "14.99",
         "41.99",

@@ -27,23 +27,23 @@ from eod_close.domain.money import Money
 from eod_close.domain.results import ExceptionReason, MatchRule, ReconciliationReport
 from eod_close.domain.statements import BankStatement, Ledger
 from eod_close.web.report_view import ReportView, ReviewItem, Summary, build_report_view
-from eod_close.web.services import reconcile_uploads
+from eod_close.web.services import parse_uploads, timed_reconcile
 
 SAMPLE_DAY_DIR: Final = Path(__file__).parent / "sample_day"
 
 MATCH_TAGS: Final[Mapping[MatchRule, tuple[str, str]]] = {
     MatchRule.EXACT: ("exact", "Exact"),
-    MatchRule.FEE_ADJUSTED: ("fee", "Fee"),
-    MatchRule.DATE_WINDOW: ("delayed", "Delayed"),
-    MatchRule.CURRENCY_TOLERANCE: ("currency", "Currency"),
-    MatchRule.BATCH: ("batch", "Batch"),
+    MatchRule.FEE_ADJUSTED: ("fee", "Card fee"),
+    MatchRule.DATE_WINDOW: ("delayed", "Late"),
+    MatchRule.CURRENCY_TOLERANCE: ("currency", "Euro"),
+    MatchRule.BATCH: ("batch", "Bundled"),
     MatchRule.REFUND_LINK: ("refund", "Refund"),
-    MatchRule.CHARGEBACK_LINK: ("chargeback", "Chargeback"),
+    MatchRule.CHARGEBACK_LINK: ("chargeback", "Disputed"),
 }
 """Each match type's filter key and the short label shown on its rows."""
 
 REVIEW_TAGS: Final[Mapping[ExceptionReason, str]] = {
-    ExceptionReason.LIKELY_TRANSPOSITION: "Typo?",
+    ExceptionReason.LIKELY_TRANSPOSITION: "Typo",
     ExceptionReason.DUPLICATE: "Duplicate",
     ExceptionReason.MISSING_FROM_LEDGER: "Missing",
     ExceptionReason.MISSING_FROM_BANK: "Missing",
@@ -203,6 +203,14 @@ def build_workspace(
 
 
 @cache
+def _solved_sample_day() -> tuple[BankStatement, Ledger, ReconciliationReport, float]:
+    statement, ledger = parse_uploads(
+        (SAMPLE_DAY_DIR / "bank.csv").read_bytes(), (SAMPLE_DAY_DIR / "ledger.csv").read_bytes()
+    )
+    report, seconds = timed_reconcile(statement, ledger)
+    return statement, ledger, report, seconds
+
+
 def load_sample_day() -> tuple[BankStatement, Ledger, ReconciliationReport]:
     """Read and reconcile the fixed sample day.
 
@@ -211,9 +219,13 @@ def load_sample_day() -> tuple[BankStatement, Ledger, ReconciliationReport]:
     Returns:
         The bank statement, the ledger and the engine's report.
     """
-    return reconcile_uploads(
-        (SAMPLE_DAY_DIR / "bank.csv").read_bytes(), (SAMPLE_DAY_DIR / "ledger.csv").read_bytes()
-    )
+    statement, ledger, report, _ = _solved_sample_day()
+    return statement, ledger, report
+
+
+def sample_day_seconds() -> float:
+    """How long the engine took on the sample day, measured on the run that produced it."""
+    return _solved_sample_day()[3]
 
 
 def sample_day_csv(name: Literal["bank", "ledger"]) -> str:

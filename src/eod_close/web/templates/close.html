@@ -1,61 +1,89 @@
 {% extends "base.html" %}
-{% block title %}Day closed · End-of-Day Close{% endblock %}
+{% block title %}You vs the engine · End-of-Day Close{% endblock %}
 {% block content %}
+{# The close screen is a scoreboard: you against the engine on accuracy and
+   time, then the verdict. Every problem explained, and the engine's own
+   answer, are folded away below for anyone who wants to learn from them. #}
+{% set won = score.accuracy > score.engine_accuracy %}
+{% set tied = score.accuracy == score.engine_accuracy %}
 <section id="close-summary" data-case-id="{{ case.case_id }}" data-balanced="{{ 'true' if score.balanced else 'false' }}" aria-labelledby="summary-heading">
-  <h1 id="summary-heading">{{ case.business_date.strftime("%A %d %B %Y") }}: day {{ "closed" if score.balanced else "not balanced" }}</h1>
-  <p class="verdict">{{ score.verdict }}</p>
-  {% include "_streak.html" %}
-  <div class="tiles">
-    <div class="tile"><span class="tile-label">Your accuracy</span><span class="tile-value">{{ score.accuracy|percent }}</span></div>
-    <div class="tile"><span class="tile-label">Engine accuracy</span><span class="tile-value">{{ score.engine_accuracy|percent }}</span></div>
-    <div class="tile"><span class="tile-label">Time</span><span class="tile-value">{{ score.elapsed_seconds|duration }}</span></div>
-    <div class="tile">
-      <span class="tile-label">Balanced</span>
-      <span class="tile-value {{ 'result-good' if score.balanced else 'result-bad' }}">{{ "✓ Yes" if score.balanced else "✗ No" }}</span>
-    </div>
-  </div>
-  <p>
-    You got {{ score.player_correct }} of {{ score.planted }} decisions right
-    ({{ score.player_claimed }} made).
-    {% if score.unassigned_ids %}{{ score.unassigned_ids|length }} {{ "entry was" if score.unassigned_ids|length == 1 else "entries were" }} left unassigned.{% endif %}
-    {% if score.one_sided_groups %}{{ score.one_sided_groups }} {{ "group had" if score.one_sided_groups == 1 else "groups had" }} entries on one side only.{% endif %}
+  <h1 id="summary-heading">You vs the engine</h1>
+  <p class="lede">
+    {{ case.business_date.strftime("%A %d %B") }} · {{ case.difficulty.label }} ·
+    day {{ "closed" if score.balanced else "not balanced" }}
   </p>
+
+  <div class="card scoreboard">
+    <table>
+      <caption class="visually-hidden">Your result against the engine's</caption>
+      <thead>
+        <tr>
+          <td></td>
+          <th scope="col">You</th>
+          <th scope="col">Engine</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Accuracy</th>
+          <td class="score-value{{ ' score-best' if score.accuracy >= score.engine_accuracy }}">{{ score.accuracy|percent }}</td>
+          <td class="score-value{{ ' score-best' if score.engine_accuracy >= score.accuracy }}">{{ score.engine_accuracy|percent }}</td>
+        </tr>
+        <tr>
+          <th scope="row">Time</th>
+          <td class="score-value">{{ score.elapsed_seconds|duration }}</td>
+          <td class="score-value score-best">{{ engine_seconds|in_seconds }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="verdict {{ 'result-good' if won or tied else 'result-bad' }}">
+      {% if won %}You beat the engine on accuracy.{% elif tied %}You matched the engine's accuracy.{% else %}The engine wins this round.{% endif %}
+    </p>
+    <p class="choice-hint">
+      You got {{ score.player_correct }} of {{ score.planted }} right.
+      {% if score.unassigned_ids %}{{ score.unassigned_ids|length }} {{ "line was" if score.unassigned_ids|length == 1 else "lines were" }} left unpaired.{% endif %}
+      {% if score.one_sided_groups %}{{ score.one_sided_groups }} {{ "pair had" if score.one_sided_groups == 1 else "pairs had" }} lines on one side only.{% endif %}
+    </p>
+    {% include "_streak.html" %}
+  </div>
+
   <div class="toolbar">
     <a class="button" href="/play?difficulty={{ case.difficulty.value }}">Next day</a>
     <a class="button button-secondary" href="/play/{{ case.difficulty.value }}/{{ case.seed }}">Try this day again</a>
   </div>
 </section>
 
-<h2>Every discrepancy, explained</h2>
-<div class="table-scroll" role="region" tabindex="0" aria-label="Planted items">
-  <table>
-    <caption>{{ score.items|length }} planted items</caption>
-    <thead>
-      <tr>
-        <th scope="col">Problem</th>
-        <th scope="col">Entries</th>
-        <th scope="col">Explanation</th>
-        <th scope="col">You</th>
-        <th scope="col">Engine</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in score.items|sort(attribute="player_correct") %}
-      <tr>
-        <th scope="row">{{ item.kind.label }}</th>
-        <td>{{ (item.bank_ids + item.ledger_ids)|join(", ") }}</td>
-        <td class="wrap">{{ item.explanation }}</td>
-        <td class="{{ 'result-good' if item.player_correct else 'result-bad' }}">{{ "✓ Right" if item.player_correct else "✗ Missed" }}</td>
-        <td class="{{ 'result-good' if item.engine_correct else 'result-bad' }}">{{ "✓ Right" if item.engine_correct else "✗ Missed" }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+<details class="group fold"{% if score.player_correct < score.planted %} open{% endif %}>
+  <summary><span class="fold-title">See every problem explained ({{ score.items|length }})</span></summary>
+  <div class="table-scroll" role="region" tabindex="0" aria-label="Every problem explained">
+    <table>
+      <caption class="visually-hidden">Every problem in the day, with your answer and the engine's</caption>
+      <thead>
+        <tr>
+          <th scope="col">Problem</th>
+          <th scope="col">Lines</th>
+          <th scope="col">What happened</th>
+          <th scope="col">You</th>
+          <th scope="col">Engine</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in score.items|sort(attribute="player_correct") %}
+        <tr>
+          <th scope="row">{{ kind_names[item.kind] }}</th>
+          <td>{{ (item.bank_ids + item.ledger_ids)|join(", ") }}</td>
+          <td class="wrap">{{ item.explanation }}</td>
+          <td class="{{ 'result-good' if item.player_correct else 'result-bad' }}">{{ "✓ Right" if item.player_correct else "✗ Missed" }}</td>
+          <td class="{{ 'result-good' if item.engine_correct else 'result-bad' }}">{{ "✓ Right" if item.engine_correct else "✗ Missed" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</details>
 
-<h2>The engine's solution</h2>
-<details>
-  <summary>{{ report.matches|length }} matches and {{ report.exceptions|length }} exceptions</summary>
+<details class="group fold">
+  <summary><span class="fold-title">See the engine's full answer</span></summary>
   {% include "_report_tables.html" %}
 </details>
 {% endblock %}

@@ -4,9 +4,8 @@
 {% block content %}
 <h1>{{ case.business_date.strftime("%A %d %B %Y") }}</h1>
 <p class="lede">
-  {{ case.difficulty.label }} · {{ case.bank_statement|length }} bank entries,
-  {{ case.ledger|length }} ledger entries · day number {{ case.seed }} (enter it on the start
-  page to replay this day).
+  {{ case.difficulty.label }} · {{ case.bank_statement|length }} bank payments,
+  {{ case.ledger|length }} in your records · day {{ case.seed }}.
   <span>Time: <span id="timer" role="timer" hidden>0:00</span></span>
 </p>
 {% include "_streak.html" %}
@@ -14,7 +13,7 @@
 {# Already read on the briefing page, so it starts collapsed here: the
    tables come first while the clock runs. #}
 <details class="help">
-  <summary>How to work the case</summary>
+  <summary>How to play</summary>
   {% include "_case_help.html" %}
 </details>
 
@@ -44,8 +43,8 @@
               <th scope="col">Reference</th>
               <th scope="col">From</th>
               <th scope="col" class="num">Amount</th>
-              <th scope="col">Match group</th>
-              <th scope="col">Exception</th>
+              <th scope="col">Pair number</th>
+              <th scope="col">If no partner</th>
             </tr>
           </thead>
           <tbody>
@@ -57,12 +56,12 @@
               <td>{{ e.reference or "(none)" }}</td>
               <td>{{ e.counterparty }}</td>
               <td class="num">{{ e.amount }}</td>
-              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Group for {{ e.entry_id }}"></td>
+              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Pair number for {{ e.entry_id }}"></td>
               <td>
-                <select name="reason-{{ e.entry_id }}" aria-label="Exception reason for {{ e.entry_id }}">
-                  <option value="">No exception</option>
+                <select name="reason-{{ e.entry_id }}" aria-label="If {{ e.entry_id }} has no partner, why">
+                  <option value="">Has a partner</option>
                   {% for r in reasons if r.side is none or r.side.value == "bank" %}
-                  <option value="{{ r.value }}">{{ r.label }}</option>
+                  <option value="{{ r.value }}">{{ reason_choices[r] }}</option>
                   {% endfor %}
                 </select>
               </td>
@@ -74,7 +73,7 @@
     </section>
 
     <section class="panel" aria-labelledby="ledger-heading">
-      <h2 id="ledger-heading">Ledger · {{ case.ledger.entity_name }}</h2>
+      <h2 id="ledger-heading">Your records · {{ case.ledger.entity_name }}</h2>
       <div class="table-scroll" tabindex="0" aria-labelledby="ledger-heading">
         <table>
           <thead>
@@ -86,8 +85,8 @@
               <th scope="col">Processor</th>
               <th scope="col">Kind</th>
               <th scope="col" class="num">Amount</th>
-              <th scope="col">Match group</th>
-              <th scope="col">Exception</th>
+              <th scope="col">Pair number</th>
+              <th scope="col">If no partner</th>
             </tr>
           </thead>
           <tbody>
@@ -98,14 +97,14 @@
               <td>{{ e.value_date.strftime("%d %b") }}</td>
               <td>{{ e.reference }}{% if e.original_reference %} <span class="choice-hint">for {{ e.original_reference }}</span>{% endif %}</td>
               <td>{{ e.processor_code }}</td>
-              <td>{{ e.kind.value }}</td>
+              <td>{{ "disputed" if e.kind.value == "chargeback" else e.kind.value }}</td>
               <td class="num">{{ e.amount }}{% if e.original_amount %} <span class="choice-hint">({{ e.original_amount }})</span>{% endif %}</td>
-              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Group for {{ e.entry_id }}"></td>
+              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Pair number for {{ e.entry_id }}"></td>
               <td>
-                <select name="reason-{{ e.entry_id }}" aria-label="Exception reason for {{ e.entry_id }}">
-                  <option value="">No exception</option>
+                <select name="reason-{{ e.entry_id }}" aria-label="If {{ e.entry_id }} has no partner, why">
+                  <option value="">Has a partner</option>
                   {% for r in reasons if r.side is none or r.side.value == "ledger" %}
-                  <option value="{{ r.value }}">{{ r.label }}</option>
+                  <option value="{{ r.value }}">{{ reason_choices[r] }}</option>
                   {% endfor %}
                 </select>
               </td>

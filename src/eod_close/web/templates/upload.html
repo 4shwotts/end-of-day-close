@@ -8,16 +8,15 @@
 <section id="upload" aria-labelledby="upload-heading">
   <h1 id="upload-heading">Upload your own files</h1>
   <p class="lede">
-    Two CSV files in the <a href="#format">format described below</a>. Not sure what they should
-    look like? Download <a href="/samples/bank.csv">sample-bank.csv</a> and
-    <a href="/samples/ledger.csv">sample-ledger.csv</a> and upload them. Files are processed in
-    memory and never stored; please use fictional data only.
+    Your bank statement and your records, each saved as a CSV file. No files to hand? Try
+    <a href="/samples/bank.csv">sample-bank.csv</a> and <a href="/samples/ledger.csv">sample-ledger.csv</a>.
+    Nothing is stored; please use made-up data only.
   </p>
 
   <form class="card upload-form" method="post" action="/upload" enctype="multipart/form-data"
         hx-post="/upload" hx-encoding="multipart/form-data" hx-target="#results" hx-swap="innerHTML">
     <div class="dropzones">
-      {% for field, title in (("bank_file", "Bank statement (CSV)"), ("ledger_file", "Ledger (CSV)")) %}
+      {% for field, title in (("bank_file", "Bank statement (CSV)"), ("ledger_file", "Your records (CSV)")) %}
       {# The real file input covers the whole zone, invisibly: clicking or
          dropping a file anywhere on it works even without JavaScript, and
          keyboard and screen-reader users meet an ordinary labelled input.
@@ -33,8 +32,8 @@
       {% endfor %}
     </div>
     <div class="toolbar">
-      <button type="submit" class="button-large">Reconcile</button>
-      <span class="htmx-indicator status" role="status">Reconciling…</span>
+      <button type="submit" class="button-large">Match them</button>
+      <span class="htmx-indicator status" role="status">Matching…</span>
     </div>
   </form>
 
@@ -43,10 +42,10 @@
   </div>
 </section>
 
-<section id="format" class="band" aria-labelledby="format-heading">
-  <h2 id="format-heading">File format</h2>
+<details id="format" class="group fold format-fold">
+  <summary><span class="fold-title">The columns each file needs</span></summary>
   <p class="lede">
-    UTF-8 CSV with a header row and exactly these columns, in this order. Dates are written
+    A CSV file (UTF-8) with a header row and exactly these columns, in this order. Dates are written
     year-month-day (<code>2026-11-13</code>). Amounts are plain numbers with no currency
     symbol or thousands separator, negative for money going out (<code>-15.20</code>). Each
     file can be up to 2 MB and 20,000 rows.
@@ -75,7 +74,7 @@
   } %}
   <div class="format-tables">
     <div class="format-column">
-      <h3 id="bank-columns-heading">Bank statement columns</h3>
+      <h2 id="bank-columns-heading" class="format-heading">Bank statement file</h2>
       <div class="table-scroll" role="region" tabindex="0" aria-labelledby="bank-columns-heading">
         <table aria-labelledby="bank-columns-heading">
           <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
@@ -86,7 +85,7 @@
       </div>
     </div>
     <div class="format-column">
-      <h3 id="ledger-columns-heading">Ledger columns</h3>
+      <h2 id="ledger-columns-heading" class="format-heading">Your records file</h2>
       <div class="table-scroll" role="region" tabindex="0" aria-labelledby="ledger-columns-heading">
         <table aria-labelledby="ledger-columns-heading">
           <thead><tr><th scope="col">Column</th><th scope="col">Meaning</th></tr></thead>
@@ -97,5 +96,5 @@
       </div>
     </div>
   </div>
-</section>
+</details>
 {% endblock %}

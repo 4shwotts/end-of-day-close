@@ -159,5 +159,5 @@ def build_timing_chart(rows: Sequence[BenchmarkRow]) -> TimingChart:
         y_ticks=tuple(
             Tick(y_at(10.0**exp), _seconds_label(10.0**exp)) for exp in range(y_lo, y_hi + 1)
         ),
-        series=(series("engine", "Engine", engine), series("naive", "Naive pairwise", naive)),
+        series=(series("engine", "Engine", engine), series("naive", "Checking every pair", naive)),
     )

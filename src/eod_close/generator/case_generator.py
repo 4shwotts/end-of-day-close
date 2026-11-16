@@ -353,7 +353,7 @@ class _CaseBuilder:
         bank, ledger = self._clean_pair()
         self._record(
             DiscrepancyKind.CLEAN,
-            "Exact match: same reference, amount and date on both sides.",
+            "Same reference, amount and date on both sides.",
             [bank],
             [ledger],
         )
@@ -381,9 +381,9 @@ class _CaseBuilder:
         ledger = self._ledger_entry(reference, amount, otterline, booked)
         self._record(
             DiscrepancyKind.SETTLEMENT_DELAY,
-            f"{otterline.name} settled T+{delay}: booked on {booked:%d %b %Y}, "
-            f"received on {self._date:%d %b %Y}."
-            + (" The bank line arrived without its reference." if blank else ""),
+            f"{otterline.name} paid {delay} working day{'' if delay == 1 else 's'} late: "
+            f"recorded on {booked:%d %b}, arrived on {self._date:%d %b}."
+            + (" The bank line had no reference." if blank else ""),
             [bank],
             [ledger],
         )
@@ -405,8 +405,8 @@ class _CaseBuilder:
         ledger = self._ledger_entry(reference, gross, bramble, booked)
         self._record(
             DiscrepancyKind.PROCESSOR_FEE,
-            f"{bramble.name} settles net of its {bramble.fee_rule.describe()} fee: "
-            f"{gross} gross less {fee} fee = {net}.",
+            f"{bramble.name} kept its {bramble.fee_rule.describe()} fee: "
+            f"{gross} sale, {fee} fee, {net} arrived.",
             [bank],
             [ledger],
         )
@@ -433,9 +433,9 @@ class _CaseBuilder:
         )
         self._record(
             DiscrepancyKind.FX_ROUNDING,
-            f"{original} booked at {rate} as {booked_gbp}; {fernhollow.name} converted "
-            f"at its own rate and paid {received}, a rounding difference of "
-            f"{received - booked_gbp}.",
+            f"A {original} sale, recorded as {booked_gbp} at a rate of {rate}; "
+            f"{fernhollow.name} used its own rate and paid {received}, "
+            f"{received - booked_gbp} different.",
             [bank],
             [ledger],
         )
@@ -466,8 +466,8 @@ class _CaseBuilder:
         bank = self._bank_entry(reference, total, quill)
         self._record(
             DiscrepancyKind.BATCH_PAYOUT,
-            f"{quill.name} paid {size} sales as one payout of {total}, "
-            f"net of its {quill.fee_rule.describe()} fee.",
+            f"{quill.name} bundled {size} sales into one payment of {total}, "
+            f"after its {quill.fee_rule.describe()} fee.",
             [bank],
             ledger,
         )
@@ -508,7 +508,7 @@ class _CaseBuilder:
         self._record(
             DiscrepancyKind.REFUND,
             f"Refund {ledger.reference} of {amount} for order {original_reference}; "
-            "the processor reported it under the original order reference.",
+            "the bank shows it under the order's reference.",
             [bank],
             [ledger],
         )
@@ -537,8 +537,8 @@ class _CaseBuilder:
         )
         self._record(
             DiscrepancyKind.CHARGEBACK,
-            f"Chargeback on order {original_reference}: {amount} reversed plus a "
-            f"{bramble.chargeback_fee} chargeback fee, {debit} in total.",
+            f"The customer disputed order {original_reference}: {amount} taken back "
+            f"plus a {bramble.chargeback_fee} fee, {debit} in total.",
             [bank],
             [ledger],
         )
@@ -554,7 +554,7 @@ class _CaseBuilder:
         bank, ledger = self._clean_pair()
         self._record(
             DiscrepancyKind.CLEAN,
-            "Exact match: same reference, amount and date on both sides.",
+            "Same reference, amount and date on both sides.",
             [bank],
             [ledger],
         )
@@ -564,7 +564,7 @@ class _CaseBuilder:
             )
             self._record(
                 DiscrepancyKind.DUPLICATE,
-                f"{ledger.reference} was booked twice in the ledger.",
+                f"{ledger.reference} was recorded twice in your records.",
                 ledger=[copy],
                 related=[ledger.entry_id],
             )
@@ -607,7 +607,7 @@ class _CaseBuilder:
         bank = self._bank_entry(reference, self._amount(), direct, f"CUSTOMER TRANSFER {reference}")
         self._record(
             DiscrepancyKind.MISSING_FROM_LEDGER,
-            f"{bank.amount} arrived with reference {reference}, which is not in the ledger.",
+            f"{bank.amount} arrived with reference {reference}, which is not in your records.",
             bank=[bank],
         )
 
@@ -640,9 +640,7 @@ class _CaseBuilder:
         ledger = self._ledger_entry(reference, keyed, direct, self._date)
         self._record(
             DiscrepancyKind.TRANSPOSITION,
-            f"{reference} was keyed as {keyed} but the bank received {amount}; the "
-            f"difference of {abs(amount - keyed)} is divisible by 9, a sign of "
-            "transposed digits.",
+            f"{reference} was typed as {keyed} but the bank received {amount}: two digits swapped.",
             [bank],
             [ledger],
         )

@@ -68,14 +68,14 @@ def test_out_of_range_seed_is_not_found(client: TestClient) -> None:
 def test_every_form_control_on_the_work_page_has_a_label(client: TestClient) -> None:
     html = client.get("/play/senior-analyst/1/work").text
     controls = html.count('class="group-input"') + html.count("<select ")
-    labelled = html.count('aria-label="Group for') + html.count('aria-label="Exception reason for')
+    labelled = html.count('aria-label="Pair number for') + html.count("has no partner, why")
     assert controls == labelled
 
 
 def test_a_day_opens_on_a_briefing_with_no_clock_running(client: TestClient) -> None:
     """The instructions come first; the lists and the start time only on the work page."""
     html = client.get("/play/intern/3").text
-    assert "How to work the case" in html
+    assert "How to play" in html
     assert "Start the timer" in html
     assert 'href="/play/intern/3/work"' in html
     assert "started_at" not in html
@@ -93,7 +93,7 @@ def test_progress_check_counts_unassigned_entries(client: TestClient) -> None:
     case = CaseGenerator().generate(1, Difficulty.INTERN)
     total = len(case.bank_statement) + len(case.ledger)
     response = client.post("/play/intern/1/check", data={}, headers={"HX-Request": "true"})
-    assert f"{total} entries still to link or explain" in response.text
+    assert f"{total} lines still to pair or explain" in response.text
 
 
 def test_closing_a_perfect_day_shows_it_balanced(client: TestClient) -> None:
@@ -105,8 +105,9 @@ def test_closing_a_perfect_day_shows_it_balanced(client: TestClient) -> None:
     html = client.post("/play/intern/4/close", data=form).text
     assert 'data-balanced="true"' in html
     assert "100.0%" in html
-    assert "n/a" in html  # a start time of 0 is implausible, so no time is shown
-    assert "Every discrepancy, explained" in html
+    assert "not timed" in html  # a start time of 0 is implausible, so no time is shown
+    assert "You vs the engine" in html
+    assert "See every problem explained" in html
 
 
 def test_closing_an_empty_day_is_not_balanced(client: TestClient) -> None:
@@ -146,10 +147,10 @@ def report_from_page(html: str) -> list[dict[str, str]]:
 
 def test_home_page_shows_the_sample_day_ready_to_reconcile(client: TestClient) -> None:
     html = client.get("/").text
-    assert "Match a bank statement against your ledger and see what doesn't add up." in html
-    assert "Not reconciled yet" in html
-    assert "24 bank lines" in html
-    assert "26 ledger lines" in html
+    assert "Match a bank statement against your records and see what doesn't add up." in html
+    assert "Not matched yet" in html
+    assert "24 bank payments" in html
+    assert "26 in your records" in html
     assert 'hx-post="/reconcile"' in html
     assert "data-select" not in html, "no outcomes before Reconcile is pressed"
     for link in ('href="/upload"', 'href="/sample-day/report.csv"', 'href="/sample"'):
@@ -160,7 +161,7 @@ def test_reconcile_returns_the_workspace_with_every_outcome(client: TestClient) 
     html = client.post("/reconcile", headers={"HX-Request": "true"}).text
     assert "<html" not in html
     assert "22 matched" in html
-    assert "3 to review" in html
+    assert "3 for a person to check" in html
     assert re.search(r'id="status-unexplained">-£42.50<', html)
     assert re.search(r'id="problems-total">-£42.50<', html)
     assert html.count('class="problem"') == 3
@@ -205,7 +206,7 @@ def test_upload_page_has_a_drop_zone_for_each_file(client: TestClient) -> None:
         assert f'<label class="dropzone-title" for="{field}">' in html
         assert f'aria-describedby="{field}-hint {field}-chosen"' in html
     assert html.count("data-dropzone ") + html.count("data-dropzone>") == 2
-    assert "File format" in html
+    assert "The columns each file needs" in html
 
 
 def test_old_arena_address_redirects_to_how_it_works(client: TestClient) -> None:
@@ -241,7 +242,7 @@ def test_upload_shows_the_summary_and_offers_the_report(client: TestClient) -> N
         headers={"HX-Request": "true"},
     )
     assert 'id="summary"' in response.text
-    assert "Needs review" in response.text
+    assert "For a person to check" in response.text
     assert "<html" not in response.text
     rows = report_from_page(response.text)
     assert rows
@@ -266,7 +267,7 @@ def test_sample_day_redirects_to_its_own_address(client: TestClient) -> None:
 
 def test_sample_day_shows_every_kind_of_result(client: TestClient) -> None:
     html = client.get("/sample/1").text
-    for label in ("Possible typo", "Duplicate", "Fee-adjusted", "Batch payout", "Next step:"):
+    for label in ("Typo", "Duplicate", "Card fee", "Bundled payment", "Next:"):
         assert label in html
     assert len(report_from_page(html)) > 100
 

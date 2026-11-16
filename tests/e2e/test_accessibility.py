@@ -76,10 +76,10 @@ def test_reconciled_home_page_has_no_axe_violations(
     page = scan_context.new_page()
     page.set_viewport_size({"width": width, "height": 900})
     page.goto(live_server)
-    page.get_by_role("button", name="Reconcile").click()
+    page.get_by_role("button", name="Match them").click()
     page.locator("#status-matched").wait_for()
     page.locator("#row-bank-B02 [data-select]").click()
-    page.get_by_role("button", name="What is unexplained?").focus()
+    page.get_by_role("button", name="What is unaccounted for?").focus()
     page.add_script_tag(path=AXE)
     found = page.evaluate(
         "async rules => (await axe.run(document, {runOnly: rules})).violations"

@@ -762,7 +762,7 @@ button:hover {
   min-width: 0;
 }
 
-.format-column h3 {
+.format-column h2 {
   font-size: var(--text-md);
   margin: 0 0 var(--space-2);
 }
@@ -900,18 +900,12 @@ td.wrap-ids {
   color: var(--bad);
 }
 
-/* Two by two, or four across when there is room; never three and one. */
+/* Three across when there is room, otherwise one under another. */
 .summary-bar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   gap: var(--space-3);
   margin: var(--space-4) 0;
-}
-
-@media (min-width: 720px) {
-  .results .summary-bar {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 .stat {
@@ -1589,6 +1583,10 @@ a.status-warn:hover {
   .status-sep {
     display: none;
   }
+
+  .status-item {
+    white-space: normal;
+  }
 }
 
 /* Row states. Each is shown three ways: a tint, a coloured bar on the
@@ -1918,4 +1916,160 @@ span.tag {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--space-5);
+}
+
+/* ---- Plain results: one sentence, three numbers, the rest folded ------ */
+
+.results-headline {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  letter-spacing: -0.015em;
+}
+
+.lede-short {
+  max-width: 60ch;
+}
+
+/* A folded section: a plain line that opens to show detail. */
+details.fold > summary {
+  padding: var(--space-3) 0;
+}
+
+.fold-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: 600;
+}
+
+details.fold {
+  margin-top: var(--space-3);
+}
+
+.money-details {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 32rem;
+  padding-bottom: var(--space-3);
+}
+
+.money-details > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-1);
+}
+
+.money-details dt {
+  color: var(--text-secondary);
+}
+
+.money-details dd {
+  font-weight: 600;
+}
+
+/* Training: the start form and the you-against-the-engine scoreboard. */
+.start-form {
+  max-width: 40rem;
+  padding: var(--space-5);
+}
+
+.start-form fieldset {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+
+.scoreboard {
+  max-width: 36rem;
+  padding: var(--space-4) var(--space-5);
+}
+
+.scoreboard table {
+  font-size: var(--text-md);
+}
+
+.scoreboard th,
+.scoreboard td {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-3) var(--space-2);
+}
+
+.scoreboard thead th {
+  background: none;
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.score-value {
+  text-align: right;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The better figure on each row, marked by a tick as well as colour. */
+.score-best {
+  color: var(--good);
+}
+
+.score-best::before {
+  content: "✓ ";
+  font-size: var(--text-md);
+}
+
+.scoreboard .verdict {
+  margin: var(--space-4) 0 var(--space-1);
+}
+
+/* How it works: what the engine copes with, as a row of small labels. */
+.copes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.copes li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.copes .icon {
+  color: var(--accent);
+}
+
+.race-form {
+  padding: var(--space-4) var(--space-5);
+  margin: var(--space-4) 0;
+}
+
+.race-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+}
+
+.race-takeaway {
+  margin: var(--space-2) 0 var(--space-4);
+  font-size: var(--text-lg);
+}
+
+/* The training rules: a compact two-column table, not a list of paragraphs. */
+.rules th {
+  color: var(--accent);
+  font-weight: 700;
+  vertical-align: top;
+}
+
+.rules td {
+  white-space: normal;
 }

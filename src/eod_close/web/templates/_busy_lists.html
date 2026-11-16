@@ -1,0 +1,25 @@
+{# One page of the busy day's two lists, with the Problems filter. Each link
+   is a plain address that renders the whole page at that page and filter,
+   so it works without JavaScript; HTMX fetches just this fragment. The
+   server builds the day again for every page rather than keeping it. #}
+{% from "_macros.html" import icon %}
+{% from "_lists.html" import list_table %}
+{% set base = "/how-it-works/busy-day/" ~ busy.seed ~ "/lists" %}
+{% macro page_link(base, page, show, label, current=false) -%}
+<a class="pill"{% if current %} aria-current="true"{% endif %} href="{{ base }}?show={{ show }}&amp;page={{ page }}#busy-lists" hx-get="{{ base }}?show={{ show }}&amp;page={{ page }}" hx-target="#busy-lists" hx-swap="innerHTML">{{ label }}</a>
+{%- endmacro %}
+<div class="busy-lists-controls">
+  <nav class="pills" aria-label="Rows to show">
+    {{ page_link(base, 1, "all", "All", lists.show == "all") }}
+    {{ page_link(base, 1, "problems", "Problems", lists.show == "problems") }}
+  </nav>
+  <nav class="pager" aria-label="Pages of the lists">
+    {% if lists.page > 1 %}{{ page_link(base, lists.page - 1, lists.show, "Previous") }}{% endif %}
+    <span class="pager-status" id="busy-page">Page {{ lists.page }} of {{ lists.pages }}</span>
+    {% if lists.page < lists.pages %}{{ page_link(base, lists.page + 1, lists.show, "Next") }}{% endif %}
+  </nav>
+</div>
+<div class="lists busy-lists">
+  {{ list_table("bank", lists.bank_rows, lists.bank_count, true) }}
+  {{ list_table("ledger", lists.ledger_rows, lists.ledger_count, true) }}
+</div>

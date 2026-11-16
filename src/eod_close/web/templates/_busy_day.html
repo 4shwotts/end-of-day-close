@@ -1,13 +1,89 @@
-{# The busy day's result: the engine's matches, problems and live time, then
-   the simple approach's matches on the same day. At this size both are
-   quick, so the honest contrast is what each one gets right; the race
-   below shows how their times grow. #}
+{# The busy day's result, laid out so every claim can be checked: the day's
+   number and a link to run it again, the result, its marks against the
+   answer key, the like-for-like comparison, the first problems, the files
+   behind it all, and the two lists themselves. Every figure here is
+   computed on this request; nothing is stored between runs. #}
 {% from "_macros.html" import icon %}
+{% from "_lists.html" import problem_card %}
+{% set day_url = "/how-it-works/busy-day/" ~ busy.seed %}
+{% set problems = busy.problems %}
+<div class="busy-head">
+  <p class="busy-seed"><strong id="busy-seed">Day #{{ busy.seed }}</strong> · {{ "{:,}".format(busy.statement|length) }} bank payments and {{ "{:,}".format(busy.ledger|length) }} lines in your records</p>
+  <a href="{{ day_url }}#busy-day">{{ icon("undo") }} Run this exact day again</a>
+</div>
+
 <p class="busy-headline" id="busy-headline">
   {{ icon("check-circle") }}
-  Matched {{ "{:,}".format(busy.matched) }} and found {{ "{:,}".format(busy.problems) }} problems in {{ busy.seconds|in_seconds }}.
+  <span>Matched {{ "{:,}".format(busy.matched) }} and found {{ problems|length }} problem{{ "" if problems|length == 1 else "s" }} in {{ busy.seconds|in_seconds }}.</span>
 </p>
-<p class="busy-detail">
-  That day had {{ "{:,}".format(busy.bank_lines) }} bank payments and {{ "{:,}".format(busy.ledger_lines) }} lines in your records.
-  Checking every pair matched only {{ "{:,}".format(busy.naive_matched) }} on the same day, and can't say what is wrong with the rest.
-</p>
+
+<div class="busy-checks">
+  <section class="busy-check card" aria-labelledby="check-heading">
+    <h3 id="check-heading">Checked against the answer key</h3>
+    <p class="busy-figure" id="busy-marks">
+      Found {{ busy.found }} of {{ busy.planted }} planted problems
+      · {{ busy.false_alarms }} false alarm{{ "" if busy.false_alarms == 1 else "s" }}
+      · {{ busy.missed }} missed
+    </p>
+    <p class="choice-hint">The generator records every problem it plants, so the engine's answers can be marked against that answer key, which you can download below.</p>
+  </section>
+
+  <section class="busy-check card" aria-labelledby="compare-heading">
+    <h3 id="compare-heading">Against checking every pair</h3>
+    <table class="busy-compare">
+      <caption class="visually-hidden">Both approaches on day #{{ busy.seed }}, each timed at its best of three runs</caption>
+      <thead>
+        <tr><th scope="col">Approach</th><th scope="col" class="num">Time</th><th scope="col" class="num">Lines left unexplained</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">The engine</th><td class="num" id="engine-time">{{ busy.seconds|in_seconds }}</td><td class="num" id="engine-unexplained">{{ "{:,}".format(busy.engine_unexplained) }}</td></tr>
+        <tr><th scope="row">Checking every pair</th><td class="num" id="naive-time">{{ busy.naive_seconds|in_seconds }}</td><td class="num" id="naive-unexplained">{{ "{:,}".format(busy.naive_unexplained) }} of {{ "{:,}".format(busy.lines) }}</td></tr>
+      </tbody>
+    </table>
+    {# Both sentences are true statements about the method; which one shows
+       depends on the times just measured, never on a pre-written result. #}
+    <p class="choice-hint" id="compare-why">
+      {% if busy.seconds < busy.naive_seconds %}
+      The engine is faster because it looks each payment's partner up in an index, where checking every pair scans all of your records again for every bank line.
+      {% else %}
+      At this size both take a few thousandths of a second, but checking every pair explains far less. It scans all of your records again for every bank line, so its time grows with the square of the day; the race below shows the engine pulling ahead.
+      {% endif %}
+    </p>
+  </section>
+</div>
+
+<section aria-labelledby="busy-problems-heading">
+  <h3 id="busy-problems-heading">{{ icon("alert") }} Problems found ({{ problems|length }})</h3>
+  <ul class="problems">
+    {% for problem in problems[:cards_shown] %}
+    <li>{{ problem_card(problem, interactive=false) }}</li>
+    {% endfor %}
+  </ul>
+  {% if problems|length > cards_shown %}
+  <details class="group fold busy-more">
+    <summary><span class="fold-title">Show all problems ({{ problems|length }})</span></summary>
+    <ul class="problems">
+      {% for problem in problems[cards_shown:] %}
+      <li>{{ problem_card(problem, interactive=false) }}</li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+</section>
+
+<section aria-labelledby="evidence-heading">
+  <h3 id="evidence-heading">{{ icon("file") }} Check it yourself</h3>
+  <ul class="evidence">
+    <li><a href="{{ day_url }}/bank.csv" download>{{ icon("download") }} Download the bank file</a></li>
+    <li><a href="{{ day_url }}/ledger.csv" download>{{ icon("download") }} Download your records file</a></li>
+    <li><a href="{{ day_url }}/answer-key.csv" download>{{ icon("download") }} Download the answer key</a></li>
+    <li><a href="{{ day_url }}/report.csv" download>{{ icon("download") }} Download the engine's report (CSV)</a></li>
+  </ul>
+</section>
+
+<details class="group fold" id="busy-lists-fold"{% if lists_open %} open{% endif %}>
+  <summary><span class="fold-title">{{ icon("layers") }} View the two lists</span></summary>
+  <div id="busy-lists" aria-live="polite">
+    {% include "_busy_lists.html" %}
+  </div>
+</details>

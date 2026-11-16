@@ -21,6 +21,7 @@ from typing import Final
 
 from eod_close.domain.entries import Side, Transaction
 from eod_close.domain.results import ExceptionReason, MatchRule, ReconciliationReport
+from eod_close.domain.statements import BankStatement, Ledger
 from eod_close.engine.engine import ReconciliationEngine
 from eod_close.generator.answer_key import AnswerKey, DiscrepancyKind
 from eod_close.generator.case_generator import Case, CaseGenerator
@@ -213,11 +214,25 @@ def evaluate(case: Case, report: ReconciliationReport) -> AccuracyResult:
     Returns:
         Precision and recall counts per problem type.
     """
-    canon = {
-        **canonical_ids(case.bank_statement),
-        **canonical_ids(case.ledger),
-    }
-    planted = planted_decisions(case.answer_key, canon)
+    return evaluate_key(case.bank_statement, case.ledger, case.answer_key, report)
+
+
+def evaluate_key(
+    statement: BankStatement, ledger: Ledger, answer_key: AnswerKey, report: ReconciliationReport
+) -> AccuracyResult:
+    """Score one report against an answer key, for a day that is not a level's case.
+
+    Args:
+        statement: The day's bank statement.
+        ledger: The day's ledger.
+        answer_key: What the generator planted in it.
+        report: The engine's report for that day.
+
+    Returns:
+        Precision and recall counts per problem type.
+    """
+    canon = {**canonical_ids(statement), **canonical_ids(ledger)}
+    planted = planted_decisions(answer_key, canon)
     claimed = engine_decisions(report, canon)
     correct = planted & claimed
     result = AccuracyResult(cases=1)

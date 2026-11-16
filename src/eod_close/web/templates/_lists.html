@@ -1,0 +1,61 @@
+{# The two lists and the problem cards, shared by the Reconcile page and the
+   busy day on How it works, so both show a day the same way. #}
+{% from "_macros.html" import icon, tip, tag_icons %}
+
+{# One list: date, reference and amount, plus the outcome once matched. The
+   reference is a button only so the description can be reached by keyboard
+   and by tapping, as well as by hovering. #}
+{% macro list_table(side, rows, count, reconciled) -%}
+{% set title = "Bank statement" if side == "bank" else "Your records" %}
+{% set help = "The money that actually came into or left the account." if side == "bank" else "Your own list of what you sold and refunded. Accountants call it the ledger." %}
+<div class="list list-{{ side }} card">
+  <h3 class="list-title" id="{{ side }}-heading">{{ title }} <span class="list-count">({{ "{:,}".format(count) }})</span> {{ tip(side, title|lower, help) }}</h3>
+  <table aria-labelledby="{{ side }}-heading">
+    <thead>
+      <tr>
+        <th scope="col" class="col-date">Date</th>
+        <th scope="col">Reference</th>
+        <th scope="col" class="num">Amount</th>
+        {% if reconciled %}<th scope="col">Result</th>{% endif %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr id="row-{{ side }}-{{ row.entry_id }}" class="row row-{{ row.status }}{% if row.tag_key %} tag-{{ row.tag_key }}{% endif %}"{% if row.group %} data-group="{{ row.group }}"{% endif %}>
+        <td class="row-date">{{ row.value_date.strftime("%d %b") }}</td>
+        <th scope="row" class="row-ref"><span class="tip tip-ref"><button type="button" class="ref-button" aria-describedby="desc-{{ side }}-{{ row.entry_id }}">{{ row.reference or "No reference" }}</button><span class="tip-text" role="tooltip" id="desc-{{ side }}-{{ row.entry_id }}">{{ row.description }}</span></span></th>
+        <td class="num amount">{{ row.amount }}</td>
+        {% if reconciled %}
+        <td class="outcome">
+          <span class="tag tag-{{ row.tag_key or 'review' }}">{{ icon(tag_icons[row.tag_key or "review"]) }} {{ row.tag }}</span>
+          {% if row.status == "matched" %}
+          <details class="why">
+            <summary>Why?</summary>
+            <span class="why-text">{{ row.reason }}</span>
+          </details>
+          {% endif %}
+        </td>
+        {% endif %}
+      </tr>
+      {% else %}
+      <tr><td colspan="{{ 4 if reconciled else 3 }}" class="list-empty">No lines to show.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{%- endmacro %}
+
+{# One problem card. On the Reconcile page it is a button that highlights
+   its rows; on the busy day the rows may be on another page, so it is
+   plain text. #}
+{% macro problem_card(problem, interactive=true) -%}
+{% set tag = "button" if interactive else "div" %}
+<{{ tag }}{% if interactive %} type="button" data-select-group="{{ problem.group }}" aria-pressed="false"{% endif %} class="problem">
+  <span class="problem-head">
+    <span class="tag tag-review">{{ icon("alert") }} {{ problem.item.label }}</span>
+    <span class="problem-effect amount" data-effect="{{ problem.effect.amount }}"><span class="visually-hidden">Effect on the difference: </span>{{ problem.effect }}</span>
+  </span>
+  <span class="problem-what">{{ problem.what }}</span>
+  <span class="next-step">{{ icon("arrow-right") }} {{ problem.next_step }}</span>
+</{{ tag }}>
+{%- endmacro %}

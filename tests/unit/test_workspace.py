@@ -103,15 +103,6 @@ def test_a_typo_card_covers_a_row_on_each_side() -> None:
     assert sorted((r.side, r.entry_id) for r in rows) == [("bank", "B09"), ("ledger", "L10")]
 
 
-def test_show_all_matches_lists_each_match_once_with_both_sides() -> None:
-    matches = reconciled().matches
-    assert len(matches) == 10
-    batch = next(m for m in matches if m.tag_key == "batch")
-    assert len(batch.bank_rows) == 1
-    assert len(batch.ledger_rows) == 2
-    assert all(m.bank_rows and m.ledger_rows and m.reason for m in matches)
-
-
 def test_before_matching_no_row_has_an_outcome() -> None:
     statement, ledger, _ = load_sample_day()
     workspace = build_workspace(statement, ledger)

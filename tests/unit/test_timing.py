@@ -8,7 +8,6 @@ from eod_close.web.services import (
     engine_seconds,
     load_case,
     parse_uploads,
-    run_busy_day,
     timed_reconcile,
 )
 from eod_close.web.workspace import SAMPLE_DAY_DIR
@@ -19,13 +18,6 @@ def test_a_case_keeps_the_time_of_the_run_that_solved_it() -> None:
     assert 0 < first < 5
     load_case(Difficulty.INTERN, 7)
     assert engine_seconds(Difficulty.INTERN, 7) == first, "cached with the report, not re-run"
-
-
-def test_the_busy_day_is_timed_live_on_about_300_payments() -> None:
-    busy = run_busy_day(3)
-    assert 250 <= busy.bank_lines <= 350
-    assert 0 < busy.seconds < 5
-    assert busy.matched + busy.problems > busy.naive_matched, "the engine explains more"
 
 
 def test_timing_covers_only_the_engine() -> None:

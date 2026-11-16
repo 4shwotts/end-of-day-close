@@ -156,14 +156,40 @@ class CaseGenerator:
         Returns:
             The bank statement, the ledger and the answer key.
         """
+        builder = self._builder(seed, name, _FIXED_MIX_PROFILE)
+        for kind in kinds:
+            builder.plant(kind)
+        return builder.build(f"EOD-{name}-{seed}")
+
+    def generate_profile(
+        self, seed: int, profile: DifficultyProfile, name: str
+    ) -> tuple[BankStatement, Ledger, AnswerKey]:
+        """Generate a day from a profile that is not one of the four levels.
+
+        Used for the busy day, which has a real day's volume and problem
+        rate rather than a training level's.
+
+        Args:
+            seed: Any integer. The same seed, profile and name give the same day.
+            profile: How many items to plant and how likely each kind is.
+            name: Names the profile in the case ID, and keeps its days
+                independent of other profiles' days with the same seed.
+
+        Returns:
+            The bank statement, the ledger and the answer key.
+        """
+        builder = self._builder(seed, name, profile)
+        for kind in builder.choose_kinds():
+            builder.plant(kind)
+        return builder.build(f"EOD-{name}-{seed}")
+
+    def _builder(self, seed: int, name: str, profile: DifficultyProfile) -> _CaseBuilder:
+        """Start a day for a named mix or profile, on a date chosen by the seed."""
         rng = random.Random(f"{seed}:{name}")
         business_date = add_business_days(
             _FIRST_BUSINESS_DATE, rng.randrange(_BUSINESS_DAYS_IN_RANGE)
         )
-        builder = _CaseBuilder(rng, business_date, self._processors, _FIXED_MIX_PROFILE)
-        for kind in kinds:
-            builder.plant(kind)
-        return builder.build(f"EOD-{name}-{seed}")
+        return _CaseBuilder(rng, business_date, self._processors, profile)
 
 
 def transpose_adjacent_digits(units: int, position: int) -> int:

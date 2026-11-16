@@ -171,7 +171,8 @@ def test_reconcile_returns_the_headline_and_the_problems(client: TestClient) -> 
     assert "£25.00 arrived in the bank (INV-40139) but isn&#39;t in your records." in html
     assert 'id="row-bank-B02"' in html
     assert html.count("<summary>Why?</summary>") == 21, "every matched row on both sides"
-    assert "Show all matches (10)" in html
+    assert "Show all matches" not in html, "the lists already show every match"
+    assert 'id="show-problems"' in html
     assert 'href="/sample-day/report.csv"' in html
     assert "seconds" not in html, "no timing on the Reconcile page"
     assert "summary-bar" not in html, "no stat cards on the Reconcile page"
@@ -212,21 +213,90 @@ def test_old_harder_day_addresses_redirect_to_the_busy_day(client: TestClient) -
         assert response.headers["location"] == "/how-it-works#busy-day"
 
 
-def test_busy_day_matches_about_300_payments_live(client: TestClient) -> None:
-    html = client.post("/how-it-works/busy-day", headers={"HX-Request": "true"}).text
-    assert "<html" not in html
-    found = re.search(r"Matched ([\d,]+) and found ([\d,]+) problems in [\d.]+ seconds", html)
-    assert found, html
-    bank = re.search(r"That day had ([\d,]+) bank payments", html)
-    assert bank
-    assert 250 <= int(bank.group(1).replace(",", "")) <= 350
-    assert "Checking every pair matched only" in html
+def visible_text(html: str) -> str:
+    return " ".join(re.sub(r"<[^>]+>", " ", html).split())
 
 
-def test_busy_day_without_htmx_returns_the_whole_page(client: TestClient) -> None:
-    html = client.post("/how-it-works/busy-day").text
-    assert "<html" in html
-    assert 'id="busy-headline"' in html
+def without_times(html: str) -> str:
+    """A busy day's text with the measured times taken out, since they always vary.
+
+    The sentence comparing the two approaches is chosen by which was faster
+    on this run, so it goes too.
+    """
+    html = re.sub(r'<p class="choice-hint" id="compare-why">.*?</p>', "", html, flags=re.S)
+    return re.sub(r"(under )?[\d.]+ seconds", "", visible_text(html))
+
+
+def test_a_new_busy_day_gets_its_own_address(client: TestClient) -> None:
+    response = client.post("/how-it-works/busy-day", headers={"HX-Request": "true"})
+    assert "<html" not in response.text
+    pushed = response.headers["HX-Push-Url"]
+    seed = re.fullmatch(r"/how-it-works/busy-day/(\d+)", pushed)
+    assert seed
+    assert f"Day #{seed.group(1)}" in response.text
+    assert f'href="{pushed}#busy-day"' in response.text, "Run this exact day again"
+
+
+def test_a_new_busy_day_without_htmx_redirects_to_its_address(client: TestClient) -> None:
+    response = client.post("/how-it-works/busy-day", follow_redirects=False)
+    assert response.status_code == 303
+    assert re.fullmatch(r"/how-it-works/busy-day/\d+#busy-day", response.headers["location"])
+
+
+def test_a_busy_day_shows_every_checkable_claim(client: TestClient) -> None:
+    html = client.get("/how-it-works/busy-day/48213").text
+    text = visible_text(html)
+    assert "Day #48213" in text
+    assert re.search(r"Matched [\d,]+ and found \d+ problems? in [\d.]+ seconds\.", text)
+    assert re.search(r"Found \d+ of \d+ planted problems · \d+ false alarms? · \d+ missed", text)
+    assert "records every problem it plants" in text
+    assert re.search(r"Checking every pair [\d.]+ seconds [\d,]+ of [\d,]+", text)
+    assert html.count('class="problem"') >= 5
+    assert "Show all problems" in text
+    for name in ("bank", "ledger", "answer-key", "report"):
+        assert f'href="/how-it-works/busy-day/48213/{name}.csv"' in html
+    assert "View the two lists" in text
+    assert "Page 1 of" in text
+
+
+def test_the_same_busy_day_gives_the_same_result_and_another_differs(client: TestClient) -> None:
+    first = without_times(client.get("/how-it-works/busy-day/48213").text)
+    again = without_times(client.get("/how-it-works/busy-day/48213").text)
+    other = without_times(client.get("/how-it-works/busy-day/48214").text)
+    assert first == again
+    assert first != other
+
+
+@pytest.mark.parametrize("name", ["bank", "ledger", "answer-key", "report"])
+def test_busy_day_evidence_downloads_and_is_reproducible(client: TestClient, name: str) -> None:
+    response = client.get(f"/how-it-works/busy-day/48213/{name}.csv")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert f"busy-day-48213-{name}.csv" in response.headers["content-disposition"]
+    assert response.text == client.get(f"/how-it-works/busy-day/48213/{name}.csv").text
+
+
+def test_busy_day_lists_page_and_filter(client: TestClient) -> None:
+    partial = client.get(
+        "/how-it-works/busy-day/48213/lists?page=2&show=all", headers={"HX-Request": "true"}
+    ).text
+    assert "<html" not in partial
+    assert "Page 2 of" in partial
+    assert partial.count('class="row row-') == 40, "20 rows a side"
+    problems = client.get(
+        "/how-it-works/busy-day/48213/lists?show=problems", headers={"HX-Request": "true"}
+    ).text
+    assert "row-matched" not in problems
+    assert "row-review" in problems
+    whole = client.get("/how-it-works/busy-day/48213/lists?page=2").text
+    assert "<html" in whole
+    assert 'id="busy-lists-fold" open' in whole
+
+
+def test_unknown_busy_day_files_are_not_found(client: TestClient) -> None:
+    assert client.get("/how-it-works/busy-day/48213/secrets.csv").status_code == 404
+    assert client.get("/how-it-works/busy-day/2000000000").status_code == 404
+    assert client.get("/how-it-works/busy-day/1/lists?show=everything").status_code == 422
 
 
 @pytest.mark.parametrize("name", ["bank", "ledger", "report"])

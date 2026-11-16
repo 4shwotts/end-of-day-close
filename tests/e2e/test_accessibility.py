@@ -32,6 +32,7 @@ PAGES = [
     "/play/intern/1",
     "/play/intern/1/work",
     "/how-it-works",
+    "/how-it-works/busy-day/48213",
 ]
 WIDTHS = {"phone": 390, "tablet": 820, "desktop": 1440}
 RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]
@@ -98,10 +99,17 @@ def test_reconciled_home_page_has_no_axe_violations(
 def test_busy_day_result_has_no_axe_violations(
     scan_context: BrowserContext, live_server: str
 ) -> None:
+    """A day run with the button, then its lists paged and filtered through HTMX."""
     page = scan_context.new_page()
     page.goto(f"{live_server}/how-it-works")
     page.get_by_role("button", name="Run a busy day").click()
     page.locator("#busy-headline").wait_for()
+    page.get_by_text("View the two lists").click()
+    page.locator("#busy-lists").get_by_role("link", name="Next").click()
+    page.locator("#busy-page", has_text="Page 2").wait_for()
+    page.locator("#busy-lists").get_by_role("link", name="Problems").click()
+    page.locator("#busy-page", has_text="Page 1").wait_for()
+    page.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")
     page.add_script_tag(path=AXE)
     found = page.evaluate(
         "async rules => (await axe.run(document, {runOnly: rules})).violations.map(v => v.id)",

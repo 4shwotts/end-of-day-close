@@ -127,6 +127,7 @@ def test_drop_zone_accepts_a_dropped_file(page: Page, live_server: str) -> None:
         "/day/1",
         "/training",
         "/how-it-works",
+        "/how-it-works/busy-day/48213",
         "/play/senior-analyst/1",
         "/play/senior-analyst/1/work",
     ],
@@ -144,15 +145,48 @@ def test_pages_fit_phone_tablet_and_desktop(
 
 
 def test_busy_day_on_how_it_works(page: Page, live_server: str) -> None:
-    """Run a busy day: the engine's matches, problems and time, beside the simple approach."""
+    """Run a busy day, check every claim is shown, and run the same day again."""
+    page.set_viewport_size({"width": 1440, "height": 900})
     page.goto(f"{live_server}/how-it-works")
     page.get_by_role("button", name="Run a busy day").click()
     headline = page.locator("#busy-headline")
     expect(headline).to_have_text(
-        re.compile(r"Matched [\d,]+ and found [\d,]+ problems in .*seconds\.")
+        re.compile(r"Matched [\d,]+ and found [\d,]+ problems? in .*seconds\.")
     )
-    expect(page.locator(".busy-detail")).to_contain_text("Checking every pair matched only")
-    expect(page).to_have_url(f"{live_server}/how-it-works")
+    expect(page).to_have_url(re.compile(r"/how-it-works/busy-day/\d+$"))
+    seed = page.locator("#busy-seed").inner_text()
+    marks = page.locator("#busy-marks").inner_text()
+    assert re.search(r"Found \d+ of \d+ planted problems", marks)
+    expect(page.locator("#engine-unexplained")).to_have_text("0")
+    expect(page.locator("#naive-unexplained")).to_contain_text(" of ")
+
+    cards = page.locator("#busy-result .problems").first.locator(".problem")
+    expect(cards).to_have_count(5)
+    page.get_by_text("Show all problems").click()
+    expect(page.locator("#busy-result .busy-more .problem").first).to_be_visible()
+
+    with page.expect_download() as download_info:
+        page.get_by_role("link", name="Download the answer key").click()
+    assert download_info.value.suggested_filename.endswith("-answer-key.csv")
+
+    page.get_by_role("link", name="Run this exact day again").click()
+    expect(page.locator("#busy-seed")).to_have_text(seed)
+    expect(page.locator("#busy-marks")).to_have_text(marks)
+
+
+def test_busy_day_lists_page_and_filter_to_problems(page: Page, live_server: str) -> None:
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(f"{live_server}/how-it-works/busy-day/48213")
+    lists = page.locator("#busy-lists")
+    expect(lists).to_be_hidden()
+    page.get_by_text("View the two lists").click()
+    expect(lists.locator(".list-bank tbody tr")).to_have_count(20)
+    lists.get_by_role("link", name="Next").click()
+    expect(page.locator("#busy-page")).to_contain_text("Page 2 of")
+    lists.get_by_role("link", name="Problems").click()
+    expect(lists.locator(".row-matched")).to_have_count(0)
+    expect(lists.locator(".row-review").first).to_be_visible()
+    expect(lists.get_by_role("link", name="Problems")).to_have_attribute("aria-current", "true")
 
 
 def test_old_harder_day_links_land_on_the_busy_day(page: Page, live_server: str) -> None:

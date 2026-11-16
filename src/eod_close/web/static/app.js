@@ -2,9 +2,9 @@
 // this file; it only adds conveniences on top of the plain HTML:
 //
 // - the workspace: selecting a problem card highlights its rows in both
-//   lists (switching the phone's list if needed), clicking a matched row
-//   highlights its partner, the rows' reveal is staggered, and focus moves
-//   to the headline after Match;
+//   lists (showing every row and switching the phone's list if needed),
+//   clicking a matched row highlights its partner, the rows' reveal is
+//   staggered, and focus moves to the headline after Match;
 // - tooltips: Escape dismisses them (WCAG 1.4.13);
 // - upload drop zones: a highlight while dragging and the chosen file's name.
 (function () {
@@ -61,6 +61,11 @@
     var card = event.target.closest("[data-select-group]");
     if (card) {
       var group = card.dataset.selectGroup;
+      // A filter showing only matches would hide the rows being pointed at.
+      var all = workspace.querySelector("#show-all");
+      if (all && !all.checked) {
+        all.checked = true;
+      }
       select(workspace, group);
       var first = rowsInGroup(workspace, group)[0];
       if (first) {

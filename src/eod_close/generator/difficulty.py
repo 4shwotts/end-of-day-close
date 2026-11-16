@@ -160,6 +160,38 @@ _PROFILES: Final = {
 }
 
 
+BUSY_DAY_PROFILE: Final = DifficultyProfile(
+    None,
+    item_count=300,
+    weights=(
+        (K.CLEAN, 140),
+        (K.SETTLEMENT_DELAY, 48),
+        (K.PROCESSOR_FEE, 48),
+        (K.FX_ROUNDING, 32),
+        (K.BATCH_PAYOUT, 16),
+        (K.REFUND, 20),
+        (K.CHARGEBACK, 16),
+        (K.DUPLICATE, 2),
+        (K.MISSING_FROM_BANK, 2),
+        (K.MISSING_FROM_LEDGER, 2),
+        (K.TRANSPOSITION, 2),
+    ),
+    max_batch_size=8,
+    max_batches=3,
+    blank_reference_rate=0.4,
+    price_point_rate=0.35,
+)
+"""A real day's volume and problem rate, for the busy day on How it works.
+
+Head of Ops plants problems in about one item in five, because training is
+meant to be hard. A real business sees far fewer, so this profile keeps the
+same kinds and the same ambiguity (blank references, shared price points)
+with problems in about 4% of payments on average (2 to 6% on a given day,
+measured over 200 seeds). No sale is held back from a payout, so every
+problem comes from the weights.
+"""
+
+
 def profile_for(difficulty: Difficulty) -> DifficultyProfile:
     """Return the profile for a difficulty level."""
     return _PROFILES[difficulty]

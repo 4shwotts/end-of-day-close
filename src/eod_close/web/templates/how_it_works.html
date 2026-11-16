@@ -73,7 +73,9 @@
   <h2 id="busy-heading">Busy day</h2>
   <p class="lede lede-short">
     The Reconcile page shows a dozen payments. This runs about 300 a side, generated fresh,
-    to show the engine copes with a real day's volume.
+    with problems in about 4% of them, as a real day might have. Every figure it shows can be
+    checked: the day has a number you can run again, the engine is marked against the
+    generator's answer key, and the files are there to download.
   </p>
   <form method="post" action="/how-it-works/busy-day" hx-post="/how-it-works/busy-day" hx-target="#busy-result" hx-swap="innerHTML" class="toolbar">
     <button type="submit">{{ icon("play") }} Run a busy day</button>

@@ -3,15 +3,16 @@
 
    Before matching: one instruction, the Match button and the two lists
    (date, reference and amount; the description shows on hover or focus).
-   After: a one-sentence headline, the problem cards, the lists with each
-   row's outcome, and every match folded away. HTMX swaps this fragment in
-   when Match is pressed; without JavaScript the form posts and the whole
-   page comes back in the same state.
+   After: a one-sentence headline, the problem cards, a filter, and the
+   lists with each row's outcome. HTMX swaps this fragment in when Match is
+   pressed; without JavaScript the form posts and the whole page comes back
+   in the same state.
 
-   The phone's list switch is a pair of radio buttons read by CSS (:has), so
-   it works without JavaScript. app.js adds the cards' highlighting, the
-   staggered reveal and focus handling after the swap. #}
-{% from "_macros.html" import icon, tip, tag_icons %}
+   The filter and the phone's list switch are radio buttons read by CSS
+   (:has), so both work without JavaScript. app.js adds the cards'
+   highlighting, the staggered reveal and focus handling after the swap. #}
+{% from "_macros.html" import icon %}
+{% from "_lists.html" import list_table, problem_card %}
 {% set w = workspace %}
 <section class="workspace{{ ' is-reconciled' if w.reconciled else '' }}" aria-labelledby="{{ 'result-heading' if w.reconciled else 'status-heading' }}" data-workspace>
   {% if not w.reconciled %}
@@ -37,91 +38,36 @@
     <p class="choice-hint">Select a problem to see its rows in both lists.</p>
     <ul class="problems">
       {% for problem in w.problems %}
-      <li>
-        <button type="button" class="problem" data-select-group="{{ problem.group }}" aria-pressed="false">
-          <span class="problem-head">
-            <span class="tag tag-review">{{ icon("alert") }} {{ problem.item.label }}</span>
-            <span class="problem-effect amount" data-effect="{{ problem.effect.amount }}"><span class="visually-hidden">Effect on the difference: </span>{{ problem.effect }}</span>
-          </span>
-          <span class="problem-what">{{ problem.what }}</span>
-          <span class="next-step">{{ icon("arrow-right") }} {{ problem.next_step }}</span>
-        </button>
-      </li>
+      <li>{{ problem_card(problem) }}</li>
       {% endfor %}
     </ul>
   </section>
   {% endif %}
   {% endif %}
 
-  <fieldset class="pills side-switch">
-    <legend class="visually-hidden">List to show</legend>
-    <input class="pill-input" type="radio" name="side" id="side-bank" value="bank" checked>
-    <label class="pill" for="side-bank">Bank statement</label>
-    <input class="pill-input" type="radio" name="side" id="side-ledger" value="ledger">
-    <label class="pill" for="side-ledger">Your records</label>
-  </fieldset>
-
-  <div class="lists">
-    {% for side, rows, title, help in [
-      ("bank", w.bank_rows, "Bank statement", "The money that actually came into or left the account."),
-      ("ledger", w.ledger_rows, "Your records", "Your own list of what you sold and refunded. Accountants call it the ledger.")
-    ] %}
-    <div class="list list-{{ side }} card">
-      <h3 class="list-title" id="{{ side }}-heading">{{ title }} <span class="list-count">({{ rows|length }})</span> {{ tip(side, title|lower, help) }}</h3>
-      <table aria-labelledby="{{ side }}-heading">
-        <thead>
-          <tr>
-            <th scope="col" class="col-date">Date</th>
-            <th scope="col">Reference</th>
-            <th scope="col" class="num">Amount</th>
-            {% if w.reconciled %}<th scope="col">Result</th>{% endif %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in rows %}
-          <tr id="row-{{ side }}-{{ row.entry_id }}" class="row row-{{ row.status }}{% if row.tag_key %} tag-{{ row.tag_key }}{% endif %}"{% if row.group %} data-group="{{ row.group }}"{% endif %}>
-            <td class="row-date">{{ row.value_date.strftime("%d %b") }}</td>
-            {# The reference is a button only so the description can be
-               reached by keyboard and by tapping, as well as by hovering. #}
-            <th scope="row" class="row-ref"><span class="tip tip-ref"><button type="button" class="ref-button" aria-describedby="desc-{{ side }}-{{ row.entry_id }}">{{ row.reference or "No reference" }}</button><span class="tip-text" role="tooltip" id="desc-{{ side }}-{{ row.entry_id }}">{{ row.description }}</span></span></th>
-            <td class="num amount">{{ row.amount }}</td>
-            {% if w.reconciled %}
-            <td class="outcome">
-              <span class="tag tag-{{ row.tag_key or 'review' }}">{{ icon(tag_icons[row.tag_key or "review"]) }} {{ row.tag }}</span>
-              {% if row.status == "matched" %}
-              <details class="why">
-                <summary>Why?</summary>
-                <span class="why-text">{{ row.reason }}</span>
-              </details>
-              {% endif %}
-            </td>
-            {% endif %}
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    {% endfor %}
+  <div class="list-controls">
+    {% if w.reconciled %}
+    <fieldset class="pills filter">
+      <legend>Show</legend>
+      {% for key, label in [("all", "All"), ("matched", "Matched"), ("problems", "Problems")] %}
+      <input class="pill-input" type="radio" name="show" id="show-{{ key }}" value="{{ key }}"{% if loop.first %} checked{% endif %}>
+      <label class="pill" for="show-{{ key }}">{{ label }}</label>
+      {% endfor %}
+    </fieldset>
+    {% endif %}
+    <fieldset class="pills side-switch">
+      <legend class="visually-hidden">List to show</legend>
+      <input class="pill-input" type="radio" name="side" id="side-bank" value="bank" checked>
+      <label class="pill" for="side-bank">Bank statement</label>
+      <input class="pill-input" type="radio" name="side" id="side-ledger" value="ledger">
+      <label class="pill" for="side-ledger">Your records</label>
+    </fieldset>
   </div>
 
-  {% if w.reconciled %}
-  <details class="fold all-matches">
-    <summary class="fold-title">Show all matches ({{ w.matches|length }})</summary>
-    <ul class="match-list">
-      {% for match in w.matches %}
-      <li>
-        <span class="tag tag-{{ match.tag_key }}">{{ icon(tag_icons[match.tag_key]) }} {{ match.tag }}</span>
-        <span class="match-sides">
-          {%- for row in match.bank_rows %}{{ row.reference or "No reference" }} {{ row.amount }}{% endfor %}
-          <span aria-hidden="true">↔</span><span class="visually-hidden">matches</span>
-          {% for row in match.ledger_rows %}{{ row.amount }}{% if not loop.last %} + {% endif %}{% endfor -%}
-        </span>
-        <span class="match-reason">{{ match.reason }}</span>
-      </li>
-      {% endfor %}
-    </ul>
-  </details>
-  {% endif %}
+  <div class="lists">
+    {{ list_table("bank", w.bank_rows, w.bank_rows|length, w.reconciled) }}
+    {{ list_table("ledger", w.ledger_rows, w.ledger_rows|length, w.reconciled) }}
+  </div>
 
   <nav class="quick-links" aria-label="More options">
     {% if w.reconciled %}

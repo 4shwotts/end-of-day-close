@@ -38,6 +38,13 @@ from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snaps
 from eod_close.game import score_answers
 from eod_close.generator import Difficulty
 from eod_close.generator.answer_key import DiscrepancyKind
+from eod_close.web.busy_day import (
+    CARDS_SHOWN,
+    Show,
+    answer_key_csv,
+    list_page,
+    run_busy_day,
+)
 from eod_close.web.chart import build_timing_chart
 from eod_close.web.report_view import build_report_view, report_csv
 from eod_close.web.schemas import MAX_SEED
@@ -48,7 +55,6 @@ from eod_close.web.services import (
     engine_seconds,
     load_case,
     parse_uploads,
-    run_busy_day,
     timed_reconcile,
 )
 from eod_close.web.wording import KIND_NAMES, MATCH_NAMES, PROBLEM_NAMES, REASON_CHOICES
@@ -380,13 +386,75 @@ def old_arena_page() -> RedirectResponse:
     return RedirectResponse("/how-it-works", status_code=301)
 
 
-@router.post("/how-it-works/busy-day", response_class=HTMLResponse)
-def busy_day(request: Request) -> HTMLResponse:
-    """Generate a busy day, match it live and show the result."""
+def _busy_day_context(seed: int, page: int = 1, show: Show = "all") -> dict[str, object]:
+    """Generate, match and mark a busy day, and cut its lists to one page.
+
+    Args:
+        seed: The day's number.
+        page: The page of the two lists to show.
+        show: Every row, or only the problem rows.
+
+    Returns:
+        The How it works values, plus the day and its lists.
+    """
+    _check_seed(seed)
+    busy = run_busy_day(seed)
     context = _how_it_works_context()
-    context["busy"] = run_busy_day(secrets.randbelow(MAX_SEED + 1))
-    template = "_busy_day.html" if _is_htmx(request) else "how_it_works.html"
-    return templates.TemplateResponse(request, template, context)
+    context.update(busy=busy, lists=list_page(busy.workspace, page, show), cards_shown=CARDS_SHOWN)
+    return context
+
+
+@router.post("/how-it-works/busy-day", response_model=None)
+def new_busy_day(request: Request) -> HTMLResponse | RedirectResponse:
+    """Run a busy day with a new number.
+
+    HTMX swaps in the result and puts the day's own address in the address
+    bar, so reloading or sharing it runs the same day again. Without
+    JavaScript the form redirects to that address.
+    """
+    seed = secrets.randbelow(MAX_SEED + 1)
+    if not _is_htmx(request):
+        return RedirectResponse(f"/how-it-works/busy-day/{seed}#busy-day", status_code=303)
+    response = templates.TemplateResponse(request, "_busy_day.html", _busy_day_context(seed))
+    response.headers["HX-Push-Url"] = f"/how-it-works/busy-day/{seed}"
+    return response
+
+
+@router.get("/how-it-works/busy-day/{seed}", response_class=HTMLResponse)
+def busy_day(request: Request, seed: int) -> HTMLResponse:
+    """How it works, with one numbered busy day run live."""
+    return templates.TemplateResponse(request, "how_it_works.html", _busy_day_context(seed))
+
+
+@router.get("/how-it-works/busy-day/{seed}/lists", response_class=HTMLResponse)
+def busy_day_lists(
+    request: Request, seed: int, page: Annotated[int, Query(ge=1)] = 1, show: Show = "all"
+) -> HTMLResponse:
+    """One page of a busy day's two lists; the whole page without JavaScript."""
+    context = _busy_day_context(seed, page, show)
+    if _is_htmx(request):
+        return templates.TemplateResponse(request, "_busy_lists.html", context)
+    context["lists_open"] = True
+    return templates.TemplateResponse(request, "how_it_works.html", context)
+
+
+@router.get("/how-it-works/busy-day/{seed}/{name}.csv")
+def busy_day_file(seed: int, name: str) -> Response:
+    """Download a busy day's bank file, records file, answer key or the engine's report."""
+    if name not in ("bank", "ledger", "answer-key", "report"):
+        raise HTTPException(status_code=404)
+    _check_seed(seed)
+    busy = run_busy_day(seed)
+    buffer = io.StringIO()
+    if name == "bank":
+        write_bank_csv(busy.statement, buffer)
+    elif name == "ledger":
+        write_ledger_csv(busy.ledger, buffer)
+    elif name == "answer-key":
+        buffer.write(answer_key_csv(busy.answer_key))
+    else:
+        buffer.write(report_csv(build_report_view(busy.report)))
+    return _csv_response(buffer.getvalue(), f"busy-day-{seed}-{name}.csv")
 
 
 @router.post("/how-it-works/race", response_class=HTMLResponse)

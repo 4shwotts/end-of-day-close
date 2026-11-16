@@ -92,14 +92,41 @@ def test_matched_rows_carry_a_type_and_say_why(page: Page, live_server: str) -> 
     expect(page.locator(".row-review .why")).to_have_count(0)
 
 
-def test_every_match_is_listed_once_unfolded(page: Page, live_server: str) -> None:
+@pytest.mark.parametrize(
+    ("pill", "bank_rows", "ledger_rows"),
+    [("All", 12, 13), ("Matched", 10, 11), ("Problems", 2, 2)],
+)
+def test_the_filter_shows_only_the_chosen_rows(
+    page: Page, live_server: str, pill: str, bank_rows: int, ledger_rows: int
+) -> None:
     page.set_viewport_size({"width": 1440, "height": 900})
     match(page, live_server)
-    matches = page.locator(".match-list li")
-    expect(matches.first).to_be_hidden()
-    page.get_by_text("Show all matches (10)").click()
-    expect(matches).to_have_count(10)
-    expect(page.locator(".match-list")).to_contain_text("QFW-PAYOUT-20261112-01 £73.56")
+    expect(page.get_by_text("Show all matches")).to_have_count(0)
+    page.locator(".filter").get_by_text(pill, exact=True).click()
+    expect(page.locator(".list-bank .row:visible")).to_have_count(bank_rows)
+    expect(page.locator(".list-ledger .row:visible")).to_have_count(ledger_rows)
+
+
+def test_the_filter_works_from_the_keyboard(page: Page, live_server: str) -> None:
+    page.set_viewport_size({"width": 1440, "height": 900})
+    match(page, live_server)
+    page.locator("#show-all").focus()
+    page.keyboard.press("ArrowRight")
+    page.keyboard.press("ArrowRight")
+    expect(page.locator("#show-problems")).to_be_checked()
+    expect(page.locator(".list-bank .row:visible")).to_have_count(2)
+
+
+def test_selecting_a_card_shows_its_rows_even_when_filtered_out(
+    page: Page, live_server: str
+) -> None:
+    page.set_viewport_size({"width": 1440, "height": 900})
+    match(page, live_server)
+    page.locator(".filter").get_by_text("Matched", exact=True).click()
+    expect(page.locator("#row-bank-B09")).to_be_hidden()
+    page.locator(".problem", has_text="Typo").click()
+    expect(page.locator("#show-all")).to_be_checked()
+    expect(page.locator("#row-bank-B09")).to_be_visible()
 
 
 def test_the_description_shows_on_hover_and_on_focus(page: Page, live_server: str) -> None:

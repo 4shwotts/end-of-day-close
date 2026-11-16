@@ -141,25 +141,6 @@ class Problem:
 
 
 @dataclass(frozen=True)
-class MatchLine:
-    """One match, for the folded "Show all matches" list.
-
-    Attributes:
-        tag_key: The match type's style key.
-        tag: The short tag, such as ``"Fee"``.
-        bank_rows: The bank side of the match.
-        ledger_rows: The records side of the match.
-        reason: Why they match, in one sentence.
-    """
-
-    tag_key: str
-    tag: str
-    bank_rows: tuple[Row, ...]
-    ledger_rows: tuple[Row, ...]
-    reason: str
-
-
-@dataclass(frozen=True)
 class Workspace:
     """Everything the Reconcile page's workspace shows.
 
@@ -168,7 +149,7 @@ class Workspace:
         ledger_rows: Your records, in file order.
         summary: The headline figures; None until the day is matched.
         problems: The problem cards, most pressing first.
-        view: The full report view, for "Show all matches"; None until matched.
+        view: The full report view; None until matched.
     """
 
     bank_rows: tuple[Row, ...]
@@ -186,24 +167,6 @@ class Workspace:
     def problems_total(self) -> Money:
         """The sum of every card's effect; equal to the unexplained difference."""
         return Money.total(problem.effect for problem in self.problems)
-
-    @property
-    def matches(self) -> list[MatchLine]:
-        """Every match, in the engine's order, with the rows on each side."""
-        groups: dict[str, list[Row]] = {}
-        for row in self.bank_rows + self.ledger_rows:
-            if row.status == "matched" and row.group:
-                groups.setdefault(row.group, []).append(row)
-        return [
-            MatchLine(
-                tag_key=rows[0].tag_key or "",
-                tag=rows[0].tag or "",
-                bank_rows=tuple(row for row in rows if row.side == "bank"),
-                ledger_rows=tuple(row for row in rows if row.side == "ledger"),
-                reason=rows[0].reason or "",
-            )
-            for _, rows in sorted(groups.items(), key=lambda item: int(item[0][1:]))
-        ]
 
     @property
     def headline(self) -> str:
@@ -247,7 +210,7 @@ def build_workspace(
         _mark(rows, group, "review", None, REVIEW_TAGS[item.reason_code], item.reason, item)
         side: Side = "bank" if item.bank_ids else "ledger"
         first = rows[side, (item.bank_ids or item.ledger_ids)[0]]
-        what, next_step = _describe(item, first.reference)
+        what, next_step = _describe(item, first.reference or "no reference")
         effect = (item.bank_amount or Money.zero()) - (item.ledger_amount or Money.zero())
         problems.append(Problem(item, group, what, next_step, effect))
     return Workspace(

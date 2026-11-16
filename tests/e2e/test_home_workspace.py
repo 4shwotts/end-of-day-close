@@ -20,6 +20,10 @@ def match(page: Page, url: str) -> None:
     page.goto(url)
     page.get_by_role("button", name="Match", exact=True).click()
     expect(page.locator(".result-headline")).to_be_visible()
+    # Match is finished only once app.js has moved focus to the headline,
+    # which it does after HTMX's settle step. Acting sooner can race it: on
+    # a slow machine a test's own focus would be taken away a moment later.
+    expect(page.locator(".result-headline")).to_be_focused()
 
 
 def test_match_the_sample_day_and_read_what_is_wrong(page: Page, live_server: str) -> None:
@@ -221,6 +225,7 @@ def test_try_another_day_gives_a_small_day_of_the_same_shape(page: Page, live_se
     expect(page.locator(".result-headline")).to_have_text(
         "Matched 10 payments and found 3 problems"
     )
+    expect(page.locator(".result-headline")).to_be_focused()
     effects = page.locator(".problem [data-effect]").evaluate_all(
         "els => els.map(el => el.dataset.effect)"
     )

@@ -6,8 +6,12 @@
   {# Indicator styles off: htmx would inject an inline <style>, which the
      Content-Security-Policy blocks; the equivalent rules are in app.css.
      "style" is left out of the attributes htmx carries across a swap, for
-     the same reason: copying one is an inline style the policy blocks. #}
-  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "attributesToSettle": ["class", "width", "height"]}'>
+     the same reason: copying one is an inline style the policy blocks.
+     "class" is left out too: carrying it would leave swapped rows wearing
+     their old classes for a moment (htmx's settle step), long enough for a
+     test, or a quick reader, to see no matched rows. The site has no class
+     transitions that would need it. #}
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "attributesToSettle": ["width", "height"]}'>
   <title>{% block title %}End-of-Day Close{% endblock %}</title>
   {# Preloaded so the first paint already uses the self-hosted fonts. #}
   <link rel="preload" href="/static/fonts/public-sans-latin-wght.woff2" as="font" type="font/woff2" crossorigin>

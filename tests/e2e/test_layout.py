@@ -61,6 +61,10 @@ def matched_reconcile_page(page: Page, live_server: str) -> None:
     page.goto(live_server)
     page.get_by_role("button", name="Match", exact=True).click()
     page.locator(".result-headline").wait_for()
+    # Match is finished only once app.js has moved focus to the headline,
+    # which it does after HTMX's settle step. Acting sooner can race it: on
+    # a slow machine a test's own focus would be taken away a moment later.
+    expect(page.locator(".result-headline")).to_be_focused()
 
 
 def busy_day_with_lists(page: Page, live_server: str) -> None:

@@ -469,6 +469,13 @@ def test_unversioned_static_files_are_checked_every_time(client: TestClient) -> 
     assert response.headers["cache-control"] == "no-cache"
 
 
+def stamp_text(html: str, kind: str) -> str:
+    """The words on the result's seal, with its markup taken out."""
+    found = re.search(rf'class="stamp {kind}" id="result-stamp">(.*?)</p>', html, re.S)
+    assert found, f"no {kind} seal on the page"
+    return " ".join(re.sub(r"<[^>]+>", " ", found.group(1)).split())
+
+
 def test_a_day_that_balances_is_stamped_reconciled() -> None:
     """Every sample day has problems, so the balanced stamp is rendered directly."""
     statement, ledger, report = load_sample_day()
@@ -477,9 +484,9 @@ def test_a_day_that_balances_is_stamped_reconciled() -> None:
     html = pages.templates.get_template("_workspace.html").render(
         workspace=balanced, match_url="/reconcile", report_url="/r.csv", day_url="/"
     )
-    assert 'class="stamp stamp-ok" id="result-stamp">Reconciled<' in html
+    assert stamp_text(html, "stamp-ok") == "Reconciled"
 
 
 def test_a_day_that_does_not_balance_is_stamped_with_its_figure(client: TestClient) -> None:
     html = client.post("/reconcile", headers={"HX-Request": "true"}).text
-    assert 'id="result-stamp">Doesn\'t balance: £91.00<' in html
+    assert stamp_text(html, "stamp-bad") == "Doesn't balance: £91.00"

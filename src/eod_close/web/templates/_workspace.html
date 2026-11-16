@@ -35,7 +35,7 @@
       <span class="amount {{ 'status-bad' if w.problems else 'status-good' }}" id="status-unexplained">{{ w.problems_total }}</span>
       unaccounted for{% if w.problems %}: the total of the problems below.{% else %}: the bank and your records agree.{% endif %}
     </p>
-    <p class="stamp {{ 'stamp-ok' if balanced else 'stamp-bad' }}" id="result-stamp">{% if balanced %}Reconciled{% else %}Doesn't balance: {{ w.problems_total|abs }}{% endif %}</p>
+    <p class="stamp {{ 'stamp-ok' if balanced else 'stamp-bad' }}" id="result-stamp">{% if balanced %}<span class="stamp-line">Reconciled</span>{% else %}<span class="stamp-line">Doesn't balance:</span> <span class="stamp-line">{{ w.problems_total|abs }}</span>{% endif %}</p>
   </div>
 
   {% if w.problems %}

@@ -1,15 +1,16 @@
 /* End-of-Day Close: one stylesheet for every page.
 
-   The look is an old-school bookkeeping ledger: ruled lines, green-bar
-   banding on the tables, continuous-feed paper edges, ink and pencil marks
-   instead of coloured pills, and a rubber stamp for the result.
+   The look is a ledger from the art-deco years: near-black panels, brass
+   linework, warm parchment text, and a seal for the result. Ornament is
+   kept to the frames of boxes and the rules beside section headings, so
+   the figures in the tables stay the focus.
 
    Everything visual is a token on :root: colours, type, spacing and radii.
-   Dark ("night ledger") is the designed-for theme; light ("ledger paper")
-   follows the visitor's system setting, and redefines the colour tokens
-   rather than the rules. Text colours meet WCAG AA contrast (4.5:1) on
-   every surface they sit on, control borders meet 3:1, and status is always
-   carried by a mark and words as well as by colour. */
+   Dark is the designed-for theme; light (ink on parchment) follows the
+   visitor's system setting, and redefines the colour tokens rather than
+   the rules. Text colours meet WCAG AA contrast (4.5:1) on every surface
+   they sit on, control edges meet 3:1, and status is always carried by a
+   mark and words as well as by colour. */
 
 @font-face {
   font-family: "Public Sans";
@@ -19,59 +20,55 @@
   src: url("/static/fonts/public-sans-latin-wght.woff2") format("woff2");
 }
 
+/* Marcellus draws 1 and 0 much like I and O, which would make counts and
+   amounts in headings hard to read. So it supplies everything except the
+   digits (U+0030 to U+0039), and figures in headings fall through to Public
+   Sans, which is next in the heading stack. */
 @font-face {
-  font-family: "Zilla Slab";
+  font-family: "Marcellus";
   font-style: normal;
-  font-weight: 600;
+  font-weight: 400;
   font-display: swap;
-  src: url("/static/fonts/zilla-slab-latin-600.woff2") format("woff2");
-}
-
-@font-face {
-  font-family: "Zilla Slab";
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("/static/fonts/zilla-slab-latin-700.woff2") format("woff2");
+  src: url("/static/fonts/marcellus-latin-400.woff2") format("woff2");
+  unicode-range: U+0000-002F, U+003A-FFFF;
 }
 
 :root {
   color-scheme: dark;
-  /* Colour, night ledger. Ruling blue draws decorative lines only; control
-     edges use the stronger ruling, which meets 3:1. Red ink marks problems,
-     stamp green marks what reconciles. */
-  --page: #121a2b;
-  --surface: #182236;
-  --surface-raised: #1f2a40;
-  --band: #1b2b2b;
-  --border: #4f6c95;
-  --border-strong: #7c9bc6;
-  --text: #e8ede5;
-  --text-secondary: #a7afbb;
-  --accent: #7c9bc6;
-  --accent-strong: #a9c8f2;
-  --accent-text: #121a2b;
-  --accent-soft: rgba(124, 155, 198, 0.16);
-  --ink-fill: #e8ede5;
-  --ink-fill-text: #121a2b;
-  --ink-fill-hover: #ffffff;
-  --good: #79cda3;
-  --good-soft: rgba(121, 205, 163, 0.12);
-  --warn: #f08c86;
-  --warn-soft: rgba(240, 140, 134, 0.1);
-  --bad: #f08c86;
-  --bad-soft: rgba(240, 140, 134, 0.1);
-  --focus: #a9c8f2;
-  --rule-faint: rgba(124, 155, 198, 0.13);
-  --hole: #0b111d;
+  /* Colour: night panels, brass for lines and the accent, parchment text,
+     verdigris for what reconciles and oxblood for problems. */
+  --page: #0e1412;
+  --surface: #151d1a;
+  --surface-raised: #1c2622;
+  --band: #1a2420;
+  --border: #8a7344;
+  --border-strong: #c9a45c;
+  --rule-soft: rgba(201, 164, 92, 0.32);
+  --rule-faint: rgba(201, 164, 92, 0.1);
+  --text: #e9e2d0;
+  --text-secondary: #a39c8c;
+  --accent: #c9a45c;
+  --accent-strong: #e3c584;
+  --accent-text: #0e1412;
+  --accent-soft: rgba(201, 164, 92, 0.13);
+  --ink-fill: #c9a45c;
+  --ink-fill-text: #0e1412;
+  --ink-fill-hover: #ddbb76;
+  --good: #7fb8a0;
+  --good-soft: rgba(127, 184, 160, 0.12);
+  --warn: #d4766b;
+  --warn-soft: rgba(212, 118, 107, 0.11);
+  --bad: #d4766b;
+  --bad-soft: rgba(212, 118, 107, 0.11);
+  --focus: #e3c584;
   /* Chart series: validated categorical slots 1 and 2 for this surface. */
   --series-engine: #3987e5;
   --series-naive: #d95926;
-  --grid: #26324a;
+  --grid: #26302c;
 
-  /* Type: Zilla Slab for headings, Public Sans for everything else. */
+  /* Type: Marcellus for headings, Public Sans for everything else. */
   --font: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  --font-heading: "Zilla Slab", Georgia, "Times New Roman", serif;
+  --font-heading: "Marcellus", "Public Sans", Georgia, serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
   --text-xs: 0.8125rem;
   --text-sm: 0.875rem;
@@ -91,79 +88,92 @@
   --space-7: 3rem;
   --space-8: 4.5rem;
 
-  /* Small corners and no soft shadows: structure comes from rules. */
-  --radius-sm: 3px;
-  --radius: 4px;
-  --radius-lg: 6px;
-  --shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  /* Square corners and no soft shadows: structure comes from brass lines. */
+  --radius-sm: 2px;
+  --radius: 2px;
+  --radius-lg: 4px;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.3);
   --content: 1200px;
   --measure: 65ch;
+
+  /* The deco frame: a hairline box with brass brackets at its four
+     corners, painted as backgrounds so any box can wear it. */
+  --corner: 14px;
+  --frame:
+    linear-gradient(var(--border-strong), var(--border-strong)) left top / var(--corner) 2px no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) left top / 2px var(--corner) no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) right top / var(--corner) 2px no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) right top / 2px var(--corner) no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) left bottom / var(--corner) 2px no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) left bottom / 2px var(--corner) no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) right bottom / var(--corner) 2px no-repeat,
+    linear-gradient(var(--border-strong), var(--border-strong)) right bottom / 2px var(--corner) no-repeat;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
-    --page: #eef2ec;
-    --surface: #ffffff;
-    --surface-raised: #f5f8f3;
-    --band: #dde8da;
-    --border: #6f8fb8;
-    --border-strong: #5e7fa8;
-    --text: #1f2a44;
-    --text-secondary: #5a5e65;
-    --accent: #3e5e88;
-    --accent-strong: #2c4a72;
-    --accent-text: #ffffff;
-    --accent-soft: rgba(62, 94, 136, 0.1);
-    --ink-fill: #1f2a44;
-    --ink-fill-text: #eef2ec;
-  --ink-fill-hover: #2c3a5c;
-    --good: #2f6b4f;
-    --good-soft: rgba(47, 107, 79, 0.1);
-    --warn: #b23a3a;
-    --warn-soft: rgba(178, 58, 58, 0.08);
-    --bad: #b23a3a;
-    --bad-soft: rgba(178, 58, 58, 0.08);
-    --focus: #3e5e88;
-    --rule-faint: rgba(111, 143, 184, 0.18);
-    --hole: #eef2ec;
+    --page: #f3eee2;
+    --surface: #fbf8f1;
+    --surface-raised: #f6f1e6;
+    --band: #ece5d3;
+    --border: #a88b4e;
+    --border-strong: #8c7038;
+    --rule-soft: rgba(140, 112, 56, 0.35);
+    --rule-faint: rgba(140, 112, 56, 0.12);
+    --text: #1c2420;
+    --text-secondary: #5b5649;
+    --accent: #7a5e22;
+    --accent-strong: #5e4818;
+    --accent-text: #fbf8f1;
+    --accent-soft: rgba(122, 94, 34, 0.1);
+    --ink-fill: #1c2420;
+    --ink-fill-text: #f3eee2;
+    --ink-fill-hover: #2e3a34;
+    --good: #2e6b54;
+    --good-soft: rgba(46, 107, 84, 0.1);
+    --warn: #9e3b30;
+    --warn-soft: rgba(158, 59, 48, 0.08);
+    --bad: #9e3b30;
+    --bad-soft: rgba(158, 59, 48, 0.08);
+    --focus: #7a5e22;
     --series-engine: #2a78d6;
     --series-naive: #eb6834;
-    --grid: #dde4ea;
-    --shadow: 0 1px 0 rgba(31, 42, 68, 0.08);
+    --grid: #e4dccb;
+    --shadow: 0 1px 0 rgba(28, 36, 32, 0.08);
   }
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --page: #eef2ec;
-  --surface: #ffffff;
-  --surface-raised: #f5f8f3;
-  --band: #dde8da;
-  --border: #6f8fb8;
-  --border-strong: #5e7fa8;
-  --text: #1f2a44;
-  --text-secondary: #5a5e65;
-  --accent: #3e5e88;
-  --accent-strong: #2c4a72;
-  --accent-text: #ffffff;
-  --accent-soft: rgba(62, 94, 136, 0.1);
-  --ink-fill: #1f2a44;
-  --ink-fill-text: #eef2ec;
-  --ink-fill-hover: #2c3a5c;
-  --good: #2f6b4f;
-  --good-soft: rgba(47, 107, 79, 0.1);
-  --warn: #b23a3a;
-  --warn-soft: rgba(178, 58, 58, 0.08);
-  --bad: #b23a3a;
-  --bad-soft: rgba(178, 58, 58, 0.08);
-  --focus: #3e5e88;
-  --rule-faint: rgba(111, 143, 184, 0.18);
-  --hole: #eef2ec;
+  --page: #f3eee2;
+  --surface: #fbf8f1;
+  --surface-raised: #f6f1e6;
+  --band: #ece5d3;
+  --border: #a88b4e;
+  --border-strong: #8c7038;
+  --rule-soft: rgba(140, 112, 56, 0.35);
+  --rule-faint: rgba(140, 112, 56, 0.12);
+  --text: #1c2420;
+  --text-secondary: #5b5649;
+  --accent: #7a5e22;
+  --accent-strong: #5e4818;
+  --accent-text: #fbf8f1;
+  --accent-soft: rgba(122, 94, 34, 0.1);
+  --ink-fill: #1c2420;
+  --ink-fill-text: #f3eee2;
+  --ink-fill-hover: #2e3a34;
+  --good: #2e6b54;
+  --good-soft: rgba(46, 107, 84, 0.1);
+  --warn: #9e3b30;
+  --warn-soft: rgba(158, 59, 48, 0.08);
+  --bad: #9e3b30;
+  --bad-soft: rgba(158, 59, 48, 0.08);
+  --focus: #7a5e22;
   --series-engine: #2a78d6;
   --series-naive: #eb6834;
-  --grid: #dde4ea;
-  --shadow: 0 1px 0 rgba(31, 42, 68, 0.08);
+  --grid: #e4dccb;
+  --shadow: 0 1px 0 rgba(28, 36, 32, 0.08);
 }
 
 *,
@@ -258,18 +268,29 @@ main,
   padding-right: 16px;
 }
 
-/* The header sits on ruled ledger paper: faint horizontal lines drawn with
-   a repeating gradient, under a firmer ruling-blue line. */
+/* The header: a faint deco fan of brass rays rising from its lower edge,
+   closed by a double brass rule. The fan sits behind the content and never
+   competes with it. */
 .site-header {
-  border-bottom: 2px solid var(--border);
+  position: relative;
+  border-bottom: 3px double var(--border-strong);
   background-color: var(--surface);
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0,
-    transparent 23px,
-    var(--rule-faint) 23px,
-    var(--rule-faint) 24px
+}
+
+.site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(
+    from -90deg at 50% 100%,
+    var(--rule-faint) 0deg 0.5deg,
+    transparent 0.5deg 9deg
   );
+  pointer-events: none;
+}
+
+.site-header > * {
+  position: relative;
 }
 
 .site-header-inner {
@@ -287,18 +308,17 @@ main,
   align-items: center;
   gap: var(--space-3);
   font-family: var(--font-heading);
-  font-weight: 700;
+  font-weight: 400;
   font-size: var(--text-xl);
   color: var(--text);
   text-decoration: none;
 }
 
-/* The logo: a round rubber stamp with a tick, set at a slight angle. */
+/* The logo: a round seal with a tick, in brass. */
 .brand-mark {
   width: 2.25rem;
   height: 2.25rem;
-  color: var(--good);
-  transform: rotate(-10deg);
+  color: var(--accent);
 }
 
 .site-header nav ul {
@@ -380,7 +400,7 @@ h1,
 h2,
 h3 {
   font-family: var(--font-heading);
-  font-weight: 700;
+  font-weight: 400;
   font-variant-numeric: lining-nums;
   line-height: 1.2;
 }
@@ -475,14 +495,51 @@ dd {
   box-shadow: var(--shadow);
 }
 
-/* A section of a page, under a centred heading. */
+/* A section of a page, under a centred heading set between two brass
+   hairlines that fade outwards. */
 .band {
   margin-top: var(--space-8);
 }
 
-.band > h2 {
+.band > h2,
+.briefing > h2,
+.problems-section > .section-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
   margin-top: 0;
   text-align: center;
+}
+
+.band > h2::before,
+.band > h2::after,
+.briefing > h2::before,
+.briefing > h2::after,
+.problems-section > .section-title::before,
+.problems-section > .section-title::after {
+  content: "";
+  flex: 0 1 5rem;
+  height: 1px;
+  background: linear-gradient(to left, var(--border-strong), transparent);
+}
+
+.band > h2::after,
+.briefing > h2::after,
+.problems-section > .section-title::after {
+  background: linear-gradient(to right, var(--border-strong), transparent);
+}
+
+/* On a phone the heading needs the whole width, so the hairlines give way. */
+@media (max-width: 480px) {
+  .band > h2::before,
+  .band > h2::after,
+  .briefing > h2::before,
+  .briefing > h2::after,
+  .problems-section > .section-title::before,
+  .problems-section > .section-title::after {
+    display: none;
+  }
 }
 
 /* A section's introduction, in a narrow column under its heading: centred
@@ -549,7 +606,7 @@ dd {
   font-family: var(--font-heading);
   font-size: 3.5rem;
   font-variant-numeric: lining-nums;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1;
 }
 
@@ -570,9 +627,10 @@ dd {
   max-width: 100%;
   margin: 0 auto;
   overflow-x: auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
 }
 
 .ledger-table th,
@@ -956,9 +1014,10 @@ td.wrap-ids {
   gap: var(--space-2) var(--space-5);
   margin: var(--space-4) 0 var(--space-2);
   padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius-sm);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   box-shadow: var(--shadow);
 }
 
@@ -1049,6 +1108,7 @@ td.wrap-ids {
 }
 
 .panel-source {
+  font-family: var(--font);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -1132,6 +1192,9 @@ td.wrap-ids {
 .results {
   margin-top: var(--space-5);
   padding: var(--space-5);
+  border: 1px solid var(--rule-soft);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
 }
 
 .headline {
@@ -1251,7 +1314,7 @@ details summary {
 
 /* The work page's instructions: boxed so they read as help, not page text. */
 details.help {
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
   background: var(--surface);
   padding: var(--space-1) var(--space-4) var(--space-2);
@@ -1279,7 +1342,7 @@ details.help {
 }
 
 details.group {
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
   padding: 0 var(--space-4);
   margin-bottom: var(--space-3);
@@ -1380,9 +1443,10 @@ div.long-list:not(.table-scroll) {
 
 /* The briefing before a training day: the instructions as one card. */
 .briefing {
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-4);
 }
@@ -1533,17 +1597,18 @@ div.long-list:not(.table-scroll) {
   font-size: var(--text-lg);
 }
 
-/* Before matching: one instruction and the Match button, centred and
-   boxed by a single ruling-blue line. */
+/* Before matching: one instruction and the Match button, centred in the
+   deco frame. */
 .status-bar {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid var(--border);
+  padding: var(--space-6) var(--space-5);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   text-align: center;
 }
 
@@ -1558,7 +1623,7 @@ div.long-list:not(.table-scroll) {
   margin: 0;
   font-family: var(--font-heading);
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.35;
 }
 
@@ -1580,10 +1645,11 @@ div.long-list:not(.table-scroll) {
    kept on the right for the stamp, so the two never overlap. */
 .result {
   position: relative;
-  padding: var(--space-5) 15rem var(--space-5) var(--space-5);
-  border: 1px solid var(--border);
+  padding: var(--space-6) 15rem var(--space-6) var(--space-5);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   text-align: center;
 }
 
@@ -1607,25 +1673,31 @@ div.long-list:not(.table-scroll) {
   font-weight: 700;
 }
 
-/* The rubber stamp: double-ruled, slightly askew, in stamp green when the
-   day reconciles and red ink when it does not. It lands once, after Match;
-   under reduced motion it is simply there. */
+/* The seal: an oval in a double brass rule, slightly askew, its words in
+   verdigris when the day reconciles and oxblood when it does not. It lands
+   once, after Match; under reduced motion it is simply there. */
 .stamp {
   position: absolute;
   top: 50%;
   right: var(--space-6);
-  max-width: 12rem;
-  margin: -1.6rem 0 0;
-  padding: 0.3rem 0.8rem;
-  border: 4px double currentColor;
-  border-radius: var(--radius-lg);
+  margin: -2.4rem 0 0;
+  padding: 0.85rem 1.7rem;
+  border: 3px double var(--border-strong);
+  border-radius: 50%;
+  background: var(--surface-raised);
   font-family: var(--font-heading);
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-variant-numeric: lining-nums;
-  font-weight: 700;
-  line-height: 1.15;
+  font-weight: 400;
+  line-height: 1.25;
   text-align: center;
   transform: rotate(-7deg);
+}
+
+/* The seal's two lines never wrap, so it keeps its oval shape. */
+.stamp-line {
+  display: block;
+  white-space: nowrap;
 }
 
 .stamp-ok {
@@ -1715,7 +1787,7 @@ div.long-list:not(.table-scroll) {
   height: 100%;
   min-height: 0;
   padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
@@ -1726,7 +1798,7 @@ div.long-list:not(.table-scroll) {
 }
 
 .problem:hover {
-  border-color: var(--warn);
+  border-color: var(--border-strong);
 }
 
 .problem.is-selected {
@@ -1927,57 +1999,22 @@ div.long-list:not(.table-scroll) {
   min-width: 0;
 }
 
-/* Continuous printer paper: a strip of punched tractor-feed holes down each
-   side of a list, separated from the printed area by a perforation. The
-   holes are radial gradients in the page colour, so they read as cut out. */
+/* The lists wear the deco frame: a hairline box with brass brackets at
+   its corners. */
 .workspace .list,
 .busy-lists .list {
-  --feed: 1.5rem;
-  position: relative;
-  padding: var(--space-3) calc(var(--feed) + var(--space-2));
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius-sm);
-  background-color: var(--surface);
-  background-image:
-    radial-gradient(circle, var(--hole) 3.5px, transparent 4px),
-    radial-gradient(circle, var(--hole) 3.5px, transparent 4px);
-  background-position:
-    left 0 top 8px,
-    right 0 top 8px;
-  background-repeat: repeat-y;
-  background-size: var(--feed) 1.25rem;
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   box-shadow: none;
 }
 
-.workspace .list::before,
-.workspace .list::after,
-.busy-lists .list::before,
-.busy-lists .list::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  border-left: 1px dashed var(--border);
-  pointer-events: none;
-}
-
-.workspace .list::before,
-.busy-lists .list::before {
-  left: var(--feed);
-}
-
-.workspace .list::after,
-.busy-lists .list::after {
-  right: var(--feed);
-}
-
-/* On a phone the strips narrow, so the table keeps its width. */
 @media (max-width: 480px) {
   .workspace .list,
   .busy-lists .list {
-    --feed: 0.9rem;
-    background-image:
-      radial-gradient(circle, var(--hole) 2.5px, transparent 3px),
-      radial-gradient(circle, var(--hole) 2.5px, transparent 3px);
+    padding: var(--space-3) var(--space-2) var(--space-3);
   }
 }
 
@@ -2356,9 +2393,10 @@ div.long-list:not(.table-scroll) {
 
 .busy-result:has(.busy-section) {
   padding: var(--space-5) var(--space-6);
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   text-align: left;
 }
 
@@ -2761,7 +2799,7 @@ details.fold {
   flex-direction: column;
   gap: var(--space-1);
   padding: var(--space-4);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
   background: var(--surface);
 }
@@ -2781,7 +2819,7 @@ details.fold {
   padding-right: 1.75rem;
   font-family: var(--font-heading);
   font-size: var(--text-xl);
-  font-weight: 700;
+  font-weight: 400;
   cursor: pointer;
 }
 
@@ -2837,9 +2875,10 @@ details.fold {
   max-width: 34rem;
   margin: 0 auto;
   padding: var(--space-5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
   text-align: center;
 }
 
@@ -2902,9 +2941,10 @@ details.fold {
   max-width: 100%;
   padding: var(--space-3) var(--space-4);
   margin: var(--space-4) auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--rule-soft);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--frame), var(--surface);
+  background-origin: border-box;
 }
 
 .race-form .toolbar {

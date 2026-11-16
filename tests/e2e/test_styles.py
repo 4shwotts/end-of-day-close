@@ -19,9 +19,9 @@ def test_stylesheet_loads_and_is_applied(page: Page, live_server: str) -> None:
     assert "?v=" in stylesheets[0].url
 
     # Rules that exist only in the current stylesheet: no bullets on the
-    # navigation, the night-ledger page colour, and the workspace's own layout.
+    # navigation, the dark page colour, and the workspace's own layout.
     nav_list = page.locator(".site-header nav ul")
     assert nav_list.evaluate("el => getComputedStyle(el).listStyleType") == "none"
-    assert page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(18, 26, 43)"
+    assert page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(14, 20, 18)"
     assert page.locator(".status-bar").evaluate("el => getComputedStyle(el).display") == "flex"
     assert page.locator(".lists").evaluate("el => getComputedStyle(el).display") == "grid"

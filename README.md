@@ -195,11 +195,11 @@ The site also has:
   report are all downloadable. Nothing is cached: each request generates and matches the
   day again.
 
-The look is taken from the bookkeeping ledgers that reconciliation grew out of: ruled
-lines behind the header, green-bar banding on the tables, tractor-feed edges on the lists,
-a pencil tick or a red-ink ring on every line, and a rubber stamp that lands on the result
-("Reconciled", or "Doesn't balance" with the real figure). Dark ("night ledger") is the
-default; a visitor whose system prefers light mode gets the paper version.
+The look is a ledger from the art-deco years, kept quiet so the figures stay the focus:
+near-black panels with brass linework, warm parchment text, Marcellus headings, boxes
+framed by small brass corner brackets, a pencil tick or a red ring on every line, and a
+seal that lands on the result ("Reconciled", or "Doesn't balance" with the real figure).
+Dark is the default; a visitor whose system prefers light mode gets ink on parchment.
 
 The pages are written for anyone, not accountants: they say "your records" rather than
 "ledger" and "Typo" rather than "transposition". One module, `web/wording.py`, holds the
@@ -210,7 +210,7 @@ buttons read by CSS, and "Why?" is a native disclosure. The scripts only add the
 cards' highlighting, the reveal after matching, row linking in training, the timer, the streak and the upload drop zones' highlight and file names. They
 are keyboard accessible, meet WCAG AA contrast in light and dark mode (checked with
 axe-core on every page at phone, tablet and desktop widths), and load nothing from another
-site under a strict Content Security Policy. The fonts (Zilla Slab and Public Sans) and
+site under a strict Content Security Policy. The fonts (Marcellus and Public Sans) and
 the icons are served from the app itself.
 
 ## API

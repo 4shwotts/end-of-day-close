@@ -7,12 +7,13 @@ at ``/docs``, so they are written for API users rather than for maintainers.
 from __future__ import annotations
 
 import secrets
-from typing import Annotated
+from typing import Annotated, Final
 
-from fastapi import APIRouter, File, HTTPException, Path, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Path, UploadFile
 
 from eod_close.game import InvalidAnswerError, PlayerAnswers, score_answers
 from eod_close.generator import Difficulty
+from eod_close.web.limits import rate_limited
 from eod_close.web.schemas import (
     MAX_SEED,
     CaseOut,
@@ -21,9 +22,19 @@ from eod_close.web.schemas import (
     ScoreOut,
     ScoreRequest,
 )
-from eod_close.web.services import MAX_UPLOAD_BYTES, UploadError, load_case, reconcile_uploads
+from eod_close.web.services import (
+    MAX_UPLOAD_BYTES,
+    UploadError,
+    check_file_names,
+    load_case,
+    reconcile_uploads,
+)
 
 router = APIRouter(prefix="/api", tags=["API"])
+
+# Per-visitor limits on the routes that do real work (see limits.py).
+_NEW_DAY: Final = [Depends(rate_limited("new-day"))]
+_UPLOAD: Final = [Depends(rate_limited("upload"))]
 
 SeedPath = Annotated[int, Path(ge=0, le=MAX_SEED, description="The case's seed.")]
 
@@ -34,7 +45,7 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-@router.post("/cases")
+@router.post("/cases", dependencies=_NEW_DAY)
 def generate_case(request: CaseRequest) -> CaseOut:
     """Generate a fictional business day to reconcile.
 
@@ -47,14 +58,14 @@ def generate_case(request: CaseRequest) -> CaseOut:
     return CaseOut.of(case)
 
 
-@router.get("/cases/{difficulty}/{seed}")
+@router.get("/cases/{difficulty}/{seed}", dependencies=_NEW_DAY)
 def get_case(difficulty: Difficulty, seed: SeedPath) -> CaseOut:
     """Fetch a previously generated day by its difficulty and seed."""
     case, _ = load_case(difficulty, seed)
     return CaseOut.of(case)
 
 
-@router.post("/cases/{difficulty}/{seed}/score")
+@router.post("/cases/{difficulty}/{seed}/score", dependencies=_NEW_DAY)
 def score_case(difficulty: Difficulty, seed: SeedPath, answers: ScoreRequest) -> ScoreOut:
     """Score a player's answers for one day, and compare them with the engine.
 
@@ -78,7 +89,7 @@ def score_case(difficulty: Difficulty, seed: SeedPath, answers: ScoreRequest) ->
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.post("/reconcile")
+@router.post("/reconcile", dependencies=_UPLOAD)
 async def reconcile(
     bank_file: Annotated[
         UploadFile, File(description="Bank statement CSV in the documented format.")
@@ -91,11 +102,12 @@ async def reconcile(
     without currency symbols or thousands separators. The column layouts are
     described on the Upload page and in the README.
     """
-    # Read one byte past the limit so an oversized file is detected without
-    # reading all of it into memory.
-    bank = await bank_file.read(MAX_UPLOAD_BYTES + 1)
-    ledger = await ledger_file.read(MAX_UPLOAD_BYTES + 1)
     try:
+        check_file_names(bank_file.filename, ledger_file.filename)
+        # Read one byte past the limit so an oversized file is detected
+        # without reading all of it into memory.
+        bank = await bank_file.read(MAX_UPLOAD_BYTES + 1)
+        ledger = await ledger_file.read(MAX_UPLOAD_BYTES + 1)
         _, _, report = reconcile_uploads(bank, ledger)
     except UploadError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

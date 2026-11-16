@@ -20,7 +20,6 @@ the measured times vary.
 
 from __future__ import annotations
 
-import csv
 import io
 import math
 import time
@@ -28,6 +27,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Final, Literal
 
+from eod_close.csv_format import SafeCsvWriter
 from eod_close.domain.processor import FICTIONAL_PROCESSORS
 from eod_close.domain.results import ReconciliationReport
 from eod_close.domain.statements import BankStatement, Ledger
@@ -256,7 +256,7 @@ def answer_key_csv(answer_key: AnswerKey) -> str:
         CSV text with a header row.
     """
     buffer = io.StringIO()
-    writer = csv.writer(buffer, lineterminator="\n")
+    writer = SafeCsvWriter(buffer, lineterminator="\n")
     writer.writerow(["kind", "problem", "bank_entries", "ledger_entries", "explanation"])
     for item in answer_key.items:
         writer.writerow(

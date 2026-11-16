@@ -8,7 +8,8 @@
 // - "Why?" popovers: placed beside their button and kept on screen;
 // - the busy day: opening a problem filters the lists to its rows;
 // - tooltips: Escape dismisses them (WCAG 1.4.13);
-// - upload drop zones: a highlight while dragging and the chosen file's name.
+// - upload drop zones: a highlight while dragging and the chosen file's name;
+// - request errors: the error box is cleared by the next request or Dismiss.
 (function () {
   "use strict";
 
@@ -274,6 +275,28 @@
   // Without JavaScript the link loads the whole page at those rows; with it,
   // a page loaded that way (or reloaded) still lands on them.
   document.addEventListener("DOMContentLoaded", bringFlashedRowsIntoView);
+
+  // ---- Request errors -----------------------------------------------------
+  //
+  // A request made without leaving the page that fails (too many requests,
+  // or a server error) has its message put in the error box by the server.
+  // A new request clears the box, and Dismiss empties it.
+  function errorBox() {
+    return document.getElementById("request-error");
+  }
+
+  document.addEventListener("htmx:beforeRequest", function () {
+    var box = errorBox();
+    if (box) {
+      box.replaceChildren();
+    }
+  });
+
+  document.addEventListener("click", function (event) {
+    if (event.target.closest("[data-dismiss-error]")) {
+      errorBox().replaceChildren();
+    }
+  });
 
   // ---- Tooltips -----------------------------------------------------------
 

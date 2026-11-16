@@ -1,5 +1,12 @@
 # End-of-Day Close
 
+[![CI](https://github.com/4shwotts/end-of-day-close/actions/workflows/ci.yml/badge.svg)](https://github.com/4shwotts/end-of-day-close/actions/workflows/ci.yml)
+![Coverage: 96%](https://img.shields.io/badge/coverage-96%25-brightgreen)
+
+**Live demo: [end-of-day-close.onrender.com](https://end-of-day-close.onrender.com)**.
+It runs on a free plan that sleeps when nobody has visited for a while, so the first
+visit can take up to a minute while it wakes; after that it is quick.
+
 A payment reconciliation engine with a game layer. You play an operations analyst at a
 fictional payments company. Each round is one business day in which the bank settlement
 file and the internal ledger do not agree, and your job is to close the day: link what
@@ -14,6 +21,7 @@ Playwright; checked by GitHub Actions; packaged with Docker and hosted on Render
 
 ## Contents
 
+- [The problem](#the-problem)
 - [What it does](#what-it-does)
 - [How the engine works](#how-the-engine-works)
 - [Accuracy and performance](#accuracy-and-performance)
@@ -23,6 +31,19 @@ Playwright; checked by GitHub Actions; packaged with Docker and hosted on Render
 - [Running it locally](#running-it-locally)
 - [Deployment](#deployment)
 - [Project layout](#project-layout)
+
+## The problem
+
+Every business that takes card payments has to check, each day, that the money its own
+records say it received is the money that actually reached the bank. The two never agree
+on their own: card processors pay out days later, take their fees first, and bundle many
+sales into one payment, and people make keying mistakes. Someone in operations has to
+work through the differences by hand, usually in a spreadsheet, before the books for that
+day can be closed. It is slow, repetitive and easy to get wrong, and a new analyst has
+nowhere safe to practise it.
+
+This project automates the routine part, explains every decision in plain words so a
+person can check it, and gives new analysts a safe place to practise on made-up days.
 
 ## What it does
 
@@ -225,6 +246,13 @@ The interactive documentation is at `/docs` when the app is running.
 | POST | `/api/cases/{difficulty}/{seed}/score` | Score a set of answers against the answer key and the engine |
 | POST | `/api/reconcile` | Reconcile an uploaded bank CSV and ledger CSV |
 
+The live demo is one small shared server, so the endpoints that do real work are
+limited per visitor: new days (60 a minute), the busy day (30), uploads (20) and the
+race (6). Past the limit, the reply is `429 Too Many Requests` with a `Retry-After`
+header. Uploads must be CSV files of up to 2 MB and 20,000 rows each, and no request may
+be larger than 5 MB. Errors from the API are JSON (`{"detail": ...}`); unexpected errors
+never include internal details.
+
 ## Running it locally
 
 ### With Python
@@ -272,10 +300,12 @@ The same `Dockerfile` runs everywhere: in Docker Compose on your machine, in CI,
 Render. Nothing about the app changes between them.
 
 **CI.** Every push and pull request runs the GitHub Actions pipeline in
-[.github/workflows/ci.yml](.github/workflows/ci.yml): ruff, mypy, the tests with
-coverage, the accuracy regression test, the Playwright browser tests, and a container
-build that is started with a read-only filesystem, health-checked and checked not to run
-as root. The workflow can only read the repository, and it holds no secrets.
+[.github/workflows/ci.yml](.github/workflows/ci.yml): ruff, mypy, a `pip-audit` check of
+every installed package for known vulnerabilities, the tests with coverage, the accuracy
+regression test, the Playwright browser tests, and a container build that is started
+with a read-only filesystem, health-checked and checked not to run as root. Test reports,
+coverage and browser traces are kept for 14 days, and the image's size is shown on each
+run's summary. The workflow can only read the repository, and it holds no secrets.
 
 **Live demo.** Render watches the `main` branch. Once CI passes on a new commit, Render
 builds the `Dockerfile` and replaces the running service. Render checks
@@ -305,3 +335,7 @@ compose.yaml    Run the image locally with one command
 
 [TESTING.md](TESTING.md) describes the test suite. [BUGS.md](BUGS.md) records the real
 defects the tests found, with the cause, the fix and the test that now guards each one.
+
+---
+
+Developed with AI-assisted tooling (Claude Code). Design, test strategy, review and bug triage by me.

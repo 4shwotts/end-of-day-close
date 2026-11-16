@@ -10,8 +10,11 @@
      "class" is left out too: carrying it would leave swapped rows wearing
      their old classes for a moment (htmx's settle step), long enough for a
      test, or a quick reader, to see no matched rows. The site has no class
-     transitions that would need it. #}
-  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "attributesToSettle": ["width", "height"]}'>
+     transitions that would need it.
+     Error responses are swapped too (htmx ignores them by default): the
+     server sends them to the error box below, so a refused or failed
+     request says why instead of doing nothing. #}
+  <meta name="htmx-config" content='{"includeIndicatorStyles": false, "allowEval": false, "attributesToSettle": ["width", "height"], "responseHandling": [{"code": "204", "swap": false}, {"code": "[23]..", "swap": true}, {"code": "[45]..", "swap": true, "error": true}]}'>
   <title>{% block title %}End-of-Day Close{% endblock %}</title>
   {# Preloaded so the first paint already uses the self-hosted fonts. #}
   <link rel="preload" href="/static/fonts/public-sans-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
@@ -48,6 +51,8 @@
   <main id="main">
     {% block content %}{% endblock %}
   </main>
+  {# Filled only when a request made without leaving the page fails. #}
+  <div id="request-error" class="request-error" role="alert"></div>
   <footer class="site-footer">
     <p>End-of-Day Close: a payment reconciliation tool for operations analysts. Fictional data only. <a href="/docs">API documentation</a></p>
   </footer>

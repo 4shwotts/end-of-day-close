@@ -15,12 +15,19 @@ Ledger columns:
 
 Dates are ISO 8601 (``2026-11-13``). Amounts are signed decimals with no
 thousands separators or currency symbols (``-15.20``).
+
+Every CSV the app writes goes through ``SafeCsvWriter``, which stops a cell
+being run as a spreadsheet formula when the file is opened (see
+``spreadsheet_safe``). Uploaded text, such as a reference or description,
+reaches the downloadable report, so without this a crafted upload could
+plant a formula in someone else's spreadsheet.
 """
 
 from __future__ import annotations
 
 import csv
-from collections.abc import Callable
+import re
+from collections.abc import Callable, Iterable
 from datetime import date
 from typing import Final, TextIO
 
@@ -37,6 +44,53 @@ BANK_COLUMNS: Final = (
     "amount",
     "currency",
 )
+# A cell starting with one of these is read by spreadsheet programs as a
+# formula (or, for tab and carriage return, can be made into one).
+_FORMULA_STARTS: Final = ("=", "+", "-", "@", "\t", "\r")
+
+# A plain signed decimal, such as -34.99: an amount, not a formula.
+_PLAIN_NUMBER: Final = re.compile(r"[+-]?\d+(\.\d+)?")
+
+
+def spreadsheet_safe(cell: object) -> object:
+    """Stop a CSV cell being run as a formula when the file is opened.
+
+    A text cell that starts like a formula gets a leading apostrophe, which
+    spreadsheet programs show as plain text; this is the protection OWASP
+    recommends against CSV injection. Plain numbers, including negative
+    amounts such as ``-34.99``, are left alone so they stay numbers.
+
+    Args:
+        cell: The value about to be written. Non-text values pass through.
+
+    Returns:
+        The value, made safe if it was text that looked like a formula.
+    """
+    if (
+        isinstance(cell, str)
+        and cell.startswith(_FORMULA_STARTS)
+        and not _PLAIN_NUMBER.fullmatch(cell)
+    ):
+        return "'" + cell
+    return cell
+
+
+class SafeCsvWriter:
+    """A ``csv.writer`` that passes every cell through ``spreadsheet_safe``.
+
+    Args:
+        handle: The text stream to write to.
+        lineterminator: The line ending, as for ``csv.writer``.
+    """
+
+    def __init__(self, handle: TextIO, lineterminator: str = "\r\n") -> None:
+        self._writer = csv.writer(handle, lineterminator=lineterminator)
+
+    def writerow(self, row: Iterable[object]) -> None:
+        """Write one row, each cell made safe first."""
+        self._writer.writerow([spreadsheet_safe(cell) for cell in row])
+
+
 LEDGER_COLUMNS: Final = (
     "entry_id",
     "value_date",
@@ -63,7 +117,7 @@ def write_bank_csv(statement: BankStatement, handle: TextIO) -> None:
         statement: The statement to write.
         handle: A text stream opened with ``newline=""``.
     """
-    writer = csv.writer(handle)
+    writer = SafeCsvWriter(handle)
     writer.writerow(BANK_COLUMNS)
     for e in statement:
         writer.writerow(
@@ -86,7 +140,7 @@ def write_ledger_csv(ledger: Ledger, handle: TextIO) -> None:
         ledger: The ledger to write.
         handle: A text stream opened with ``newline=""``.
     """
-    writer = csv.writer(handle)
+    writer = SafeCsvWriter(handle)
     writer.writerow(LEDGER_COLUMNS)
     for e in ledger:
         original = e.original_amount

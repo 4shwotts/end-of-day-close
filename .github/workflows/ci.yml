@@ -1,15 +1,15 @@
 # Continuous integration.
 #
-# Every push and pull request: lint, type check, tests with coverage, the
-# accuracy regression test, browser tests, and a container build with a smoke
-# test. Deployment is not done here: Render builds the Dockerfile itself when
+# Every push to any branch, and every pull request: lint, type check, a
+# dependency audit, tests with coverage, the accuracy regression test,
+# browser tests, and a container build with a smoke test. Test reports are
+# kept for 14 days. Deployment is not done here: Render builds the Dockerfile itself when
 # main changes, and waits for these checks to pass first.
 
 name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
 
 # Least privilege: jobs can read the code and nothing else.
@@ -39,6 +39,9 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: mypy
+      # Fails if any installed package has a published vulnerability. The
+      # project itself is skipped: it is not on PyPI, so it has no record.
+      - run: pip-audit --skip-editable
 
   test:
     name: Tests and coverage
@@ -55,11 +58,18 @@ jobs:
       - run: pip install -e ".[dev]"
       # The accuracy and browser tests have their own jobs. Coverage fails
       # the job below the floor set in pyproject.toml.
-      - run: pytest -m "not e2e and not accuracy" --cov --cov-report=term --cov-report=xml
+      - run: >
+          pytest -m "not e2e and not accuracy" --cov --cov-report=term
+          --cov-report=xml --junitxml=test-results.xml
+      # Uploaded even when the tests fail, which is when they are wanted.
       - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
         with:
-          name: coverage
-          path: coverage.xml
+          name: coverage-and-test-results
+          path: |
+            coverage.xml
+            test-results.xml
+          retention-days: 14
 
   accuracy:
     name: Accuracy regression
@@ -73,7 +83,13 @@ jobs:
       - run: pip install -e ".[dev]"
       # Fails if precision or recall drops below the thresholds set in
       # tests/accuracy/test_accuracy.py.
-      - run: pytest -m accuracy -v
+      - run: pytest -m accuracy -v --junitxml=accuracy-results.xml
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: accuracy-results
+          path: accuracy-results.xml
+          retention-days: 14
 
   e2e:
     name: Browser tests
@@ -87,7 +103,20 @@ jobs:
       - run: pip install -e ".[dev]"
       # --with-deps installs the system libraries Chromium needs on Ubuntu.
       - run: python -m playwright install --with-deps chromium webkit
-      - run: pytest -m e2e
+      # On a failure, Playwright keeps a trace (screenshots, network and
+      # console at each step) that playwright.dev/trace can replay.
+      - run: >
+          pytest -m e2e --junitxml=browser-results.xml
+          --tracing retain-on-failure --output test-traces
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: browser-results
+          path: |
+            browser-results.xml
+            test-traces/
+          if-no-files-found: ignore
+          retention-days: 14
 
   container:
     name: Build and smoke-test the image
@@ -95,6 +124,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build --tag eod-close:ci .
+      # Shown on the run's summary page, so a change that bloats the image
+      # is noticed.
+      - name: Report the image size
+        run: |
+          bytes="$(docker image inspect --format '{{.Size}}' eod-close:ci)"
+          echo "Image size: $((bytes / 1024 / 1024)) MB" >> "$GITHUB_STEP_SUMMARY"
       # Run with the same restrictions as Compose, so a change that needs a
       # writable filesystem or root fails here first.
       - run: >

@@ -331,6 +331,40 @@ main,
   }
 }
 
+/* A failed in-page request's message (base.html), pinned to the foot of
+   the window so it is seen wherever the visitor has scrolled to. Empty, it
+   takes no space. */
+.request-error {
+  position: fixed;
+  inset-inline: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 20;
+  max-width: 36rem;
+  margin-inline: auto;
+  padding: var(--space-3) var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  background: var(--surface-raised);
+  color: var(--text);
+  border: 1px solid var(--bad);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+
+.request-error:empty {
+  display: none;
+}
+
+.request-error p {
+  margin: 0;
+}
+
+.error-page {
+  text-align: center;
+}
+
 /* The fictional-data notice: one quiet line under the header. */
 .notice {
   margin-top: 0;

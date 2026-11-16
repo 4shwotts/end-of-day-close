@@ -33,6 +33,7 @@ PAGES = [
     "/play/intern/1/work",
     "/how-it-works",
     "/how-it-works/busy-day/48213",
+    "/no-such-page",
 ]
 WIDTHS = {"phone": 390, "tablet": 820, "desktop": 1440}
 RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]

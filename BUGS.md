@@ -81,3 +81,23 @@ Real defects found by the test suite, with the test that now guards each one.
 - **Root cause:** every line of the day sends two form fields, its pair number and its "if no partner" choice. A Head of Ops day has about 600 lines, so it sends about 1,200 fields, and Starlette's form parser refuses more than 1,000 by default. The smaller levels stay under the limit, which is why only the hardest level failed.
 - **Fix:** both routes read the form through one helper that sets the limit from the day itself: two fields per line plus a small allowance. The limit still protects the server, but it can never be lower than the day needs.
 - **Guarding test:** `tests/api/test_pages.py::test_the_largest_day_can_be_closed_and_checked`, which posts a full Head of Ops day to both routes.
+
+## BUG-009: "Show its rows in the lists" on the busy day did nothing
+
+- **Found by:** the owner, trying the busy day on How it works.
+- **Steps to reproduce:** run a busy day, open a problem in the problem list, then press **Show its rows in the lists**.
+- **Expected result:** the lists open at that problem's rows, with the rows highlighted and in view.
+- **Actual result:** nothing on screen changed.
+- **Root cause:** opening a problem had already followed the link for the visitor, filtering the lists to its rows. Pressing the link fetched the same filtered lists again, so the page did not change, and the lists sat further down the page, out of sight, so the first filter was never seen either.
+- **Fix:** opening a problem no longer changes the lists. The link now asks for the page of the lists that holds the problem's rows (`?focus=`), keeping every other row, and marks those rows. The lists open, and the first marked row is scrolled into view and focused. Without JavaScript, the link loads the whole page at those rows.
+- **Guarding tests:** `tests/e2e/test_game_flow.py::test_show_its_rows_finds_and_highlights_the_problem` and `::test_show_its_rows_works_without_javascript`.
+
+## BUG-010: a browser test failed now and then in CI, but never locally
+
+- **Found by:** CI, on a push to `main`. The Browser tests job failed, then passed on a rerun with no change.
+- **Steps to reproduce:** run `pytest -m e2e` repeatedly on a slow machine, such as a CI runner. `test_matched_rows_carry_a_type_and_say_why` sometimes found no matched rows straight after **Match**.
+- **Expected result:** straight after Match, the matched rows carry their matched class.
+- **Actual result:** for about 20 ms after the swap, the rows still wore their old classes, so a test (or a very quick reader) could see a workspace with nothing matched.
+- **Root cause:** HTMX's settle step copies some attributes of an element that shares an ID with the new one onto the new element, then swaps them back a moment later. `class` was one of those attributes, so each new row briefly showed its old, unmatched class. A second race came from the tests themselves: they acted on the result before the page had moved focus to the headline, which happens only once settling is over.
+- **Fix:** `class` is no longer one of the attributes HTMX carries across a swap (the `htmx-config` in `base.html`; the site has no class transitions that need it). The browser tests' match helpers wait for the headline to take focus before checking anything.
+- **Guarding tests:** `tests/e2e/test_home_workspace.py::test_matched_rows_carry_a_type_and_say_why`, run in CI on every push, with the shared `match` helpers in `test_home_workspace.py` and `test_layout.py`.

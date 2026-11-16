@@ -505,3 +505,24 @@ def test_a_training_days_engine_answer_downloads(client: TestClient) -> None:
     assert response.headers["content-type"].startswith("text/csv")
     assert "intern-day-4-engine-report.csv" in response.headers["content-disposition"]
     assert response.text.startswith("status,type,bank_entries")
+
+
+def test_an_uploaded_formula_cannot_reach_the_report_as_a_formula(client: TestClient) -> None:
+    """A crafted upload must not plant a formula in the downloaded report."""
+    bank = (
+        b"entry_id,value_date,reference,counterparty,description,amount,currency\n"
+        b'"=HYPERLINK(""http://example.invalid"")",2026-11-13,=1+1,DIRECT,@SUM(A1),25.00,GBP\n'
+    )
+    ledger = (
+        b"entry_id,value_date,reference,processor,kind,description,amount,currency,"
+        b"original_amount,original_currency,original_reference\n"
+        b"L1,2026-11-13,INV-1,DIRECT,payment,Invoice,10.00,GBP,,,\n"
+    )
+    files = {"bank_file": ("b.csv", bank), "ledger_file": ("l.csv", ledger)}
+    html = client.post("/upload", files=files, headers={"HX-Request": "true"}).text
+    rows = report_from_page(html)
+    assert rows
+    for row in rows:
+        for cell in row.values():
+            assert not cell.startswith(("=", "+", "@")), cell
+    assert rows[0]["bank_entries"].startswith("'=HYPERLINK")

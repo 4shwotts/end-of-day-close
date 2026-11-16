@@ -27,7 +27,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Annotated, Final
 
-from fastapi import APIRouter, File, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
@@ -45,12 +45,14 @@ from eod_close.web.busy_day import (
     run_busy_day,
 )
 from eod_close.web.chart import build_timing_chart
+from eod_close.web.limits import rate_limited
 from eod_close.web.report_view import build_report_view, report_csv
 from eod_close.web.schemas import MAX_SEED
 from eod_close.web.services import (
     MAX_UPLOAD_BYTES,
     UploadError,
     answers_from_form,
+    check_file_names,
     engine_seconds,
     load_case,
     parse_uploads,
@@ -129,6 +131,12 @@ templates.env.filters.update(
 
 router = APIRouter(include_in_schema=False)
 
+# Per-visitor limits on the routes that do real work (see limits.py).
+_NEW_DAY: Final = [Depends(rate_limited("new-day"))]
+_BUSY_DAY: Final = [Depends(rate_limited("busy-day"))]
+_RACE: Final = [Depends(rate_limited("race"))]
+_UPLOAD: Final = [Depends(rate_limited("upload"))]
+
 # A fixed menu of sizes rather than free input, so nobody can ask a shared
 # instance to time a naive run on a million rows.
 # Below about 500 a side the engine's index-building cost outweighs its
@@ -148,7 +156,8 @@ _FORMAT_CONTEXT: Final = MappingProxyType(
 )
 
 
-def _is_htmx(request: Request) -> bool:
+def is_htmx(request: Request) -> bool:
+    """Whether HTMX made the request, so only part of a page is wanted."""
     return request.headers.get("HX-Request") == "true"
 
 
@@ -212,7 +221,7 @@ def _workspace_context(seed: int | None, *, reconciled: bool) -> dict[str, objec
 def _workspace_page(request: Request, seed: int | None, *, reconciled: bool) -> HTMLResponse:
     # HTMX swaps in just the workspace; without JavaScript the Match form
     # posts as a plain form and gets the whole page back, already matched.
-    template = "_workspace.html" if reconciled and _is_htmx(request) else "home.html"
+    template = "_workspace.html" if reconciled and is_htmx(request) else "home.html"
     return templates.TemplateResponse(
         request, template, _workspace_context(seed, reconciled=reconciled)
     )
@@ -248,19 +257,19 @@ def another_day() -> RedirectResponse:
     return RedirectResponse(f"/day/{secrets.randbelow(MAX_SEED + 1)}", status_code=303)
 
 
-@router.get("/day/{seed}", response_class=HTMLResponse)
+@router.get("/day/{seed}", response_class=HTMLResponse, dependencies=_NEW_DAY)
 def small_day(request: Request, seed: int) -> HTMLResponse:
     """A generated small day, the same shape as the sample day, ready to match."""
     return _workspace_page(request, seed, reconciled=False)
 
 
-@router.post("/day/{seed}/reconcile", response_class=HTMLResponse)
+@router.post("/day/{seed}/reconcile", response_class=HTMLResponse, dependencies=_NEW_DAY)
 def reconcile_small_day(request: Request, seed: int) -> HTMLResponse:
     """Match a generated small day and show what is wrong."""
     return _workspace_page(request, seed, reconciled=True)
 
 
-@router.get("/day/{seed}/report.csv")
+@router.get("/day/{seed}/report.csv", dependencies=_NEW_DAY)
 def small_day_report(seed: int) -> Response:
     """Download the engine's report on a generated small day."""
     _check_seed(seed)
@@ -298,7 +307,7 @@ def new_day(
     return RedirectResponse(f"/play/{difficulty.value}/{chosen}", status_code=303)
 
 
-@router.get("/play/{difficulty}/{seed}", response_class=HTMLResponse)
+@router.get("/play/{difficulty}/{seed}", response_class=HTMLResponse, dependencies=_NEW_DAY)
 def briefing(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
     """The briefing: how to work the day, read before the clock starts."""
     _check_seed(seed)
@@ -306,7 +315,7 @@ def briefing(request: Request, difficulty: Difficulty, seed: int) -> HTMLRespons
     return templates.TemplateResponse(request, "briefing.html", {"case": case})
 
 
-@router.get("/play/{difficulty}/{seed}/work", response_class=HTMLResponse)
+@router.get("/play/{difficulty}/{seed}/work", response_class=HTMLResponse, dependencies=_NEW_DAY)
 def work_case(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
     """The work-the-case page: bank and ledger side by side, with the clock running.
 
@@ -345,7 +354,7 @@ async def _answers_form(request: Request, case: Case) -> dict[str, str]:
         return {key: str(value) for key, value in form.items()}
 
 
-@router.post("/play/{difficulty}/{seed}/check", response_class=HTMLResponse)
+@router.post("/play/{difficulty}/{seed}/check", response_class=HTMLResponse, dependencies=_NEW_DAY)
 async def check_progress(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
     """HTMX partial: how much is still unassigned, without revealing answers."""
     _check_seed(seed)
@@ -359,7 +368,7 @@ async def check_progress(request: Request, difficulty: Difficulty, seed: int) ->
     )
 
 
-@router.post("/play/{difficulty}/{seed}/close", response_class=HTMLResponse)
+@router.post("/play/{difficulty}/{seed}/close", response_class=HTMLResponse, dependencies=_NEW_DAY)
 async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
     """Score the day and show the engine's solution and every explanation."""
     _check_seed(seed)
@@ -385,7 +394,7 @@ async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTML
     )
 
 
-@router.get("/play/{difficulty}/{seed}/report.csv")
+@router.get("/play/{difficulty}/{seed}/report.csv", dependencies=_NEW_DAY)
 def training_day_report(difficulty: Difficulty, seed: int) -> Response:
     """Download the engine's full answer to a training day, for the close screen."""
     _check_seed(seed)
@@ -443,7 +452,7 @@ def _busy_day_context(
     return context
 
 
-@router.post("/how-it-works/busy-day", response_model=None)
+@router.post("/how-it-works/busy-day", response_model=None, dependencies=_BUSY_DAY)
 def new_busy_day(request: Request) -> HTMLResponse | RedirectResponse:
     """Run a busy day with a new number.
 
@@ -452,20 +461,22 @@ def new_busy_day(request: Request) -> HTMLResponse | RedirectResponse:
     JavaScript the form redirects to that address.
     """
     seed = secrets.randbelow(MAX_SEED + 1)
-    if not _is_htmx(request):
+    if not is_htmx(request):
         return RedirectResponse(f"/how-it-works/busy-day/{seed}#busy-day", status_code=303)
     response = templates.TemplateResponse(request, "_busy_day.html", _busy_day_context(seed))
     response.headers["HX-Push-Url"] = f"/how-it-works/busy-day/{seed}"
     return response
 
 
-@router.get("/how-it-works/busy-day/{seed}", response_class=HTMLResponse)
+@router.get("/how-it-works/busy-day/{seed}", response_class=HTMLResponse, dependencies=_BUSY_DAY)
 def busy_day(request: Request, seed: int) -> HTMLResponse:
     """How it works, with one numbered busy day run live."""
     return templates.TemplateResponse(request, "how_it_works.html", _busy_day_context(seed))
 
 
-@router.get("/how-it-works/busy-day/{seed}/lists", response_class=HTMLResponse)
+@router.get(
+    "/how-it-works/busy-day/{seed}/lists", response_class=HTMLResponse, dependencies=_BUSY_DAY
+)
 def busy_day_lists(
     request: Request,
     seed: int,
@@ -479,13 +490,13 @@ def busy_day_lists(
     highlighted, for "Show its rows in the lists".
     """
     context = _busy_day_context(seed, page, show, focus)
-    if _is_htmx(request):
+    if is_htmx(request):
         return templates.TemplateResponse(request, "_busy_lists.html", context)
     context["lists_open"] = True
     return templates.TemplateResponse(request, "how_it_works.html", context)
 
 
-@router.get("/how-it-works/busy-day/{seed}/{name}.csv")
+@router.get("/how-it-works/busy-day/{seed}/{name}.csv", dependencies=_BUSY_DAY)
 def busy_day_file(seed: int, name: str) -> Response:
     """Download a busy day's bank file, records file, answer key or the engine's report."""
     if name not in ("bank", "ledger", "answer-key", "report"):
@@ -504,7 +515,7 @@ def busy_day_file(seed: int, name: str) -> Response:
     return _csv_response(buffer.getvalue(), f"busy-day-{seed}-{name}.csv")
 
 
-@router.post("/how-it-works/race", response_class=HTMLResponse)
+@router.post("/how-it-works/race", response_class=HTMLResponse, dependencies=_RACE)
 async def run_race(request: Request) -> HTMLResponse:
     """Time both approaches on the chosen sizes and return the chart."""
     form = await request.form()
@@ -516,7 +527,7 @@ async def run_race(request: Request) -> HTMLResponse:
     else:
         rows = [run_benchmark(size) for size in chosen]
         context.update(rows=rows, chart=build_timing_chart(rows))
-    template = "_race_results.html" if _is_htmx(request) else "how_it_works.html"
+    template = "_race_results.html" if is_htmx(request) else "how_it_works.html"
     return templates.TemplateResponse(request, template, context)
 
 
@@ -526,15 +537,16 @@ def upload_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(request, "upload.html", dict(_FORMAT_CONTEXT))
 
 
-@router.post("/upload", response_class=HTMLResponse)
+@router.post("/upload", response_class=HTMLResponse, dependencies=_UPLOAD)
 async def upload(
     request: Request,
     bank_file: Annotated[UploadFile, File()],
     ledger_file: Annotated[UploadFile, File()],
 ) -> HTMLResponse:
     """Reconcile two uploaded files and show the results."""
-    context: dict[str, object] = {} if _is_htmx(request) else dict(_FORMAT_CONTEXT)
+    context: dict[str, object] = {} if is_htmx(request) else dict(_FORMAT_CONTEXT)
     try:
+        check_file_names(bank_file.filename, ledger_file.filename)
         statement, ledger = parse_uploads(
             await bank_file.read(MAX_UPLOAD_BYTES + 1), await ledger_file.read(MAX_UPLOAD_BYTES + 1)
         )
@@ -544,11 +556,11 @@ async def upload(
     except UploadError as exc:
         context["error"] = str(exc)
         status = 422
-    template = "_results.html" if _is_htmx(request) else "upload.html"
+    template = "_results.html" if is_htmx(request) else "upload.html"
     # HTMX does not swap error responses by default, so its partial is sent
     # with 200 and the error is shown in the page instead.
     return templates.TemplateResponse(
-        request, template, context, status_code=200 if _is_htmx(request) else status
+        request, template, context, status_code=200 if is_htmx(request) else status
     )
 
 

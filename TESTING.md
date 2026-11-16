@@ -16,6 +16,10 @@ The engine makes financial decisions, so the tests check behaviour from several 
   problems at phone, tablet and desktop widths in both colour themes.
 - **The deployment files** are parsed and checked, so dropping the non-root user, the
   health check or the Compose hardening fails in CI rather than on the live host.
+- **Misuse** is tested as well as use: a crafted upload cannot plant a spreadsheet
+  formula in a downloaded report, an over-large or non-CSV upload is refused, a visitor
+  who calls a heavy page too often is slowed down, and an unexpected error shows a plain
+  message with no internal details.
 
 Real defects the tests found are recorded in [BUGS.md](BUGS.md), each with the test that
 now guards it.
@@ -24,13 +28,25 @@ now guards it.
 
 | Folder | What it checks |
 |---|---|
-| `tests/unit/` | Money, the domain model, the generator, CSV, each matching strategy, edge cases, game scoring, the evaluator, the CLIs, the Dockerfile, Compose and the CI workflow |
+| `tests/unit/` | Money, the domain model, the generator, CSV (including formula-injection protection), each matching strategy, edge cases, game scoring, the evaluator, the rate limiter, the CLIs, the Dockerfile, Compose and the CI workflow |
 | `tests/property/` | Hypothesis properties: invariants that must hold for any input |
 | `tests/accuracy/` | Precision and recall on held-out seeds; fails below the thresholds (marker `accuracy`) |
-| `tests/api/` | The JSON API and the HTML pages, through FastAPI's test client |
+| `tests/api/` | The JSON API and the HTML pages, through FastAPI's test client, plus error handling, rate limits, request size limits and security headers |
 | `tests/e2e/` | The Reconcile page's flow (instruction, Match, problem cards, highlighted rows, a total that adds up, the filter), upload, the busy day (marks, reruns, downloads, paged lists), the row popovers, and layout checks in Chromium and WebKit (no box wider than its card, no reference or amount wrapping, a popover never resizing its table), training mode and How it works in a real Chromium browser with Playwright, including keyboard use, no JavaScript and reduced motion; a check that the stylesheet is applied; and the axe-core accessibility scan (marker `e2e`) |
 
-Branch coverage is about 96%, and the run fails below 90%.
+### Totals
+
+| Level | Tests |
+|---|---:|
+| Unit | 279 |
+| Property | 11 |
+| Accuracy | 15 |
+| API and pages | 101 |
+| Browser (e2e) | 195 |
+| **Total** | **601** |
+
+Counted with `pytest --collect-only`; a test run once per browser, width or colour theme
+counts once for each. Branch coverage is about 96%, and the run fails below 90%.
 
 ### Accuracy thresholds
 
@@ -48,6 +64,33 @@ are only about 100 in the sample, so one miss costs a whole percentage point) an
 missing-from-bank (93%: it absorbs the other half of every ambiguous blank-reference
 settlement). The current results are in the [README](README.md#accuracy-and-performance).
 
+## Deliberately not tested
+
+Some things are left out on purpose, because a test would cost more than it would catch,
+or would not be reliable:
+
+- **Speed in the test suite.** Timings depend on the machine, so no test fails on a
+  slow run. The benchmark is run by hand and its results saved (see below).
+- **Firefox.** The browser tests use Chromium for everything and WebKit (Safari's engine)
+  for layout. Firefox is left out to keep CI fast; the site uses no Firefox-specific
+  features.
+- **Screen readers themselves.** axe-core checks the markup that screen readers rely on,
+  and the tests drive the pages by keyboard, but nobody has tested them with NVDA or
+  VoiceOver.
+- **Pixel-perfect appearance.** There are no screenshot comparisons, which break on every
+  font or colour change. The layout tests check geometry instead: nothing overflows its
+  card, and nothing moves when a filter changes.
+- **Load.** The rate limits are tested, but the site has not been load-tested. It runs as
+  a single small instance and keeps no state between requests.
+- **Rate limits across several servers.** The limits are kept in memory, which suits one
+  instance (Render's free plan runs exactly one). Several instances would need a shared
+  store, which this project does not have.
+- **The hosting.** Render's proxy, HTTPS and free-tier sleep are not reproduced locally.
+  CI builds the Docker image and checks it starts, runs as a non-root user and answers
+  its health check; the live site is checked by hand after each deploy.
+- **Other people's code.** FastAPI, Starlette, HTMX and Jinja are trusted to work as
+  documented. Their known vulnerabilities are checked by `pip-audit` in CI.
+
 ## Running the checks
 
 Install the project with its development tools into a virtual environment (see the
@@ -57,6 +100,7 @@ Install the project with its development tools into a virtual environment (see t
 ruff check .
 ruff format --check .
 mypy
+pip-audit --skip-editable
 pytest --cov
 ```
 
@@ -86,8 +130,16 @@ runs 500, as CI does.
 
 ## In CI
 
-GitHub Actions runs the same checks on Linux on every push and pull request, split into
-jobs: lint and type check, tests with coverage (Hypothesis `ci` profile), the accuracy
-regression, the browser tests, and a container build with a health-checked smoke run.
+GitHub Actions runs the same checks on Linux on every push to any branch and on every
+pull request, split into jobs: lint, type check and dependency audit; tests with coverage
+(Hypothesis `ci` profile); the accuracy regression; the browser tests; and a container
+build with a health-checked smoke run, which also writes the image's size to the run's
+summary page.
+
+Each run keeps its reports for 14 days, under **Artifacts** on the run's page: the
+coverage report, JUnit test results for each job, and, when a browser test fails, a
+Playwright trace that replays the failure step by step at
+[trace.playwright.dev](https://trace.playwright.dev).
+
 CI does not deploy anything. Render deploys the live demo from `main` once all of these
 pass.

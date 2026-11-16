@@ -12,13 +12,13 @@ the accuracy figures and the tests of the engine are unaffected.
 
 from __future__ import annotations
 
-import csv
 import io
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from typing import Final
 
+from eod_close.csv_format import SafeCsvWriter
 from eod_close.domain.business_days import business_days_between
 from eod_close.domain.entries import BankEntry, LedgerEntry
 from eod_close.domain.money import Money
@@ -236,7 +236,9 @@ def report_csv(view: ReportView) -> str:
         The CSV text, with a header row.
     """
     buffer = io.StringIO(newline="")
-    writer = csv.writer(buffer)
+    # Safe against formula injection: uploaded references and descriptions
+    # reach this report.
+    writer = SafeCsvWriter(buffer)
     writer.writerow(REPORT_COLUMNS)
     for row in view.matches:
         writer.writerow(

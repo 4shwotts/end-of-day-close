@@ -77,6 +77,39 @@ def test_how_it_works_draws_the_race_chart_with_htmx(page: Page, live_server: st
     expect(page).to_have_url(f"{live_server}/how-it-works")
 
 
+def test_a_refused_request_says_why_and_leaves_the_page_alone(page: Page, live_server: str) -> None:
+    """A rate-limited click shows its message in the error box, not nowhere.
+
+    The test server has no rate limits, so the refusal is played back the
+    way the deployed app sends it (tests/api/test_errors.py checks that).
+    """
+    page.goto(f"{live_server}/how-it-works")
+    page.route(
+        "**/how-it-works/race",
+        lambda route: route.fulfill(
+            status=429,
+            headers={
+                "Content-Type": "text/html; charset=utf-8",
+                "HX-Retarget": "#request-error",
+                "HX-Reswap": "innerHTML",
+                "Retry-After": "30",
+            },
+            body=(
+                "<p>Too many requests. Please try again in 30 seconds.</p>"
+                '<button type="button" class="button-secondary button-small" '
+                "data-dismiss-error>Dismiss</button>"
+            ),
+        ),
+    )
+    page.get_by_role("button", name="Run the race").click()
+    alert = page.get_by_role("alert")
+    expect(alert).to_contain_text("try again in 30 seconds")
+    expect(alert).to_be_in_viewport()
+    expect(page.get_by_role("heading", level=1)).to_have_text("How it works")
+    alert.get_by_role("button", name="Dismiss").click()
+    expect(alert).to_be_hidden()
+
+
 def test_old_arena_link_lands_on_how_it_works(page: Page, live_server: str) -> None:
     page.goto(f"{live_server}/arena")
     expect(page).to_have_url(f"{live_server}/how-it-works")

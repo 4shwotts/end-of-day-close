@@ -128,6 +128,26 @@ def parse_uploads(bank_csv: bytes, ledger_csv: bytes) -> tuple[BankStatement, Le
     return statement, ledger
 
 
+def check_file_names(bank_filename: str | None, ledger_filename: str | None) -> None:
+    """Refuse files that are not named as CSV files, before reading them.
+
+    The parser would reject them anyway, but only after reading up to 2 MB;
+    an image or a spreadsheet chosen by mistake is better told so plainly.
+    The name is a courtesy check, not a security one: the content is still
+    parsed strictly whatever the file is called.
+
+    Args:
+        bank_filename: The bank file's name, as the browser sent it.
+        ledger_filename: The ledger file's name, as the browser sent it.
+
+    Raises:
+        UploadError: If either name does not end in ``.csv``.
+    """
+    for name, filename in (("bank", bank_filename), ("ledger", ledger_filename)):
+        if not (filename or "").lower().endswith(".csv"):
+            raise UploadError(f"The {name} file must be a CSV file (ending in .csv).")
+
+
 def _text(raw: bytes, name: str) -> io.StringIO:
     if not raw:
         raise UploadError(f"The {name} file is empty.")

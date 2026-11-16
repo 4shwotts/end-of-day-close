@@ -9,6 +9,7 @@ from eod_close.csv_format import (
     CsvFormatError,
     read_bank_csv,
     read_ledger_csv,
+    spreadsheet_safe,
     write_bank_csv,
     write_ledger_csv,
 )
@@ -52,3 +53,22 @@ def test_duplicate_ids_in_a_file_are_rejected() -> None:
 def test_empty_file_is_rejected() -> None:
     with pytest.raises(CsvFormatError, match="no entries"):
         read_bank_csv(io.StringIO(",".join(BANK_COLUMNS) + "\n"))
+
+
+@pytest.mark.parametrize(
+    "cell",
+    ["=SUM(A1:A9)", "+44 20 7946 0000", "-1+1", "@cmd", "\tlead", "\rlead", '=HYPERLINK("x")'],
+)
+def test_cells_that_look_like_formulas_are_neutralised(cell: str) -> None:
+    """OWASP's CSV injection advice: a leading apostrophe makes the cell plain text."""
+    assert spreadsheet_safe(cell) == "'" + cell
+
+
+@pytest.mark.parametrize("cell", ["-34.99", "+12", "1250.00", "INV-40112", "", "Exact"])
+def test_numbers_and_ordinary_text_are_left_alone(cell: str) -> None:
+    assert spreadsheet_safe(cell) == cell
+
+
+def test_values_that_are_not_text_pass_through() -> None:
+    assert spreadsheet_safe(None) is None
+    assert spreadsheet_safe(7) == 7

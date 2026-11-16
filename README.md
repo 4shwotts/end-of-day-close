@@ -161,7 +161,8 @@ analyst would learn them:
 | Senior Analyst | 100 | Batch payouts, chargebacks, duplicates, blank references, shared prices |
 | Head of Ops | 300 | Transpositions, held-back batch sales, more noise |
 
-On the work page you give bank and ledger entries that belong together the same group
+A day opens on a briefing with the instructions and the processors' rules; the timer
+starts only when you press **Start the timer**. On the work page you give bank and ledger entries that belong together the same group
 label (or tick them and choose **Link selected**), and mark the rest as exceptions with
 a reason. **Check progress** tells you whether every entry is accounted for; **Close
 the day** scores you and explains every planted discrepancy, item by item, alongside

@@ -16,7 +16,15 @@ from eod_close.web import pages
 from eod_close.web.app import create_app
 from eod_close.web.report_view import REPORT_COLUMNS
 
-PAGES = ["/", "/upload", "/training", "/how-it-works", "/sample/1", "/play/intern/1"]
+PAGES = [
+    "/",
+    "/upload",
+    "/training",
+    "/how-it-works",
+    "/sample/1",
+    "/play/intern/1",
+    "/play/intern/1/work",
+]
 
 
 @pytest.fixture(scope="module")
@@ -58,10 +66,27 @@ def test_out_of_range_seed_is_not_found(client: TestClient) -> None:
 
 
 def test_every_form_control_on_the_work_page_has_a_label(client: TestClient) -> None:
-    html = client.get("/play/senior-analyst/1").text
+    html = client.get("/play/senior-analyst/1/work").text
     controls = html.count('class="group-input"') + html.count("<select ")
     labelled = html.count('aria-label="Group for') + html.count('aria-label="Exception reason for')
     assert controls == labelled
+
+
+def test_a_day_opens_on_a_briefing_with_no_clock_running(client: TestClient) -> None:
+    """The instructions come first; the lists and the start time only on the work page."""
+    html = client.get("/play/intern/3").text
+    assert "How to work the case" in html
+    assert "Start the timer" in html
+    assert 'href="/play/intern/3/work"' in html
+    assert "started_at" not in html
+    assert "link-select" not in html
+
+
+def test_the_work_page_starts_the_clock_and_has_one_close_button(client: TestClient) -> None:
+    html = client.get("/play/intern/3/work").text
+    assert re.search(r'name="started_at" value="\d+"', html)
+    assert html.count(">Close the day</button>") == 1
+    assert '<details class="help">' in html, "the instructions start folded away"
 
 
 def test_progress_check_counts_unassigned_entries(client: TestClient) -> None:

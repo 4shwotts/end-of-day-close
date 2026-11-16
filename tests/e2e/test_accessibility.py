@@ -20,7 +20,15 @@ from playwright.sync_api import Browser, BrowserContext
 pytestmark = pytest.mark.e2e
 
 AXE = Path(__file__).parent / "vendor" / "axe-4.10.2.min.js"
-PAGES = ["/", "/upload", "/sample/1", "/training", "/play/intern/1", "/how-it-works"]
+PAGES = [
+    "/",
+    "/upload",
+    "/sample/1",
+    "/training",
+    "/play/intern/1",
+    "/play/intern/1/work",
+    "/how-it-works",
+]
 WIDTHS = {"phone": 390, "tablet": 820, "desktop": 1440}
 RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]
 
@@ -87,7 +95,7 @@ def test_results_and_close_pages_have_no_axe_violations(
 ) -> None:
     """The pages reached by posting a form: upload results and a closed training day."""
     page = scan_context.new_page()
-    page.goto(f"{live_server}/play/intern/4")
+    page.goto(f"{live_server}/play/intern/4/work")
     page.get_by_role("button", name="Close the day").first.click()
     page.wait_for_load_state()
     page.add_script_tag(path=AXE)

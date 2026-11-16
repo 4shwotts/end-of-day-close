@@ -21,6 +21,9 @@ def test_play_a_perfect_day_and_extend_the_streak(page: Page, live_server: str) 
     page.get_by_label("Day number (optional)").fill(str(SEED))
     page.get_by_role("button", name="Start the day").click()
     expect(page).to_have_url(re.compile(rf"/play/intern/{SEED}$"))
+    expect(page.locator("#timer")).to_have_count(0)
+    page.get_by_role("link", name="Start the timer").click()
+    expect(page).to_have_url(re.compile(rf"/play/intern/{SEED}/work$"))
 
     for item in case.answer_key.items:
         for entry_id in item.bank_ids + item.ledger_ids:
@@ -38,7 +41,7 @@ def test_play_a_perfect_day_and_extend_the_streak(page: Page, live_server: str) 
 
 
 def test_an_unbalanced_day_resets_the_streak(page: Page, live_server: str) -> None:
-    page.goto(f"{live_server}/play/intern/{SEED + 1}")
+    page.goto(f"{live_server}/play/intern/{SEED + 1}/work")
     page.evaluate("window.localStorage.setItem('eod-close.streak', '3')")
     page.get_by_role("button", name="Close the day").first.click()
     expect(page.get_by_role("heading", level=1)).to_contain_text("not balanced")
@@ -115,7 +118,15 @@ def test_drop_zone_accepts_a_dropped_file(page: Page, live_server: str) -> None:
 @pytest.mark.parametrize("width", [375, 820, 1440])
 @pytest.mark.parametrize(
     "path",
-    ["/", "/upload", "/sample/1", "/training", "/how-it-works", "/play/senior-analyst/1"],
+    [
+        "/",
+        "/upload",
+        "/sample/1",
+        "/training",
+        "/how-it-works",
+        "/play/senior-analyst/1",
+        "/play/senior-analyst/1/work",
+    ],
 )
 def test_pages_fit_phone_tablet_and_desktop(
     page: Page, live_server: str, path: str, width: int

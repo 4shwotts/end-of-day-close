@@ -1173,6 +1173,16 @@ details.group[open] {
   margin-top: 0.2em;
 }
 
+/* The briefing before a training day: the instructions as one card. */
+.briefing {
+  padding: var(--space-4) var(--space-5);
+  margin-bottom: var(--space-4);
+}
+
+.briefing h2 {
+  margin-top: 0;
+}
+
 /* The worked example on the training start page. */
 .example {
   margin: var(--space-4) 0 var(--space-5);

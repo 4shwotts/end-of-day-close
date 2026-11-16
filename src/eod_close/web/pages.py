@@ -247,8 +247,20 @@ def new_day(
 
 
 @router.get("/play/{difficulty}/{seed}", response_class=HTMLResponse)
+def briefing(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
+    """The briefing: how to work the day, read before the clock starts."""
+    _check_seed(seed)
+    case, _ = load_case(difficulty, seed)
+    return templates.TemplateResponse(request, "briefing.html", {"case": case})
+
+
+@router.get("/play/{difficulty}/{seed}/work", response_class=HTMLResponse)
 def work_case(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
-    """The work-the-case page: bank and ledger side by side."""
+    """The work-the-case page: bank and ledger side by side, with the clock running.
+
+    The start time is taken here, when the player leaves the briefing, so
+    time spent reading the instructions is not counted.
+    """
     _check_seed(seed)
     case, _ = load_case(difficulty, seed)
     return templates.TemplateResponse(

@@ -18,7 +18,9 @@ from eod_close.evaluation.benchmark import BenchmarkRow
 WIDTH = 640
 HEIGHT = 340
 MARGIN_LEFT = 72
-MARGIN_RIGHT = 120
+# Room for the series labels at the end of each line, the longest being
+# "Checking every pair".
+MARGIN_RIGHT = 160
 MARGIN_TOP = 20
 MARGIN_BOTTOM = 52
 

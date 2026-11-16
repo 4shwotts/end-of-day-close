@@ -46,6 +46,46 @@
     }
   }
 
+  // The lists keep at least the height they have with every row showing,
+  // so choosing Matched or Problems (or the other list, on a phone) hides
+  // rows without the rest of the page jumping. The height only ever grows,
+  // and is measured again when the window changes size.
+  function holdListsHeight(workspace, fresh) {
+    var lists = workspace.querySelector(".lists");
+    var all = workspace.querySelector("#show-all");
+    if (!lists || (all && !all.checked)) {
+      return;
+    }
+    if (fresh) {
+      lists.style.minHeight = "";
+    }
+    var held = parseFloat(lists.style.minHeight) || 0;
+    // The exact, fractional height: rounding it would let the page below
+    // shift by a pixel when rows are hidden.
+    lists.style.minHeight = Math.max(held, lists.getBoundingClientRect().height) + "px";
+  }
+
+  function holdAllListHeights(fresh) {
+    document.querySelectorAll("[data-workspace]").forEach(function (workspace) {
+      holdListsHeight(workspace, fresh);
+    });
+  }
+
+  document.addEventListener("change", function (event) {
+    var workspace = event.target.closest && event.target.closest("[data-workspace]");
+    if (workspace && event.target.name === "side") {
+      holdListsHeight(workspace, false);
+    }
+  });
+
+  var resizeTimer = null;
+  window.addEventListener("resize", function () {
+    window.clearTimeout(resizeTimer);
+    resizeTimer = window.setTimeout(function () {
+      holdAllListHeights(true);
+    }, 150);
+  });
+
   document.addEventListener("click", function (event) {
     var workspace = event.target.closest("[data-workspace]");
     if (!workspace) {
@@ -90,6 +130,7 @@
     if (!workspace) {
       return;
     }
+    holdListsHeight(workspace, true);
     var headline = workspace.querySelector(".result-headline");
     if (headline) {
       headline.focus();
@@ -306,5 +347,13 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-dropzone]").forEach(setUpZone);
+    holdAllListHeights(true);
+    // The web fonts can arrive after the page is ready and change the rows'
+    // height, so the lists are measured again once they have.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function () {
+        holdAllListHeights(true);
+      });
+    }
   });
 })();

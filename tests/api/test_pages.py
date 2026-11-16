@@ -16,6 +16,7 @@ from eod_close.generator import CaseGenerator, Difficulty
 from eod_close.web import pages
 from eod_close.web.app import create_app
 from eod_close.web.report_view import REPORT_COLUMNS
+from eod_close.web.services import load_case
 from eod_close.web.workspace import Workspace, build_workspace, load_sample_day
 
 PAGES = [
@@ -490,3 +491,17 @@ def test_a_day_that_balances_is_stamped_reconciled() -> None:
 def test_a_day_that_does_not_balance_is_stamped_with_its_figure(client: TestClient) -> None:
     html = client.post("/reconcile", headers={"HX-Request": "true"}).text
     assert stamp_text(html, "stamp-bad") == "Doesn't balance: £91.00"
+
+
+@pytest.mark.parametrize("action", ["close", "check"])
+def test_the_largest_day_can_be_closed_and_checked(client: TestClient, action: str) -> None:
+    """BUG-008: a Head of Ops day sends over 1,000 fields, the framework's default limit."""
+    case, _ = load_case(Difficulty.HEAD_OF_OPS, 3)
+    data = {"started_at": "0"}
+    for entry in [*case.bank_statement, *case.ledger]:
+        data[f"group-{entry.entry_id}"] = ""
+        data[f"reason-{entry.entry_id}"] = ""
+    assert len(data) > 1_000
+    response = client.post(f"/play/head-of-ops/3/{action}", data=data)
+    assert response.status_code == 200
+    assert "Too many fields" not in response.text

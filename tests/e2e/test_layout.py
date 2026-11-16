@@ -129,7 +129,10 @@ def test_opening_a_popover_never_changes_the_table(
         after = table.bounding_box()
         assert before is not None
         assert after is not None
-        assert (after["width"], after["height"]) == (before["width"], before["height"])
+        # Within a pixel: WebKit can round a row's height differently by a
+        # fraction once a popover is in the top layer, which no one can see.
+        assert abs(after["width"] - before["width"]) < 1
+        assert abs(after["height"] - before["height"]) < 1
         box = popover.bounding_box()
         assert box is not None
         assert box["x"] >= 0
@@ -153,7 +156,7 @@ def test_info_icons_line_up_down_each_list(
     page.context.close()
 
 
-@pytest.mark.parametrize("width", [1280, 1440])
+@pytest.mark.parametrize("width", [1600, 1920])
 def test_training_tables_fit_side_by_side_with_no_scrollbars(
     any_browser: Browser, live_server: str, width: int
 ) -> None:
@@ -190,4 +193,48 @@ def test_the_fictional_data_notice_is_never_covered(
     )
     assert on_top
     assert notice.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", [1280, 1440])
+def test_training_tables_stack_with_no_scrollbars_below_1560(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    """Too narrow for both at a readable size, so they stack, each at full width."""
+    page = open_page(any_browser, width)
+    page.goto(f"{live_server}/play/head-of-ops/3/work")
+    boxes = page.evaluate(
+        "() => [...document.querySelectorAll('.panel-scroll')].map(b => ["
+        "b.scrollWidth - b.clientWidth, b.scrollHeight - b.clientHeight,"
+        " Math.round(b.getBoundingClientRect().top)])"
+    )
+    for wider, taller, _ in boxes:
+        assert wider <= 0
+        assert taller <= 0
+    assert boxes[1][2] > boxes[0][2], "the records table sits below the bank's"
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_changing_the_filter_never_moves_the_page(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    """The lists keep their height, so the links below them never jump up."""
+    page = open_page(any_browser, width)
+    matched_reconcile_page(page, live_server)
+    page.evaluate("document.fonts.ready")
+
+    def positions() -> tuple[float, float]:
+        # Measured from the top of the page, not the window: clicking scrolls
+        # the filter into view, which moves everything relative to the window.
+        found: list[float] = page.evaluate(
+            "() => [document.querySelector('.lists').getBoundingClientRect().height,"
+            " document.querySelector('.quick-links').getBoundingClientRect().top + scrollY]"
+        )
+        return round(found[0]), round(found[1])
+
+    before = positions()
+    for choice in ("Problems", "Matched", "All"):
+        page.locator(".filter").get_by_text(choice, exact=True).click()
+        assert positions() == before, choice
     page.context.close()

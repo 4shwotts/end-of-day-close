@@ -71,3 +71,13 @@ Real defects found by the test suite, with the test that now guards each one.
 - **Root cause:** each wide table sits in a `div` that scrolls sideways so the page itself never does, but the `div` had no `tabindex`. Boxes that contain form controls (the training work page) were reachable through those controls; the others were not.
 - **Fix:** every table box with nothing focusable inside is now `role="region"` with `tabindex="0"` and a name (its heading or caption), so it can be focused, scrolled and announced. The work page's boxes keep their existing names without the extra role, which would duplicate the section landmarks around them.
 - **Guarding tests:** `tests/e2e/test_accessibility.py`, which scans every page at phone, tablet and desktop widths in both themes and fails on any violation.
+
+## BUG-008: closing a Head of Ops day failed with "Too many fields"
+
+- **Found by:** the owner, playing a Head of Ops day in training mode on the live site.
+- **Steps to reproduce:** start a Head of Ops day, then press **Close the day** (or **Check progress**).
+- **Expected result:** the close screen with the score, or the progress line.
+- **Actual result:** the page showed `{"detail":"Too many fields. Maximum number of fields is 1000."}` instead.
+- **Root cause:** every line of the day sends two form fields, its pair number and its "if no partner" choice. A Head of Ops day has about 600 lines, so it sends about 1,200 fields, and Starlette's form parser refuses more than 1,000 by default. The smaller levels stay under the limit, which is why only the hardest level failed.
+- **Fix:** both routes read the form through one helper that sets the limit from the day itself: two fields per line plus a small allowance. The limit still protects the server, but it can never be lower than the day needs.
+- **Guarding test:** `tests/api/test_pages.py::test_the_largest_day_can_be_closed_and_checked`, which posts a full Head of Ops day to both routes.

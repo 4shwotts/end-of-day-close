@@ -36,7 +36,7 @@ from eod_close.domain.results import ExceptionReason, ReconciliationReport
 from eod_close.evaluation.benchmark import NAIVE_FULL_RUN_LIMIT, run_benchmark
 from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snapshot
 from eod_close.game import score_answers
-from eod_close.generator import Difficulty
+from eod_close.generator import Case, Difficulty
 from eod_close.generator.answer_key import DiscrepancyKind
 from eod_close.web.busy_day import (
     Show,
@@ -320,12 +320,37 @@ def work_case(request: Request, difficulty: Difficulty, seed: int) -> HTMLRespon
     )
 
 
+# Fields a training form sends besides the two per line: the start time,
+# with room to spare for anything a browser adds.
+_EXTRA_FORM_FIELDS: Final = 16
+
+
+async def _answers_form(request: Request, case: Case) -> dict[str, str]:
+    """Read a training day's answers, allowing for the size of the day.
+
+    Every line sends two fields, its pair number and its "if no partner"
+    choice, so a Head of Ops day sends over 1,200. The framework's default
+    limit of 1,000 fields would reject it (BUG-008), so the limit is set
+    from the day itself: large enough for this day, and no larger.
+
+    Args:
+        request: The form post.
+        case: The day being played.
+
+    Returns:
+        The form's fields as text.
+    """
+    limit = 2 * (len(case.bank_statement) + len(case.ledger)) + _EXTRA_FORM_FIELDS
+    async with request.form(max_fields=limit) as form:
+        return {key: str(value) for key, value in form.items()}
+
+
 @router.post("/play/{difficulty}/{seed}/check", response_class=HTMLResponse)
 async def check_progress(request: Request, difficulty: Difficulty, seed: int) -> HTMLResponse:
     """HTMX partial: how much is still unassigned, without revealing answers."""
     _check_seed(seed)
     case, report = load_case(difficulty, seed)
-    form = {k: str(v) for k, v in (await request.form()).items()}
+    form = await _answers_form(request, case)
     score = score_answers(case, answers_from_form(case, form, None), report)
     return templates.TemplateResponse(
         request,
@@ -339,7 +364,7 @@ async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTML
     """Score the day and show the engine's solution and every explanation."""
     _check_seed(seed)
     case, report = load_case(difficulty, seed)
-    form = {k: str(v) for k, v in (await request.form()).items()}
+    form = await _answers_form(request, case)
     elapsed: int | None = None
     with contextlib.suppress(ValueError):
         elapsed = int(time.time()) - int(form.get("started_at", ""))

@@ -195,11 +195,11 @@ The site also has:
   report are all downloadable. Nothing is cached: each request generates and matches the
   day again.
 
-The look is a ledger from the art-deco years, kept quiet so the figures stay the focus:
-near-black panels with brass linework, warm parchment text, Marcellus headings, boxes
-framed by small brass corner brackets, a pencil tick or a red ring on every line, and a
-seal that lands on the result ("Reconciled", or "Doesn't balance" with the real figure).
-Dark is the default; a visitor whose system prefers light mode gets ink on parchment.
+The look is a quiet ledger, kept simple so the figures stay the focus: a dark grey page
+with lighter grey tables and boxes, gold hairlines and accents, Marcellus headings, a tick
+or a cross on every line, and a stamp that lands on the result ("Reconciled", or "Doesn't
+balance" with the real figure). Dark is the default; a visitor whose system prefers light
+mode gets ink on parchment.
 
 The pages are written for anyone, not accountants: they say "your records" rather than
 "ledger" and "Typo" rather than "transposition". One module, `web/wording.py`, holds the

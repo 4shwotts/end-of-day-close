@@ -89,8 +89,15 @@ def test_busy_day_results_fit_their_cards(
     page = open_page(any_browser, width)
     busy_day_with_lists(page, live_server)
     assert page.evaluate(LAYOUT_FAULTS) == []
-    page.locator("#busy-result .problem-line summary").first.click()
-    expect(page.locator("#busy-group-note")).to_be_visible()
+    line = page.locator("#busy-result .problem-line").first
+    line.locator("summary").click()
+    line.get_by_role("link", name="Show its rows in the lists").click()
+    # Focus moves to the first row only once HTMX has settled the swap, so the
+    # check below never measures the lists half-way through it.
+    expect(page.locator("#busy-lists .row.is-flash").first).to_be_focused()
+    # A tooltip shown under a resting pointer floats over the layout without
+    # moving it, but would still count towards its cell's width.
+    page.mouse.move(0, 0)
     assert page.evaluate(LAYOUT_FAULTS) == []
     page.context.close()
 
@@ -127,4 +134,60 @@ def test_opening_a_popover_never_changes_the_table(
         assert box is not None
         assert box["x"] >= 0
         assert box["x"] + box["width"] <= width, "the popover stays inside the page"
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_info_icons_line_up_down_each_list(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    """Every row's info button sits at the same x, whatever the type beside it."""
+    page = open_page(any_browser, width)
+    matched_reconcile_page(page, live_server)
+    lefts = page.evaluate(
+        "() => [...document.querySelectorAll('.list-bank .why-button')]"
+        ".map(b => Math.round(b.getBoundingClientRect().left))"
+    )
+    assert len(lefts) == 12
+    assert len(set(lefts)) == 1, lefts
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", [1280, 1440])
+def test_training_tables_fit_side_by_side_with_no_scrollbars(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    page = open_page(any_browser, width)
+    page.goto(f"{live_server}/play/head-of-ops/3/work")
+    boxes = page.evaluate(
+        "() => [...document.querySelectorAll('.panel-scroll')].map(b => ["
+        "b.scrollWidth - b.clientWidth, b.scrollHeight - b.clientHeight,"
+        " Math.round(b.getBoundingClientRect().top)])"
+    )
+    assert len(boxes) == 2
+    for wider, taller, _ in boxes:
+        assert wider <= 0, "no sideways scrolling inside a table"
+        assert taller <= 0, "no scrolling up and down inside a table"
+    assert boxes[0][2] == boxes[1][2], "the two tables sit side by side"
+    page.context.close()
+
+
+@pytest.mark.parametrize("path", ["/", "/training", "/play/analyst/1/work", "/how-it-works"])
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_the_fictional_data_notice_is_never_covered(
+    any_browser: Browser, live_server: str, path: str, width: int
+) -> None:
+    page = open_page(any_browser, width)
+    page.goto(f"{live_server}{path}")
+    notice = page.locator(".notice")
+    box = notice.bounding_box()
+    assert box is not None
+    assert box["height"] >= 14
+    # Whatever is drawn at the notice's centre must be the notice itself.
+    on_top = page.evaluate(
+        "([x, y]) => document.elementFromPoint(x, y).closest('.notice') !== null",
+        [box["x"] + box["width"] / 2, box["y"] + box["height"] / 2],
+    )
+    assert on_top
+    assert notice.evaluate("el => el.scrollHeight <= el.clientHeight + 1")
     page.context.close()

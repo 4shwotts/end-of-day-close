@@ -1,24 +1,28 @@
 {% extends "base.html" %}
-{% block title %}Get ready · {{ case.difficulty.label }} · End-of-Day Close{% endblock %}
+{% block title %}Get ready: {{ case.difficulty.label }} – End-of-Day Close{% endblock %}
 {% block body_attrs %} class="wide"{% endblock %}
 {% block content %}
 {# The briefing: everything needed to work the day, read before the clock
    starts. The lists stay hidden until the player chooses to begin. #}
-<h1>{{ case.business_date.strftime("%A %d %B %Y") }}: get ready</h1>
-<p class="lede">
-  {{ case.difficulty.label }} · {{ case.bank_statement|length }} bank payments,
-  {{ case.ledger|length }} in your records. The clock only starts when you press
-  <strong>Start the timer</strong>.
-</p>
-{% include "_streak.html" %}
+<div class="intro">
+  <h1>{{ case.business_date.strftime("%A %d %B %Y") }}: get ready</h1>
+  <p class="tagline">
+    {{ case.bank_statement|length }} bank payments and {{ case.ledger|length }} in your records.
+    The clock only starts when you press <strong>Start the timer</strong>.
+  </p>
+  <p class="intro-badges">
+    <span class="badge">{{ case.difficulty.label }}</span>
+    <span class="badge">Balanced-day streak <strong id="streak-count">0</strong></span>
+  </p>
+</div>
 
-<section class="card briefing" aria-labelledby="briefing-heading">
+<section class="briefing" aria-labelledby="briefing-heading">
   <h2 id="briefing-heading">How to play</h2>
   {% include "_case_help.html" %}
 </section>
 
-<div class="toolbar">
+<div class="start-actions">
   <a class="button button-large" href="/play/{{ case.difficulty.value }}/{{ case.seed }}/work">Start the timer</a>
-  <span class="choice-hint">You can open these instructions again while you play.</span>
+  <p class="choice-hint">You can open these instructions again while you play.</p>
 </div>
 {% endblock %}

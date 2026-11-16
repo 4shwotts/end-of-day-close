@@ -86,6 +86,14 @@
     });
   }
 
+  // The clock is a role="timer", which screen readers leave alone between
+  // ticks; it only changes colour, gently and once each, at five and ten
+  // minutes (data-stage, styled in app.css), and never flashes.
+  var STAGES = [
+    [600, "later"],
+    [300, "late"],
+  ];
+
   function startTimer() {
     var timer = document.getElementById("timer");
     if (!timer) {
@@ -96,6 +104,12 @@
     window.setInterval(function () {
       var seconds = Math.floor((Date.now() - started) / 1000);
       timer.textContent = Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+      for (var i = 0; i < STAGES.length; i += 1) {
+        if (seconds >= STAGES[i][0]) {
+          timer.dataset.stage = STAGES[i][1];
+          break;
+        }
+      }
     }, 1000);
   }
 

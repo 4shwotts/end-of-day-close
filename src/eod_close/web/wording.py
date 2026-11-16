@@ -51,7 +51,7 @@ KIND_NAMES: Final[Mapping[DiscrepancyKind, str]] = {
 
 REASON_CHOICES: Final[Mapping[ExceptionReason, str]] = {
     ExceptionReason.MISSING_FROM_LEDGER: "Not in my records",
-    ExceptionReason.MISSING_FROM_BANK: "Not on the bank statement",
+    ExceptionReason.MISSING_FROM_BANK: "Not on statement",
     ExceptionReason.DUPLICATE: "Duplicate",
     ExceptionReason.LIKELY_TRANSPOSITION: "Typo",
 }

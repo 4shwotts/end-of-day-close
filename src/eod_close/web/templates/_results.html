@@ -5,7 +5,7 @@
    scrolls in its own short box, so a long one never turns the page into an
    endless list; groups are capped on screen, and the CSV report always
    lists everything. #}
-{% from "_macros.html" import icon, summary_bar, match_icons, review_icons %}
+{% from "_macros.html" import icon, summary_bar, mark %}
 {% if error is defined %}
 <p class="error" role="alert">{{ icon("alert") }} {{ error }}</p>
 {% else %}
@@ -21,13 +21,13 @@
   </h2>
   {{ summary_bar(s, seconds, id="summary") }}
 
-  <h3 id="review-heading" class="section-title">{{ icon("alert") }} Problems found ({{ "{:,}".format(s.needs_review) }})</h3>
+  <h3 id="review-heading" class="section-title">Problems found ({{ "{:,}".format(s.needs_review) }})</h3>
   {% if not view.review %}
   <p>{{ icon("check") }} No problems found: every payment is matched.</p>
   {% endif %}
   {% for label, items in view.review_by_label() %}
   <details class="group"{% if open_review %} open{% endif %}>
-    <summary><span class="chip chip-warn">{{ icon(review_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(items|length) }}</span></summary>
+    <summary>{{ mark("problem", label) }} <span class="count">{{ "{:,}".format(items|length) }}</span></summary>
     <div class="long-list" role="region" tabindex="0" aria-label="{{ label }} problems">
     <ul class="review-list">
       {% for item in items[:limit] %}
@@ -37,7 +37,7 @@
           {% if item.ledger_ids %}<span>Records {{ item.ledger_ids|join(", ") }}{% if item.ledger_amount is not none %}: <span class="amount">{{ item.ledger_amount }}</span>{% endif %}</span>{% endif %}
         </p>
         <p>{{ item.reason }}</p>
-        <p class="next-step">{{ icon("arrow-right") }} <span><strong>Next:</strong> {{ item.next_step }}</span></p>
+        <p class="next-step"><strong>Next:</strong> {{ item.next_step }}</p>
       </li>
       {% endfor %}
     </ul>
@@ -47,10 +47,10 @@
   {% endfor %}
 
   <details class="group fold">
-    <summary><span class="fold-title">{{ icon("check-circle") }} Show all {{ "{:,}".format(s.matched) }} matches</span></summary>
+    <summary><span class="fold-title">Show all {{ "{:,}".format(s.matched) }} matches</span></summary>
     {% for label, rows in view.matches_by_label() %}
     <details class="group">
-      <summary><span class="chip chip-good">{{ icon(match_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(rows|length) }}</span></summary>
+      <summary>{{ mark("matched", label) }} <span class="count">{{ "{:,}".format(rows|length) }}</span></summary>
       {# When every row gives the same reason, say it once above the table
          rather than on each of a hundred rows. #}
       {% set shared = rows|map(attribute="reason")|unique|list %}
@@ -87,7 +87,7 @@
   </details>
 
   <details class="group fold">
-    <summary><span class="fold-title">{{ icon("pound") }} Show the money details</span></summary>
+    <summary><span class="fold-title">Show the money details</span></summary>
     <dl class="money-details">
       <div><dt>Bank total</dt><dd class="amount">{{ s.bank_total }}</dd></div>
       <div><dt>Your records total</dt><dd class="amount">{{ s.ledger_total }}</dd></div>

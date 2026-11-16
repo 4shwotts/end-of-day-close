@@ -1,54 +1,85 @@
 /* End-of-Day Close: one stylesheet for every page.
 
-   Everything visual is a token on :root: colours, the type scale, spacing
-   and radii. The light theme redefines the colour tokens rather than the
-   rules. Dark is the designed-for theme; light follows the visitor's system
-   setting. Text colours meet WCAG AA contrast (4.5:1) on every surface they
-   sit on, and status is always carried by an icon and words as well as by
-   colour. */
+   The look is an old-school bookkeeping ledger: ruled lines, green-bar
+   banding on the tables, continuous-feed paper edges, ink and pencil marks
+   instead of coloured pills, and a rubber stamp for the result.
+
+   Everything visual is a token on :root: colours, type, spacing and radii.
+   Dark ("night ledger") is the designed-for theme; light ("ledger paper")
+   follows the visitor's system setting, and redefines the colour tokens
+   rather than the rules. Text colours meet WCAG AA contrast (4.5:1) on
+   every surface they sit on, control borders meet 3:1, and status is always
+   carried by a mark and words as well as by colour. */
 
 @font-face {
-  font-family: "Inter";
+  font-family: "Public Sans";
   font-style: normal;
   font-weight: 100 900;
   font-display: swap;
-  src: url("/static/fonts/inter-latin-wght.woff2") format("woff2");
+  src: url("/static/fonts/public-sans-latin-wght.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Zilla Slab";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/static/fonts/zilla-slab-latin-600.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "Zilla Slab";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/static/fonts/zilla-slab-latin-700.woff2") format("woff2");
 }
 
 :root {
   color-scheme: dark;
-  /* Colour: one accent (teal) plus three status colours. */
-  --page: #0c1015;
-  --surface: #131920;
-  --surface-raised: #1b232c;
-  --border: #2b3540;
-  --text: #e9eef3;
-  --text-secondary: #a3b0bd;
-  --accent: #3fd0b6;
-  --accent-strong: #6fe0cb;
-  --accent-text: #04201b;
-  --accent-soft: rgba(63, 208, 182, 0.12);
-  --good: #5fd590;
-  --good-soft: rgba(95, 213, 144, 0.12);
-  --warn: #f3bd5e;
-  --warn-soft: rgba(243, 189, 94, 0.12);
-  --bad: #f6918a;
-  --bad-soft: rgba(246, 145, 138, 0.12);
-  --focus: #6fe0cb;
+  /* Colour, night ledger. Ruling blue draws decorative lines only; control
+     edges use the stronger ruling, which meets 3:1. Red ink marks problems,
+     stamp green marks what reconciles. */
+  --page: #121a2b;
+  --surface: #182236;
+  --surface-raised: #1f2a40;
+  --band: #1b2b2b;
+  --border: #4f6c95;
+  --border-strong: #7c9bc6;
+  --text: #e8ede5;
+  --text-secondary: #a7afbb;
+  --accent: #7c9bc6;
+  --accent-strong: #a9c8f2;
+  --accent-text: #121a2b;
+  --accent-soft: rgba(124, 155, 198, 0.16);
+  --ink-fill: #e8ede5;
+  --ink-fill-text: #121a2b;
+  --ink-fill-hover: #ffffff;
+  --good: #79cda3;
+  --good-soft: rgba(121, 205, 163, 0.12);
+  --warn: #f08c86;
+  --warn-soft: rgba(240, 140, 134, 0.1);
+  --bad: #f08c86;
+  --bad-soft: rgba(240, 140, 134, 0.1);
+  --focus: #a9c8f2;
+  --rule-faint: rgba(124, 155, 198, 0.13);
+  --hole: #0b111d;
   /* Chart series: validated categorical slots 1 and 2 for this surface. */
   --series-engine: #3987e5;
   --series-naive: #d95926;
-  --grid: #26303a;
+  --grid: #26324a;
 
-  /* Type scale, a major third (1.25). */
-  --font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  /* Type: Zilla Slab for headings, Public Sans for everything else. */
+  --font: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading: "Zilla Slab", Georgia, "Times New Roman", serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
   --text-xs: 0.8125rem;
   --text-sm: 0.875rem;
   --text-md: 1rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5625rem;
-  --text-2xl: 1.953rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
 
   /* Spacing on a 4px grid. */
   --space-1: 0.25rem;
@@ -60,63 +91,79 @@
   --space-7: 3rem;
   --space-8: 4.5rem;
 
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 14px;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
-  --content: 1280px;
+  /* Small corners and no soft shadows: structure comes from rules. */
+  --radius-sm: 3px;
+  --radius: 4px;
+  --radius-lg: 6px;
+  --shadow: 0 1px 0 rgba(0, 0, 0, 0.25);
+  --content: 1200px;
+  --measure: 65ch;
 }
 
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     color-scheme: light;
-    --page: #f4f6f8;
+    --page: #eef2ec;
     --surface: #ffffff;
-    --surface-raised: #eef2f5;
-    --border: #d3dae1;
-    --text: #0e1720;
-    --text-secondary: #4a5867;
-    --accent: #0a7466;
-    --accent-strong: #075a4f;
+    --surface-raised: #f5f8f3;
+    --band: #dde8da;
+    --border: #6f8fb8;
+    --border-strong: #5e7fa8;
+    --text: #1f2a44;
+    --text-secondary: #5a5e65;
+    --accent: #3e5e88;
+    --accent-strong: #2c4a72;
     --accent-text: #ffffff;
-    --accent-soft: rgba(10, 116, 102, 0.09);
-    --good: #12733a;
-    --good-soft: rgba(18, 115, 58, 0.09);
-    --warn: #8a5300;
-    --warn-soft: rgba(176, 106, 0, 0.1);
-    --bad: #b42318;
-    --bad-soft: rgba(180, 35, 24, 0.08);
-    --focus: #0a7466;
+    --accent-soft: rgba(62, 94, 136, 0.1);
+    --ink-fill: #1f2a44;
+    --ink-fill-text: #eef2ec;
+  --ink-fill-hover: #2c3a5c;
+    --good: #2f6b4f;
+    --good-soft: rgba(47, 107, 79, 0.1);
+    --warn: #b23a3a;
+    --warn-soft: rgba(178, 58, 58, 0.08);
+    --bad: #b23a3a;
+    --bad-soft: rgba(178, 58, 58, 0.08);
+    --focus: #3e5e88;
+    --rule-faint: rgba(111, 143, 184, 0.18);
+    --hole: #eef2ec;
     --series-engine: #2a78d6;
     --series-naive: #eb6834;
-    --grid: #e3e7eb;
-    --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 18px rgba(16, 24, 40, 0.06);
+    --grid: #dde4ea;
+    --shadow: 0 1px 0 rgba(31, 42, 68, 0.08);
   }
 }
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --page: #f4f6f8;
+  --page: #eef2ec;
   --surface: #ffffff;
-  --surface-raised: #eef2f5;
-  --border: #d3dae1;
-  --text: #0e1720;
-  --text-secondary: #4a5867;
-  --accent: #0a7466;
-  --accent-strong: #075a4f;
+  --surface-raised: #f5f8f3;
+  --band: #dde8da;
+  --border: #6f8fb8;
+  --border-strong: #5e7fa8;
+  --text: #1f2a44;
+  --text-secondary: #5a5e65;
+  --accent: #3e5e88;
+  --accent-strong: #2c4a72;
   --accent-text: #ffffff;
-  --accent-soft: rgba(10, 116, 102, 0.09);
-  --good: #12733a;
-  --good-soft: rgba(18, 115, 58, 0.09);
-  --warn: #8a5300;
-  --warn-soft: rgba(176, 106, 0, 0.1);
-  --bad: #b42318;
-  --bad-soft: rgba(180, 35, 24, 0.08);
-  --focus: #0a7466;
+  --accent-soft: rgba(62, 94, 136, 0.1);
+  --ink-fill: #1f2a44;
+  --ink-fill-text: #eef2ec;
+  --ink-fill-hover: #2c3a5c;
+  --good: #2f6b4f;
+  --good-soft: rgba(47, 107, 79, 0.1);
+  --warn: #b23a3a;
+  --warn-soft: rgba(178, 58, 58, 0.08);
+  --bad: #b23a3a;
+  --bad-soft: rgba(178, 58, 58, 0.08);
+  --focus: #3e5e88;
+  --rule-faint: rgba(111, 143, 184, 0.18);
+  --hole: #eef2ec;
   --series-engine: #2a78d6;
   --series-naive: #eb6834;
-  --grid: #e3e7eb;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 6px 18px rgba(16, 24, 40, 0.06);
+  --grid: #dde4ea;
+  --shadow: 0 1px 0 rgba(31, 42, 68, 0.08);
 }
 
 *,
@@ -144,10 +191,16 @@ a:hover {
   color: var(--accent-strong);
 }
 
-/* A visible focus ring on every interactive element, for keyboard users. */
+/* A visible focus ring on every interactive element, for keyboard users.
+   A mouse click or tap focuses buttons and tabs too, but without
+   :focus-visible, so no ring or underline appears for pointer users. */
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 /* Hidden visually but still read by screen readers. */
@@ -205,9 +258,18 @@ main,
   padding-right: 16px;
 }
 
+/* The header sits on ruled ledger paper: faint horizontal lines drawn with
+   a repeating gradient, under a firmer ruling-blue line. */
 .site-header {
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  background-color: var(--surface);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 23px,
+    var(--rule-faint) 23px,
+    var(--rule-faint) 24px
+  );
 }
 
 .site-header-inner {
@@ -215,69 +277,67 @@ main,
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2) var(--space-5);
-  padding-top: var(--space-3);
+  gap: var(--space-3) var(--space-5);
+  padding-top: var(--space-4);
   padding-bottom: var(--space-3);
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  font-family: var(--font-heading);
   font-weight: 700;
-  font-size: var(--text-lg);
-  letter-spacing: -0.01em;
+  font-size: var(--text-xl);
   color: var(--text);
   text-decoration: none;
 }
 
+/* The logo: a round rubber stamp with a tick, set at a slight angle. */
 .brand-mark {
-  display: inline-grid;
-  place-items: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--accent-text);
-  font-size: var(--text-md);
+  width: 2.25rem;
+  height: 2.25rem;
+  color: var(--good);
+  transform: rotate(-10deg);
 }
 
 .site-header nav ul {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-2);
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
+/* The sections are clear buttons; the current one is filled with ink. */
 .site-header nav a {
   display: inline-block;
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-weight: 500;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
   text-decoration: none;
 }
 
 .site-header nav a:hover {
-  color: var(--text);
   background: var(--surface-raised);
+}
+
+.site-header nav a[aria-current="page"] {
+  border-color: var(--ink-fill);
+  background: var(--ink-fill);
+  color: var(--ink-fill-text);
 }
 
 /* On a phone the three sections still fit on one line under the brand. */
 @media (max-width: 480px) {
   .site-header nav a {
-    padding: var(--space-2) var(--space-2);
+    padding: var(--space-2) var(--space-3);
     font-size: var(--text-sm);
   }
-}
-
-/* The current section, shown by more than colour: weight and an underline bar. */
-.site-header nav a[aria-current="page"] {
-  color: var(--text);
-  font-weight: 700;
-  box-shadow: inset 0 -3px 0 var(--accent);
 }
 
 /* The fictional-data notice: one quiet line under the header. */
@@ -314,35 +374,34 @@ main {
 
 /* ---- Type ------------------------------------------------------------- */
 
+/* Zilla Slab's figures are old-style by default; headings use lining
+   figures, so counts and amounts in them sit level with the capitals. */
 h1,
 h2,
 h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-variant-numeric: lining-nums;
   line-height: 1.2;
-  letter-spacing: -0.015em;
 }
 
 h1 {
-  font-size: var(--text-2xl);
+  font-size: var(--text-3xl);
   margin: var(--space-2) 0 var(--space-4);
 }
 
 h2 {
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   margin: var(--space-6) 0 var(--space-3);
 }
 
 h3 {
-  font-size: var(--text-lg);
+  font-size: var(--text-xl);
 }
 
 .lede {
   color: var(--text-secondary);
   max-width: 70ch;
-}
-
-.muted {
-  color: var(--text-secondary);
-  font-weight: 400;
 }
 
 code {
@@ -375,6 +434,11 @@ dd {
 
 .steps-list {
   counter-reset: step;
+  gap: var(--space-3);
+}
+
+.steps-list > li {
+  margin: 0;
 }
 
 .steps-list > li,
@@ -402,17 +466,6 @@ dd {
   font-weight: 700;
 }
 
-.point-list > li::before {
-  content: "";
-  position: absolute;
-  left: 0.6rem;
-  top: 0.65rem;
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
 /* ---- Surfaces --------------------------------------------------------- */
 
 .card {
@@ -422,13 +475,131 @@ dd {
   box-shadow: var(--shadow);
 }
 
-/* A home-page section. */
+/* A section of a page, under a centred heading. */
 .band {
   margin-top: var(--space-8);
 }
 
 .band > h2 {
   margin-top: 0;
+  text-align: center;
+}
+
+/* A section's introduction, in a narrow column under its heading: centred
+   when it is a line or two, left-aligned for reading when it runs longer
+   (section-intro-long). */
+.section-intro {
+  max-width: var(--measure);
+  margin: 0 auto var(--space-5);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.section-intro-long {
+  text-align: left;
+}
+
+.centred-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.intro-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-5);
+}
+
+/* The buttons that end a page, centred, with any note on its own line. */
+.start-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
+.start-actions .choice-hint {
+  flex-basis: 100%;
+  margin: 0;
+  text-align: center;
+}
+
+/* How it works: the three steps under large slab numerals. */
+.ledger-steps {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+  text-align: center;
+}
+
+.step-numeral {
+  display: block;
+  color: var(--accent);
+  font-family: var(--font-heading);
+  font-size: 3.5rem;
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.ledger-steps h3 {
+  margin: var(--space-2) 0 var(--space-1);
+  font-size: var(--text-lg);
+}
+
+.ledger-steps p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* A worked ledger: as wide as its columns, centred, ruled and banded. It
+   scrolls sideways inside its own border on a phone too narrow for it. */
+.ledger-box {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.ledger-table th,
+.ledger-table td {
+  padding: 0.55rem 0.9rem;
+  vertical-align: top;
+}
+
+.ledger-table tbody tr:nth-child(odd) {
+  background: var(--band);
+}
+
+.ledger-table tbody th {
+  font-weight: 600;
+}
+
+.ledger-table .amount {
+  white-space: nowrap;
+}
+
+.ledger-table td.wrap {
+  min-width: 14rem;
+  max-width: 30rem;
+}
+
+.audit-table td.num {
+  font-weight: 700;
 }
 
 /* ---- Buttons and forms ------------------------------------------------ */
@@ -497,9 +668,9 @@ button {
   min-height: 44px;
   padding: 0.5rem 1.1rem;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--accent);
-  background: var(--accent);
-  color: var(--accent-text);
+  border: 1px solid var(--ink-fill);
+  background: var(--ink-fill);
+  color: var(--ink-fill-text);
   cursor: pointer;
   text-decoration: none;
   display: inline-flex;
@@ -509,20 +680,20 @@ button {
 
 .button:hover,
 button:hover {
-  background: var(--accent-strong);
-  border-color: var(--accent-strong);
-  color: var(--accent-text);
+  background: var(--ink-fill-hover);
+  border-color: var(--ink-fill-hover);
+  color: var(--ink-fill-text);
 }
 
 .button-secondary {
   background: transparent;
   color: var(--text);
-  border-color: var(--border);
+  border-color: var(--border-strong);
 }
 
 .button-secondary:hover {
   background: var(--surface-raised);
-  border-color: var(--text-secondary);
+  border-color: var(--text);
   color: var(--text);
 }
 
@@ -651,49 +822,6 @@ button:disabled:hover {
   gap: var(--space-4);
 }
 
-.steps {
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-  counter-reset: none;
-}
-
-.step {
-  padding: var(--space-5);
-}
-
-.step h3 {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 var(--space-2);
-}
-
-.step p {
-  margin: 0;
-  color: var(--text-secondary);
-}
-
-.step-icon {
-  display: inline-grid;
-  place-items: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius);
-  color: var(--accent);
-  background: var(--accent-soft);
-  font-size: 1.2rem;
-}
-
-.step-number {
-  color: var(--accent);
-  font-variant-numeric: tabular-nums;
-}
-
-.figures {
-  display: grid;
-  gap: var(--space-4);
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  margin: 0 0 var(--space-3);
-}
 
 /* The figure reads big-number-first, though the markup keeps the term
    before its value as a description list requires. */
@@ -709,57 +837,6 @@ button:disabled:hover {
 
 .figure dd {
   margin: 0;
-}
-
-.figure-value {
-  order: -1;
-  font-size: var(--text-2xl);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--accent);
-  line-height: 1.15;
-}
-
-.figure-note {
-  margin-top: var(--space-1);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.handles {
-  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
-}
-
-.handle {
-  padding: var(--space-4) var(--space-5);
-}
-
-.handle h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-md);
-  margin: 0 0 var(--space-2);
-}
-
-.handle h3 .icon {
-  color: var(--accent);
-}
-
-.handle p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.handle .example-line {
-  margin-top: var(--space-3);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
 }
 
 /* The two format tables sit side by side and share a height, so the shorter
@@ -837,13 +914,13 @@ tbody tr:last-child > * {
   border-bottom: 0;
 }
 
+/* Column headings in sentence case, set off by a ruling-blue line. */
 thead th {
   background: var(--surface-raised);
   color: var(--text-secondary);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
   position: sticky;
   top: 0;
 }
@@ -865,31 +942,189 @@ td.wrap-ids {
   max-width: 14rem;
 }
 
-.group-input {
-  width: 4.5rem;
+/* ---- Training: the game page ------------------------------------------ */
+
+/* The game bar stays in view while the tables scroll: the clock large, the
+   level and streak as small badges, the controls to the right. */
+.game-bar {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--space-4) 0 var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
+.game-clock {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+}
+
+.game-clock .icon {
+  color: var(--text-secondary);
+}
+
+.timer {
+  min-width: 3.5ch;
+  font-variant-numeric: tabular-nums;
+  transition: color 1s;
+}
+
+.timer[data-stage="late"] {
+  color: var(--warn);
+}
+
+.timer[data-stage="later"] {
+  color: var(--bad);
+}
+
+.game-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.15rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.badge strong {
+  color: var(--text);
+}
+
+.game-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* The two tables: side by side from 1280px, stacked below. Neither has a
+   scroll box of its own; they grow to their full length. */
 .panels {
   display: grid;
   gap: var(--space-5);
   grid-template-columns: minmax(0, 1fr);
 }
 
-/* Side by side only when both tables fit without scrolling sideways; below
-   this width they stack, each using the full width. */
-@media (min-width: 1800px) {
+@media (min-width: 1280px) {
   .panels {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--space-4);
   }
+}
+
+.panel {
+  min-width: 0;
+}
+
+/* Sideways only, and only when a phone is too narrow for the table; it has
+   no height limit, so there is never a scrollbar up and down inside it. */
+.panel-scroll {
+  overflow-x: auto;
 }
 
 .panel h2 {
   margin-top: 0;
+  font-size: var(--text-lg);
 }
 
-.panel .table-scroll {
-  max-height: 70vh;
-  overflow-y: auto;
+.panel-source {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Tight cells, so each table fits half of a 1280px screen. */
+.game-table {
+  width: 100%;
+  font-size: var(--text-xs);
+}
+
+.game-table th,
+.game-table td {
+  padding: 0.3rem 0.3rem;
+}
+
+.game-table thead th {
+  white-space: nowrap;
+}
+
+/* Green-bar banding, as on the other ledgers. */
+.game-table tbody tr:nth-child(odd),
+.rules tbody tr:nth-child(odd) {
+  background: var(--band);
+}
+
+.game-table .col-select {
+  width: 1.5rem;
+}
+
+/* A note under a cell's main value may wrap; the value itself never does. */
+.cell-note {
+  display: block;
+  max-width: 9rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  white-space: normal;
+}
+
+.group-input {
+  width: 2.75rem;
+}
+
+.game-table .group-input,
+.game-table select {
+  padding: 0.25rem 0.4rem;
+  font-size: var(--text-xs);
+}
+
+/* A select drawn with its own chevron, so the arrow sits a fixed distance
+   in from the border in every browser. */
+.select-wrap {
+  position: relative;
+  display: inline-block;
+}
+
+.select-wrap select {
+  appearance: none;
+  padding-right: 1.6rem;
+}
+
+.game-table .select-wrap select {
+  padding-right: 1.6rem;
+}
+
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
 }
 
 /* ---- Results: headline and summary bar -------------------------------- */
@@ -907,14 +1142,6 @@ td.wrap-ids {
   font-size: var(--text-xl);
   font-weight: 700;
   letter-spacing: -0.01em;
-}
-
-.headline-good {
-  color: var(--good);
-}
-
-.headline-bad {
-  color: var(--bad);
 }
 
 /* Three across when there is room, otherwise one under another. */
@@ -975,16 +1202,6 @@ td.wrap-ids {
   letter-spacing: -0.01em;
 }
 
-.results-note {
-  color: var(--text-secondary);
-  max-width: 80ch;
-}
-
-.results-note .amount {
-  color: var(--text);
-  font-weight: 600;
-}
-
 .section-title {
   display: flex;
   align-items: center;
@@ -992,60 +1209,9 @@ td.wrap-ids {
   margin: var(--space-6) 0 var(--space-2);
 }
 
-/* Type labels: a tinted pill with an icon and a word. */
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0.15rem 0.6rem;
-  border-radius: 999px;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.chip-good {
-  color: var(--good);
-  background: var(--good-soft);
-}
-
-.chip-warn {
-  color: var(--warn);
-  background: var(--warn-soft);
-}
-
 .count {
   color: var(--text-secondary);
   font-weight: 600;
-}
-
-/* ---- Close-the-day summary (training mode) ---------------------------- */
-
-.tiles {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-4);
-  margin: var(--space-4) 0;
-}
-
-.tile {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: var(--space-4);
-}
-
-.tile-label {
-  display: block;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.tile-value {
-  display: block;
-  white-space: nowrap;
-  font-size: clamp(1.25rem, 5vw, 1.75rem);
-  font-weight: 700;
 }
 
 .verdict {
@@ -1098,8 +1264,18 @@ details.help {
   .help-columns {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: start;
     gap: var(--space-6);
   }
+}
+
+/* The rules box starts level with the first step, with no gap above it. */
+.help-columns .steps-list {
+  margin-top: 0;
+}
+
+.help-columns .rules caption {
+  padding-top: 0;
 }
 
 details.group {
@@ -1202,27 +1378,18 @@ div.long-list:not(.table-scroll) {
   font-weight: 600;
 }
 
-.next-step {
-  display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
-  color: var(--text-secondary);
-}
-
-.next-step .icon {
-  color: var(--accent);
-  align-self: flex-start;
-  margin-top: 0.2em;
-}
-
 /* The briefing before a training day: the instructions as one card. */
 .briefing {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
   padding: var(--space-4) var(--space-5);
   margin-bottom: var(--space-4);
 }
 
 .briefing h2 {
   margin-top: 0;
+  text-align: center;
 }
 
 /* The worked example on the training start page. */
@@ -1349,32 +1516,35 @@ div.long-list:not(.table-scroll) {
 
 /* ---- Home: the workspace ---------------------------------------------- */
 
-.home main,
-.home .site-header-inner,
-.home .site-footer,
-.home .notice {
-  max-width: 1480px;
+/* The page's title and intro are centred over the work, as on a ledger's
+   title page. */
+.intro {
+  text-align: center;
 }
 
 .intro h1 {
   margin: 0;
-  font-size: var(--text-2xl);
 }
 
 .tagline {
-  margin: var(--space-1) 0 var(--space-5);
+  max-width: var(--measure);
+  margin: var(--space-2) auto var(--space-6);
   color: var(--text-secondary);
   font-size: var(--text-lg);
 }
 
-/* Before matching: one instruction and the Match button. */
+/* Before matching: one instruction and the Match button, centred and
+   boxed by a single ruling-blue line. */
 .status-bar {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3) var(--space-5);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
 }
 
 .status-bar form {
@@ -1384,11 +1554,12 @@ div.long-list:not(.table-scroll) {
 }
 
 .status-line {
-  flex: 1 1 22rem;
+  max-width: var(--measure);
   margin: 0;
-  font-size: var(--text-lg);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 1.35;
 }
 
 .status-good {
@@ -1401,18 +1572,24 @@ div.long-list:not(.table-scroll) {
 
 .reconcile-button {
   font-size: var(--text-lg);
-  padding-left: 2.5rem;
-  padding-right: 2.5rem;
+  padding-left: 3rem;
+  padding-right: 3rem;
 }
 
-/* After matching: the headline, then the problems. */
+/* After matching: the headline, centred, with the stamp beside it. Room is
+   kept on the right for the stamp, so the two never overlap. */
 .result {
-  padding: var(--space-4) var(--space-5);
+  position: relative;
+  padding: var(--space-5) 15rem var(--space-5) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
 }
 
 .result-headline {
   margin: 0;
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
 }
 
 /* Focus moves here after Match so screen readers hear the result; the
@@ -1422,7 +1599,7 @@ div.long-list:not(.table-scroll) {
 }
 
 .result-difference {
-  margin: var(--space-1) 0 0;
+  margin: var(--space-2) 0 0;
   color: var(--text-secondary);
 }
 
@@ -1430,16 +1607,90 @@ div.long-list:not(.table-scroll) {
   font-weight: 700;
 }
 
+/* The rubber stamp: double-ruled, slightly askew, in stamp green when the
+   day reconciles and red ink when it does not. It lands once, after Match;
+   under reduced motion it is simply there. */
+.stamp {
+  position: absolute;
+  top: 50%;
+  right: var(--space-6);
+  max-width: 12rem;
+  margin: -1.6rem 0 0;
+  padding: 0.3rem 0.8rem;
+  border: 4px double currentColor;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-variant-numeric: lining-nums;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  transform: rotate(-7deg);
+}
+
+.stamp-ok {
+  color: var(--good);
+}
+
+.stamp-bad {
+  color: var(--bad);
+}
+
+@keyframes stamp-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-7deg) scale(1.9);
+  }
+
+  60% {
+    opacity: 1;
+    transform: rotate(-7deg) scale(0.94);
+  }
+
+  100% {
+    transform: rotate(-7deg) scale(1);
+  }
+}
+
+.is-reconciled .stamp {
+  animation: stamp-in 0.32s cubic-bezier(0.2, 0.8, 0.3, 1) 0.15s both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-reconciled .stamp {
+    animation: none;
+  }
+}
+
+/* On narrower screens the stamp sits under the headline instead. */
+@media (max-width: 760px) {
+  .result {
+    padding: var(--space-5) var(--space-4);
+  }
+
+  .stamp {
+    position: static;
+    display: inline-block;
+    margin: var(--space-4) auto 0;
+  }
+}
+
 .problems-section {
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
+  text-align: center;
 }
 
 .problems-section .section-title {
+  justify-content: center;
   margin: 0;
 }
 
 .problems-section .choice-hint {
-  margin: var(--space-1) 0 var(--space-3);
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.problems-section .problems {
+  text-align: left;
 }
 
 .problems {
@@ -1479,7 +1730,8 @@ div.long-list:not(.table-scroll) {
 }
 
 .problem.is-selected {
-  box-shadow: 0 0 0 2px var(--accent);
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
 }
 
 .problem-head {
@@ -1499,21 +1751,43 @@ div.long-list:not(.table-scroll) {
   font-weight: 600;
 }
 
+/* "Next:" leads every suggested action, in ink, with the action in pencil. */
 .next-step {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
   color: var(--text-secondary);
 }
 
-.next-step .icon {
-  flex: none;
-  margin-top: 0.15rem;
-  color: var(--accent);
+.next-step strong {
+  color: var(--text);
+  font-weight: 700;
 }
 
-/* Choices drawn as a segmented control: one rounded track, the chosen
-   segment filled. Radio inputs stay in the page (visually hidden), so
+/* Ledger marks: a pencil tick and the match type in pencil grey, or a
+   red-ink ring and the problem type in red. */
+.mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.mark-icon {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+}
+
+.mark-matched {
+  color: var(--text-secondary);
+}
+
+.mark-problem {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+/* Choices drawn as a segmented control: one ruled box divided into
+   segments, the chosen segment filled with ink. Radio inputs stay in the page (visually hidden), so
    arrow keys and screen readers work as for any radio group; the busy
    day's filter is links, which mark the current one with aria-current. */
 .pills {
@@ -1547,21 +1821,20 @@ div.long-list:not(.table-scroll) {
 .segmented {
   display: inline-flex;
   flex-wrap: nowrap;
-  gap: 2px;
-  padding: 3px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
   background: var(--surface);
+  overflow: hidden;
 }
 
 .pill {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 34px;
-  padding: 0.3rem 0.95rem;
+  min-height: 36px;
+  padding: 0.3rem 1rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 500;
@@ -1576,13 +1849,21 @@ div.long-list:not(.table-scroll) {
   background: var(--surface-raised);
 }
 
+.segmented .pill + .pill-input + .pill,
+.segmented .pill + .pill {
+  border-left: 1px solid var(--border-strong);
+}
+
 .pill-input:checked + .pill,
 .pill[aria-current="true"],
 .pill[aria-current="true"]:hover {
-  background: var(--accent-soft);
-  box-shadow: inset 0 0 0 1px var(--accent);
-  color: var(--text);
+  background: var(--ink-fill);
+  color: var(--ink-fill-text);
   font-weight: 700;
+}
+
+.pill-input:focus-visible + .pill {
+  outline-offset: -3px;
 }
 
 .pill-input:focus-visible + .pill {
@@ -1595,9 +1876,9 @@ div.long-list:not(.table-scroll) {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-5);
+  justify-content: center;
+  gap: var(--space-3) var(--space-6);
+  margin-top: var(--space-6);
 }
 
 /* The two lists sit side by side when there is room. On narrower screens
@@ -1646,12 +1927,72 @@ div.long-list:not(.table-scroll) {
   min-width: 0;
 }
 
+/* Continuous printer paper: a strip of punched tractor-feed holes down each
+   side of a list, separated from the printed area by a perforation. The
+   holes are radial gradients in the page colour, so they read as cut out. */
+.workspace .list,
+.busy-lists .list {
+  --feed: 1.5rem;
+  position: relative;
+  padding: var(--space-3) calc(var(--feed) + var(--space-2));
+  border-radius: var(--radius-sm);
+  background-color: var(--surface);
+  background-image:
+    radial-gradient(circle, var(--hole) 3.5px, transparent 4px),
+    radial-gradient(circle, var(--hole) 3.5px, transparent 4px);
+  background-position:
+    left 0 top 8px,
+    right 0 top 8px;
+  background-repeat: repeat-y;
+  background-size: var(--feed) 1.25rem;
+  box-shadow: none;
+}
+
+.workspace .list::before,
+.workspace .list::after,
+.busy-lists .list::before,
+.busy-lists .list::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--border);
+  pointer-events: none;
+}
+
+.workspace .list::before,
+.busy-lists .list::before {
+  left: var(--feed);
+}
+
+.workspace .list::after,
+.busy-lists .list::after {
+  right: var(--feed);
+}
+
+/* On a phone the strips narrow, so the table keeps its width. */
+@media (max-width: 480px) {
+  .workspace .list,
+  .busy-lists .list {
+    --feed: 0.9rem;
+    background-image:
+      radial-gradient(circle, var(--hole) 2.5px, transparent 3px),
+      radial-gradient(circle, var(--hole) 2.5px, transparent 3px);
+  }
+}
+
 .list-title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  margin: var(--space-1) var(--space-2) var(--space-3);
-  font-size: var(--text-md);
+  margin: var(--space-1) 0 var(--space-3);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+}
+
+/* Green-bar banding, as on continuous stationery: alternate rows tinted. */
+.list-table tbody tr:nth-child(odd) {
+  background: var(--band);
 }
 
 .list-count {
@@ -1759,9 +2100,20 @@ div.long-list:not(.table-scroll) {
 /* The flex layout sits on an inner box: a cell that is itself a flex box
    stops behaving as a table cell, and its borders fall out of line. */
 .outcome-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 28px;
   align-items: center;
   gap: var(--space-1);
+}
+
+/* The info button has its own fixed slot at the cell's right edge, so it
+   sits at the same x on every row whatever the width of the type beside it. */
+.outcome-inner .why-button {
+  grid-column: 2;
+}
+
+.outcome-inner .tag {
+  justify-self: start;
 }
 
 /* The small info button beside each tag, which opens the row's popover. */
@@ -1863,19 +2215,20 @@ div.long-list:not(.table-scroll) {
   }
 }
 
-/* Row states: a tint and the tag's icon and word. Matched rows step back
-   into secondary text so the problems stand out; that colour still meets
-   contrast, where lowering the opacity would not. */
+/* Row states: a tint and the row's mark and word. Matched rows step back
+   into pencil grey so the problems stand out; that colour still meets
+   contrast, where lowering the opacity would not. The tinted states are
+   written to outrank the green-bar banding, which would otherwise win. */
 .row-matched {
   color: var(--text-secondary);
 }
 
-.row-review {
+.list-table tbody tr.row-review {
   background: var(--warn-soft);
 }
 
-.row.is-selected,
-.row:target {
+.list-table tbody tr.is-selected,
+.list-table tbody tr:target {
   background: var(--accent-soft);
   color: var(--text);
   font-weight: 600;
@@ -1883,6 +2236,33 @@ div.long-list:not(.table-scroll) {
 
 .row[data-group] {
   cursor: pointer;
+}
+
+/* Rows brought into view by "Show its rows in the lists": a highlight that
+   fades to a lasting tint, so the eye finds them and can come back to them.
+   Under reduced motion the tint is simply there. */
+@keyframes flash {
+  from {
+    background-color: var(--warn-soft);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+}
+
+.list-table tbody tr.is-flash {
+  background: var(--accent-soft);
+  color: var(--text);
+  animation: flash 1.6s ease-out;
+}
+
+.list-table tbody tr.is-flash:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: -3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-table tbody tr.is-flash {
+    animation: none;
+  }
 }
 
 .tag {
@@ -1897,11 +2277,6 @@ div.long-list:not(.table-scroll) {
   white-space: nowrap;
   color: var(--good);
   background: var(--good-soft);
-}
-
-.tag-review {
-  color: var(--warn);
-  background: var(--warn-soft);
 }
 
 /* Tooltips, shown while the small info button is hovered or focused. */
@@ -1956,27 +2331,12 @@ div.long-list:not(.table-scroll) {
   display: none;
 }
 
-.link-button,
-.link-button:hover {
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: var(--text-sm);
-  font-weight: 500;
-  text-decoration: underline;
-}
-
-.link-button:hover {
-  color: var(--accent-strong);
-}
-
 .quick-links {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2) var(--space-5);
-  margin-top: var(--space-5);
+  justify-content: center;
+  gap: var(--space-2) var(--space-6);
+  margin-top: var(--space-6);
   font-size: var(--text-sm);
 }
 
@@ -1988,9 +2348,18 @@ div.long-list:not(.table-scroll) {
 
 /* How it works: the busy day. One card, divided into sections by rules,
    with the same padding and heading size throughout. */
+/* Boxed only once a day has run; before that it holds one centred line. */
 .busy-result {
-  margin-top: var(--space-4);
+  margin-top: var(--space-5);
+  text-align: center;
+}
+
+.busy-result:has(.busy-section) {
   padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: left;
 }
 
 @media (max-width: 600px) {
@@ -2036,8 +2405,6 @@ div.long-list:not(.table-scroll) {
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
 }
 
 .busy-result .busy-size {
@@ -2232,11 +2599,6 @@ div.long-list:not(.table-scroll) {
   margin-bottom: var(--space-4);
 }
 
-.lists-filter-note {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
 .pager {
   display: flex;
   flex-wrap: wrap;
@@ -2265,39 +2627,6 @@ div.long-list:not(.table-scroll) {
 
 .busy-lists .list-title {
   margin-left: 0;
-}
-
-/* The reveal after Match: each row's outcome fades in a moment after
-   the one above (app.js sets --i), so the eye can follow the matching.
-   Turned off entirely when the visitor asks for reduced motion. */
-@keyframes reveal {
-  from {
-    opacity: 0;
-    transform: translateX(-6px);
-  }
-}
-
-@keyframes settle {
-  from {
-    background-color: var(--accent-soft);
-  }
-}
-
-.is-reconciled .outcome > * {
-  animation: reveal 0.35s ease-out both;
-  animation-delay: calc(var(--i, 0) * 35ms);
-}
-
-.is-reconciled .row {
-  animation: settle 0.8s ease-out both;
-  animation-delay: calc(var(--i, 0) * 35ms);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .is-reconciled .outcome > *,
-  .is-reconciled .row {
-    animation: none;
-  }
 }
 
 /* How it works: the two approaches side by side, and the race sizes in a row. */
@@ -2334,10 +2663,6 @@ div.long-list:not(.table-scroll) {
   margin: 0 0 var(--space-2);
   font-size: var(--text-xl);
   letter-spacing: -0.015em;
-}
-
-.lede-short {
-  max-width: 60ch;
 }
 
 /* A folded section: a plain line that opens to show detail. */
@@ -2379,37 +2704,164 @@ details.fold {
   font-weight: 600;
 }
 
-/* Training: the start form and the you-against-the-engine scoreboard. */
+/* Training: the level chooser. The four levels are cards in a row (two by
+   two on a tablet, stacked on a phone); the chosen card is outlined in
+   ink, and the radio in its corner shows the choice as well. */
 .start-form {
-  max-width: 40rem;
-  padding: var(--space-5);
+  max-width: 64rem;
+  margin: 0 auto;
 }
 
-.start-form fieldset {
-  border: 0;
+.chooser-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.chooser-head h2 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.chooser-head .badge {
+  margin: 0;
+}
+
+.level-chooser {
+  margin: 0;
   padding: 0;
+  border: 0;
   background: none;
 }
 
+.level-cards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 900px) {
+  .level-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .level-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.level-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.level-input {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* The label is stretched over the whole card, so any part of it chooses. */
+.level-name {
+  padding-right: 1.75rem;
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.level-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.level-hint {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.level-count {
+  display: block;
+  color: var(--text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.level-card:has(.level-input:checked) {
+  border-color: var(--ink-fill);
+  background: var(--surface-raised);
+  box-shadow: inset 0 0 0 1px var(--ink-fill);
+}
+
+.level-card:has(.level-input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.start-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-6);
+}
+
+.start-row .field {
+  max-width: 20rem;
+  margin: 0;
+}
+
+.start-row .button-large {
+  margin-top: 1.6rem;
+}
+
+/* Training: the you-against-the-engine scoreboard, a small ruled sheet. */
 .scoreboard {
-  max-width: 36rem;
-  padding: var(--space-4) var(--space-5);
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  text-align: center;
 }
 
 .scoreboard table {
+  margin: 0 auto;
   font-size: var(--text-md);
 }
 
 .scoreboard th,
 .scoreboard td {
   border-bottom: 1px solid var(--border);
-  padding: var(--space-3) var(--space-2);
+  padding: var(--space-3) var(--space-4);
 }
 
 .scoreboard thead th {
   background: none;
   font-size: var(--text-sm);
   text-align: right;
+}
+
+.scoreboard tbody th {
+  text-align: left;
 }
 
 .score-value {
@@ -2431,34 +2883,72 @@ details.fold {
 
 .scoreboard .verdict {
   margin: var(--space-4) 0 var(--space-1);
+  font-family: var(--font-heading);
+  font-size: var(--text-xl);
 }
 
-/* How it works: what the engine copes with, as a row of small labels. */
-.copes {
+.scoreboard .badge {
+  margin: var(--space-3) 0 0;
+}
+
+/* The race box holds only the sizes and the button, so it fits its content
+   rather than stretching across the page. */
+.race-form {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-4) auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
 
-.copes li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0.3rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+.race-form .toolbar {
+  margin: 0;
+}
+
+.race-form legend {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.race-note {
+  max-width: var(--measure);
+  margin: 0 auto var(--space-4);
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
-.copes .icon {
-  color: var(--accent);
+/* The timings: as wide as their figures, with a small header and every
+   number right-aligned in tabular figures. */
+.timings-box {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
 }
 
-.race-form {
-  padding: var(--space-4) var(--space-5);
-  margin: var(--space-4) 0;
+.timings-box table {
+  width: auto;
+}
+
+.timings-box th,
+.timings-box td {
+  padding: 0.35rem 0.85rem;
+}
+
+.timings-box thead th {
+  font-size: var(--text-xs);
+}
+
+.timings-box td,
+.timings-box th[scope="row"] {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .race-form fieldset {
@@ -2471,6 +2961,17 @@ details.fold {
 .race-takeaway {
   margin: var(--space-2) 0 var(--space-4);
   font-size: var(--text-lg);
+  text-align: center;
+}
+
+/* The race's chart, centred under its heading. */
+#race-results figure {
+  max-width: 640px;
+  margin: var(--space-5) auto 0;
+}
+
+#race-results > h3 {
+  text-align: center;
 }
 
 /* The training rules: a compact two-column table, not a list of paragraphs. */

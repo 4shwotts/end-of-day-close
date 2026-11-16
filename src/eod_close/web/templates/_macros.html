@@ -39,15 +39,15 @@
 {% macro summary_bar(s, seconds, id=none) %}
 <div class="summary-bar"{% if id %} id="{{ id }}"{% endif %}>
   <div class="stat stat-good">
-    <span class="stat-label">{{ icon("check-circle") }} Matched</span>
+    <span class="stat-label">Matched</span>
     <span class="stat-value">{{ "{:,}".format(s.matched) }}</span>
   </div>
   <div class="stat {{ 'stat-good' if s.needs_review == 0 else 'stat-warn' }}">
-    <span class="stat-label">{{ icon("alert") }} Problems found</span>
+    <span class="stat-label">Problems found</span>
     <span class="stat-value">{{ "{:,}".format(s.needs_review) }}</span>
   </div>
   <div class="stat">
-    <span class="stat-label">{{ icon("clock") }} Time taken</span>
+    <span class="stat-label">Time taken</span>
     <span class="stat-value">{{ seconds|in_seconds }}</span>
   </div>
 </div>
@@ -69,6 +69,13 @@
   "Not in your records": "missing",
   "Not on the bank statement": "missing"
 } %}
+
+{# Ledger marks, drawn as a bookkeeper would: a pencil tick beside a
+   matched line, a red-ink ring round a problem. The word beside the mark
+   always says what it means, so colour is never the only signal. #}
+{% macro mark(kind, label) -%}
+<span class="mark mark-{{ kind }}">{% if kind == "matched" %}<svg class="mark-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M2.6 8.9l3.1 3.2 7.6-8.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>{% else %}<svg class="mark-icon" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="M9.2 2.4c2.9.5 4.8 2.9 4.5 5.9-.3 3-2.9 5.3-6 5.1-3.1-.2-5.4-2.8-5.2-5.8.2-2.8 2.4-5 5.1-5.3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>{% endif %}{{ label }}</span>
+{%- endmacro %}
 
 {# A short explanation of a term, shown on hover and on keyboard focus.
    The button names the term for screen readers and points to the text with

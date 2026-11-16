@@ -1,42 +1,54 @@
 {% extends "base.html" %}
-{% block title %}Training mode · End-of-Day Close{% endblock %}
+{% block title %}Training mode – End-of-Day Close{% endblock %}
 {% block content %}
 {# A challenge, not a lesson: one sentence, a level, a start button. How to
-   play is on the briefing page, read before the clock starts. #}
-<h1>Can you beat the engine?</h1>
-<p class="lede lede-short">
-  Match a day's payments by hand, then see how your accuracy and time compare with the engine's.
-</p>
-{% include "_streak.html" %}
+   play is on the briefing page, read before the clock starts.
 
-<form action="/play" method="get" class="card start-form">
-  <fieldset>
-    <legend>Choose your level</legend>
-    {% set hints = {
-      "intern": "15 payments: card fees and late arrivals.",
-      "analyst": "40 payments: adds refunds, euro sales and missing payments.",
-      "senior-analyst": "100 payments: adds bundled payments, disputes and duplicates.",
-      "head-of-ops": "300 payments: every kind of problem, including typos."
+   The four levels are cards in a row (stacked on a phone). Each card is a
+   radio button whose label is just the level's name, so it reads simply;
+   the count and what the level adds are its description. The label is
+   stretched over the whole card, so any part of it can be clicked. #}
+<div class="intro">
+  <h1>Can you beat the engine?</h1>
+  <p class="tagline">
+    Match a day's payments by hand, then see how your accuracy and time compare with the engine's.
+  </p>
+</div>
+
+<form action="/play" method="get" class="start-form">
+  <div class="chooser-head">
+    <h2 id="level-heading">Choose your level</h2>
+    <p class="badge">Balanced-day streak <strong id="streak-count">0</strong></p>
+  </div>
+  <fieldset class="level-chooser">
+    <legend class="visually-hidden">Choose your level</legend>
+    {% set levels = {
+      "intern": ("15 payments", "Card fees and late arrivals."),
+      "analyst": ("40 payments", "Adds refunds, euro sales and missing payments."),
+      "senior-analyst": ("100 payments", "Adds bundled payments, disputes and duplicates."),
+      "head-of-ops": ("300 payments", "Every kind of problem, including typos.")
     } %}
-    {% for level in difficulties %}
-    <div class="choice">
-      <input type="radio" id="level-{{ level.value }}" name="difficulty" value="{{ level.value }}"
-             {% if loop.first %}checked{% endif %} aria-describedby="hint-{{ level.value }}">
-      <div>
-        <label for="level-{{ level.value }}">{{ level.label }}</label>
-        <span class="choice-hint" id="hint-{{ level.value }}">{{ hints[level.value] }}</span>
+    <div class="level-cards">
+      {% for level in difficulties %}
+      {% set count, adds = levels[level.value] %}
+      <div class="level-card">
+        <input class="level-input" type="radio" id="level-{{ level.value }}" name="difficulty" value="{{ level.value }}"
+               {% if loop.first %}checked{% endif %} aria-describedby="hint-{{ level.value }}">
+        <label class="level-name" for="level-{{ level.value }}">{{ level.label }}</label>
+        <span class="level-hint" id="hint-{{ level.value }}"><span class="level-count">{{ count }}</span> {{ adds }}</span>
       </div>
+      {% endfor %}
     </div>
-    {% endfor %}
   </fieldset>
 
-  <div class="field">
-    <label for="seed">Day number (optional)</label>
-    <input type="number" id="seed" name="seed" min="0" max="1000000000" inputmode="numeric"
-           aria-describedby="seed-hint">
-    <span class="choice-hint" id="seed-hint">Leave it empty for a new day. The same number always gives the same day.</span>
+  <div class="start-row">
+    <div class="field">
+      <label for="seed">Day number (optional)</label>
+      <input type="number" id="seed" name="seed" min="0" max="1000000000" inputmode="numeric"
+             aria-describedby="seed-hint">
+      <span class="choice-hint" id="seed-hint">Leave it empty for a new day. The same number always gives the same day.</span>
+    </div>
+    <button type="submit" class="button-large">Start the day</button>
   </div>
-
-  <button type="submit" class="button-large">Start the day</button>
 </form>
 {% endblock %}

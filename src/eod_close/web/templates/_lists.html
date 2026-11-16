@@ -1,10 +1,10 @@
 {# The two lists and the problem cards, shared by the Reconcile page and the
    busy day on How it works, so both show a day the same way. #}
-{% from "_macros.html" import icon, tip, tag_icons %}
+{% from "_macros.html" import icon, tip, mark %}
 
 {# One list: date, reference and amount, plus the outcome once matched.
 
-   Both lists use the same fixed column widths (the colgroup), so the bank
+   Both lists use the same fixed column widths (set on the header cells), so the bank
    and records tables line up. References and amounts never wrap; a
    reference too long for its column ends in an ellipsis and shows in full
    in its tooltip. The table sits in its own box, which scrolls sideways
@@ -16,19 +16,13 @@
    what is wrong and what to do). It uses the browser's own popover, so it
    floats above the table without changing its size, closes on Escape or
    a click outside, and only one is open at a time. #}
-{% macro list_table(side, rows, count, reconciled) -%}
+{% macro list_table(side, rows, count, reconciled, focus=none) -%}
 {% set title = "Bank statement" if side == "bank" else "Your records" %}
 {% set help = "The money that actually came into or left the account." if side == "bank" else "Your own list of what you sold and refunded. Accountants call it the ledger." %}
 <div class="list list-{{ side }} card">
   <h3 class="list-title" id="{{ side }}-heading">{{ title }} <span class="list-count">({{ "{:,}".format(count) }})</span> {{ tip(side, title|lower, help) }}</h3>
   <div class="list-scroll" role="region" aria-labelledby="{{ side }}-heading" tabindex="0">
     <table class="list-table{{ ' is-reconciled' if reconciled else '' }}">
-      <colgroup>
-        <col class="col-date">
-        <col class="col-ref">
-        <col class="col-amount">
-        {% if reconciled %}<col class="col-result">{% endif %}
-      </colgroup>
       <thead>
         <tr>
           <th scope="col" class="col-date">Date</th>
@@ -40,7 +34,7 @@
       <tbody>
         {% for row in rows %}
         {% set reference = row.reference or "No reference" %}
-        <tr id="row-{{ side }}-{{ row.entry_id }}" class="row row-{{ row.status }}{% if row.tag_key %} tag-{{ row.tag_key }}{% endif %}"{% if row.group %} data-group="{{ row.group }}"{% endif %}>
+        <tr id="row-{{ side }}-{{ row.entry_id }}" class="row row-{{ row.status }}{% if row.tag_key %} tag-{{ row.tag_key }}{% endif %}{% if focus and row.group == focus %} is-flash{% endif %}"{% if row.group %} data-group="{{ row.group }}"{% endif %}>
           <td class="row-date">{{ row.value_date.strftime("%d %b") }}</td>
           <th scope="row" class="row-ref"><span class="tip tip-ref"><button type="button" class="ref-button" aria-describedby="desc-{{ side }}-{{ row.entry_id }}">{{ reference }}</button><span class="tip-text" role="tooltip" id="desc-{{ side }}-{{ row.entry_id }}"><strong>{{ reference }}</strong><br>{{ row.description }}</span></span></th>
           <td class="num amount">{{ row.amount }}</td>
@@ -48,13 +42,13 @@
           {% set why_id = "why-" ~ side ~ "-" ~ row.entry_id %}
           {% set question = ("Why was " ~ reference ~ " matched?") if row.status == "matched" else ("What is wrong with " ~ reference ~ "?") %}
           <td class="outcome"><div class="outcome-inner">
-            <span class="tag tag-{{ row.tag_key or 'review' }}">{{ icon(tag_icons[row.tag_key or "review"]) }} {{ row.tag }}</span>
+            {{ mark("matched" if row.status == "matched" else "problem", row.tag) }}
             {% if row.reason %}
             <button type="button" class="why-button" popovertarget="{{ why_id }}" aria-label="{{ question }}">{{ icon("info") }}</button>
             <div class="why-popover" id="{{ why_id }}" popover role="dialog" aria-label="{{ question }}">
-              <p class="why-title">{{ reference }} · {{ row.tag }}</p>
+              <p class="why-title">{{ reference }}: {{ row.tag }}</p>
               <p>{{ row.reason }}</p>
-              {% if row.next_step %}<p class="next-step">{{ icon("arrow-right") }} {{ row.next_step }}</p>{% endif %}
+              {% if row.next_step %}<p class="next-step"><strong>Next:</strong> {{ row.next_step }}</p>{% endif %}
             </div>
             {% endif %}
           </div></td>
@@ -75,27 +69,28 @@
 {% macro problem_card(problem) -%}
 <button type="button" data-select-group="{{ problem.group }}" aria-pressed="false" class="problem">
   <span class="problem-head">
-    <span class="tag tag-review">{{ icon("alert") }} {{ problem.item.label }}</span>
+    {{ mark("problem", problem.item.label) }}
     <span class="problem-effect amount" data-effect="{{ problem.effect.amount }}"><span class="visually-hidden">Effect on the difference: </span>{{ problem.effect }}</span>
   </span>
   <span class="problem-what">{{ problem.what }}</span>
-  <span class="next-step">{{ icon("arrow-right") }} {{ problem.next_step }}</span>
+  <span class="next-step"><strong>Next:</strong> {{ problem.next_step }}</span>
 </button>
 {%- endmacro %}
 
 {# One line of the busy day's compact problem list: tag, sentence, amount.
-   Opening it shows the next step and filters the lists below to its rows
-   (app.js follows the link for you; without JavaScript, follow it). #}
+   Opening it shows the next step and a link that brings the problem's rows
+   into view in the lists below, highlighted. Without JavaScript the link
+   loads the whole page at those rows. #}
 {% macro problem_line(problem, rows_url) -%}
 <details class="problem-line" data-group="{{ problem.group }}">
   <summary>
-    <span class="tag tag-review">{{ icon("alert") }} {{ problem.item.label }}</span>
+    {{ mark("problem", problem.item.label) }}
     <span class="problem-line-what">{{ problem.what }}</span>
     <span class="problem-line-amount amount" data-effect="{{ problem.effect.amount }}">{{ problem.effect }}</span>
   </summary>
   <div class="problem-line-body">
-    <p class="next-step">{{ icon("arrow-right") }} {{ problem.next_step }}</p>
-    <a class="problem-rows-link" href="{{ rows_url }}?group={{ problem.group }}#busy-lists" hx-get="{{ rows_url }}?group={{ problem.group }}" hx-target="#busy-lists" hx-swap="innerHTML" data-show-rows>Show its rows in the lists</a>
+    <p class="next-step"><strong>Next:</strong> {{ problem.next_step }}</p>
+    <a class="problem-rows-link" href="{{ rows_url }}?focus={{ problem.group }}#busy-lists" hx-get="{{ rows_url }}?focus={{ problem.group }}" hx-target="#busy-lists" hx-swap="innerHTML" data-show-rows>Show its rows in the lists</a>
   </div>
 </details>
 {%- endmacro %}

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}You vs the engine · End-of-Day Close{% endblock %}
+{% from "_macros.html" import mark %}
+{% block title %}You vs the engine – End-of-Day Close{% endblock %}
 {% block content %}
 {# The close screen is a scoreboard: you against the engine on accuracy and
    time, then the verdict. Every problem explained, and the engine's own
@@ -7,13 +8,15 @@
 {% set won = score.accuracy > score.engine_accuracy %}
 {% set tied = score.accuracy == score.engine_accuracy %}
 <section id="close-summary" data-case-id="{{ case.case_id }}" data-balanced="{{ 'true' if score.balanced else 'false' }}" aria-labelledby="summary-heading">
-  <h1 id="summary-heading">You vs the engine</h1>
-  <p class="lede">
-    {{ case.business_date.strftime("%A %d %B") }} · {{ case.difficulty.label }} ·
-    day {{ "closed" if score.balanced else "not balanced" }}
-  </p>
+  <div class="intro">
+    <h1 id="summary-heading">You vs the engine</h1>
+    <p class="tagline">
+      {{ case.business_date.strftime("%A %d %B") }}, {{ case.difficulty.label }}.
+      {{ "You closed the day." if score.balanced else "The day did not balance." }}
+    </p>
+  </div>
 
-  <div class="card scoreboard">
+  <div class="scoreboard">
     <table>
       <caption class="visually-hidden">Your result against the engine's</caption>
       <thead>
@@ -47,7 +50,7 @@
     {% include "_streak.html" %}
   </div>
 
-  <div class="toolbar">
+  <div class="start-actions">
     <a class="button" href="/play?difficulty={{ case.difficulty.value }}">Next day</a>
     <a class="button button-secondary" href="/play/{{ case.difficulty.value }}/{{ case.seed }}">Try this day again</a>
   </div>
@@ -73,8 +76,8 @@
           <th scope="row">{{ kind_names[item.kind] }}</th>
           <td>{{ (item.bank_ids + item.ledger_ids)|join(", ") }}</td>
           <td class="wrap">{{ item.explanation }}</td>
-          <td class="{{ 'result-good' if item.player_correct else 'result-bad' }}">{{ "✓ Right" if item.player_correct else "✗ Missed" }}</td>
-          <td class="{{ 'result-good' if item.engine_correct else 'result-bad' }}">{{ "✓ Right" if item.engine_correct else "✗ Missed" }}</td>
+          <td>{{ mark("matched", "Right") if item.player_correct else mark("problem", "Missed") }}</td>
+          <td>{{ mark("matched", "Right") if item.engine_correct else mark("problem", "Missed") }}</td>
         </tr>
         {% endfor %}
       </tbody>

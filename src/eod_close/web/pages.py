@@ -131,7 +131,9 @@ router = APIRouter(include_in_schema=False)
 
 # A fixed menu of sizes rather than free input, so nobody can ask a shared
 # instance to time a naive run on a million rows.
-RACE_SIZES: Final = (100, 250, 500, 1_000, 2_500, 5_000)
+# Below about 500 a side the engine's index-building cost outweighs its
+# gain, which the race explains in a sentence rather than charts.
+RACE_SIZES: Final = (500, 1_000, 2_500, 5_000, 10_000)
 
 # The seed and difficulty of the example files offered beside the upload form.
 SAMPLE_SEED: Final = 1
@@ -386,7 +388,7 @@ def old_arena_page() -> RedirectResponse:
 
 
 def _busy_day_context(
-    seed: int, page: int = 1, show: Show = "all", group: str | None = None
+    seed: int, page: int = 1, show: Show = "all", focus: str | None = None
 ) -> dict[str, object]:
     """Generate, match and mark a busy day, and cut its lists to one page.
 
@@ -394,7 +396,7 @@ def _busy_day_context(
         seed: The day's number.
         page: The page of the two lists to show.
         show: Every row, or only the problem rows.
-        group: Show only the rows of this one problem.
+        focus: A problem whose rows to bring into view and highlight.
 
     Returns:
         The How it works values, plus the day and its lists.
@@ -402,7 +404,7 @@ def _busy_day_context(
     _check_seed(seed)
     busy = run_busy_day(seed)
     context = _how_it_works_context()
-    context.update(busy=busy, lists=list_page(busy.workspace, page, show, group))
+    context.update(busy=busy, lists=list_page(busy.workspace, page, show, focus))
     return context
 
 
@@ -434,13 +436,14 @@ def busy_day_lists(
     seed: int,
     page: Annotated[int, Query(ge=1)] = 1,
     show: Show = "all",
-    group: Annotated[str | None, Query(pattern=r"^r\d{1,4}$")] = None,
+    focus: Annotated[str | None, Query(pattern=r"^r\d{1,4}$")] = None,
 ) -> HTMLResponse:
     """One page of a busy day's two lists; the whole page without JavaScript.
 
-    With ``group``, only one problem's rows, for a problem selected above.
+    With ``focus``, the page holding one problem's rows, with them
+    highlighted, for "Show its rows in the lists".
     """
-    context = _busy_day_context(seed, page, show, group)
+    context = _busy_day_context(seed, page, show, focus)
     if _is_htmx(request):
         return templates.TemplateResponse(request, "_busy_lists.html", context)
     context["lists_open"] = True

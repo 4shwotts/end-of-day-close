@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 import pytest
-from playwright.sync_api import Page, expect
+from playwright.sync_api import Browser, Page, expect
 
 from eod_close.csv_format import write_bank_csv, write_ledger_csv
 from eod_close.generator import CaseGenerator, Difficulty
@@ -38,7 +38,7 @@ def test_play_a_perfect_day_and_extend_the_streak(page: Page, live_server: str) 
 
     page.get_by_role("button", name="Close the day").first.click()
     expect(page.get_by_role("heading", level=1)).to_have_text("You vs the engine")
-    expect(page.locator("#close-summary")).to_contain_text("day closed")
+    expect(page.locator("#close-summary")).to_contain_text("You closed the day.")
     expect(page.locator("#close-summary")).to_contain_text("100.0%")
     expect(page.locator("#streak-count")).to_have_text("1")
 
@@ -47,7 +47,7 @@ def test_an_unbalanced_day_resets_the_streak(page: Page, live_server: str) -> No
     page.goto(f"{live_server}/play/intern/{SEED + 1}/work")
     page.evaluate("window.localStorage.setItem('eod-close.streak', '3')")
     page.get_by_role("button", name="Close the day").first.click()
-    expect(page.locator("#close-summary")).to_contain_text("day not balanced")
+    expect(page.locator("#close-summary")).to_contain_text("The day did not balance.")
     expect(page.locator("#streak-count")).to_have_text("0")
 
 
@@ -67,7 +67,7 @@ def test_how_it_works_draws_the_race_chart_with_htmx(page: Page, live_server: st
     page.goto(live_server)
     page.get_by_role("navigation", name="Main").get_by_role("link", name="How it works").click()
     expect(page.get_by_role("heading", level=1)).to_have_text("How it works")
-    for size in ("1,000", "2,500", "5,000"):
+    for size in ("2,500", "5,000", "10,000"):
         page.get_by_label(size, exact=True).uncheck()
     page.get_by_role("button", name="Run the race").click()
     expect(page.locator("#race-results svg")).to_be_visible()
@@ -167,15 +167,10 @@ def test_busy_day_on_how_it_works(page: Page, live_server: str) -> None:
     expect(lines).to_have_count(found)
     expect(page.get_by_text("Show all problems")).to_have_count(0)
 
-    # Selecting a problem shows its next step and filters the lists to its rows.
+    # Selecting a problem shows its next step; only one is open at a time.
     first = lines.first
     first.locator("summary").click()
     expect(first.locator(".next-step")).to_be_visible()
-    expect(page.locator("#busy-group-note")).to_be_visible()
-    rows = page.locator("#busy-lists .row")
-    expect(rows.first).to_be_visible()
-    assert rows.count() <= 2
-    expect(page.locator("#busy-lists .row-matched")).to_have_count(0)
     lines.nth(1).locator("summary").click()
     expect(first).not_to_have_attribute("open", "")
 
@@ -205,6 +200,39 @@ def test_busy_day_lists_page_and_filter_to_problems(page: Page, live_server: str
     expect(lists.locator(".row-review").first).to_be_visible()
     expect(lists.get_by_role("link", name="Problems")).to_have_attribute("aria-current", "true")
     expect(lists.get_by_role("button", name="Next")).to_be_disabled()
+
+
+def test_show_its_rows_finds_and_highlights_the_problem(page: Page, live_server: str) -> None:
+    """The link opens the folded lists at the right page and focuses the first row."""
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(f"{live_server}/how-it-works/busy-day/48213")
+    expect(page.locator("#busy-lists")).to_be_hidden()
+    # The last problem, so its rows are not on the first page of every row.
+    line = page.locator("#busy-result .problem-line").last
+    group = line.get_attribute("data-group")
+    line.locator("summary").click()
+    line.get_by_role("link", name="Show its rows in the lists").click()
+
+    flashed = page.locator("#busy-lists .row.is-flash")
+    expect(flashed.first).to_be_visible()
+    assert flashed.count() >= 1
+    for index in range(flashed.count()):
+        assert flashed.nth(index).get_attribute("data-group") == group
+    expect(flashed.first).to_be_focused()
+    expect(flashed.first).to_be_in_viewport()
+    lists = page.locator("#busy-lists")
+    expect(lists.get_by_role("link", name="Problems")).to_have_attribute("aria-current", "true")
+
+
+def test_show_its_rows_works_without_javascript(browser: Browser, live_server: str) -> None:
+    context = browser.new_context(java_script_enabled=False)
+    page = context.new_page()
+    page.goto(f"{live_server}/how-it-works/busy-day/48213")
+    line = page.locator("#busy-result .problem-line").last
+    line.locator("summary").click()
+    line.get_by_role("link", name="Show its rows in the lists").click()
+    expect(page.locator("#busy-lists .row.is-flash").first).to_be_visible()
+    context.close()
 
 
 def test_old_harder_day_links_land_on_the_busy_day(page: Page, live_server: str) -> None:

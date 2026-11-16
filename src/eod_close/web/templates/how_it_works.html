@@ -1,100 +1,144 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon, tip %}
-{% block title %}How it works · End-of-Day Close{% endblock %}
+{% from "_macros.html" import tip %}
+{% block title %}How it works – End-of-Day Close{% endblock %}
 {% block content %}
-{# Short answers: what the engine does, how good it is, that it copes with
-   a busy day, and why it is fast, with a race to prove the last one. Detail
-   lives in tooltips and the README, not here. #}
-<h1>How it works</h1>
-<p class="lede lede-short">
-  The engine pairs up a bank statement with your records, explains every pair, and hands a
-  person only the payments it cannot explain.
-</p>
+{# Short answers, set out like the pages of a ledger: the three steps, eight
+   worked examples of what goes wrong, an audit summary of how good the
+   engine is, a busy day to check it on, and a race to prove its speed.
+   Detail lives in tooltips and the README, not here. #}
+<div class="intro">
+  <h1>How it works</h1>
+  <p class="tagline">
+    The engine pairs up a bank statement with your records, explains every pair, and hands a
+    person only the payments it cannot explain.
+  </p>
+</div>
 
 <section class="band" aria-labelledby="steps-heading">
   <h2 id="steps-heading">What it does</h2>
-  <ol class="steps">
-    <li class="card step">
-      <span class="step-icon">{{ icon("upload") }}</span>
-      <h3><span class="step-number">1</span> Load the two lists</h3>
+  <ol class="ledger-steps">
+    <li>
+      <span class="step-numeral" aria-hidden="true">1</span>
+      <h3>Load the two lists</h3>
       <p>The bank statement and your records.</p>
     </li>
-    <li class="card step">
-      <span class="step-icon">{{ icon("spark") }}</span>
-      <h3><span class="step-number">2</span> The engine pairs them</h3>
+    <li>
+      <span class="step-numeral" aria-hidden="true">2</span>
+      <h3>The engine pairs them</h3>
       <p>Allowing for card fees, late payments and rounding.</p>
     </li>
-    <li class="card step">
-      <span class="step-icon">{{ icon("search") }}</span>
-      <h3><span class="step-number">3</span> You check the rest</h3>
+    <li>
+      <span class="step-numeral" aria-hidden="true">3</span>
+      <h3>You check the rest</h3>
       <p>Each with what is wrong and what to do.</p>
     </li>
   </ol>
-  <ul class="copes" aria-label="What it copes with">
-    {% for name, label in [("percent", "Card fees"), ("clock", "Late payments"), ("exchange", "Euro rounding"), ("layers", "Bundled payments"), ("undo", "Refunds and disputes"), ("copy", "Duplicates"), ("missing", "Missing payments"), ("typo", "Typos")] %}
-    <li>{{ icon(name) }} {{ label }}</li>
-    {% endfor %}
-  </ul>
 </section>
 
-<section class="band" aria-labelledby="figures-heading">
-  <h2 id="figures-heading">How good it is</h2>
-  <dl class="figures">
-    <div class="card figure">
-      <dt>matched exactly right</dt>
-      <dd class="figure-value">{{ accuracy.overall|percent }}</dd>
-      <dd class="figure-note">across {{ accuracy.days }} test days</dd>
-    </div>
-    <div class="card figure">
-      <dt>on the hardest days</dt>
-      <dd class="figure-value">{{ accuracy.hardest|percent }}</dd>
-      <dd class="figure-note">full of typos and look-alikes</dd>
-    </div>
-    {% if benchmark %}
-    <div class="card figure">
-      <dt>payments a second</dt>
-      <dd class="figure-value">{{ "{:,}".format(benchmark.entries_per_second) }}</dd>
-      <dd class="figure-note">bank and records lines together</dd>
-    </div>
-    <div class="card figure">
-      <dt>for {{ "{:,}".format(benchmark.largest.size) }} payments a side</dt>
-      <dd class="figure-value">{{ benchmark.largest.engine_seconds|in_seconds }}</dd>
-      <dd class="figure-note">{{ "{:,.0f}".format(benchmark.largest.speedup) }} times faster than checking every pair</dd>
-    </div>
-    {% endif %}
-  </dl>
-  <p class="choice-hint">
-    Accuracy is checked against the known answers for each test day.
-    {% if benchmark %}Speed was measured on a laptop on {{ benchmark.measured_on.strftime("%d %B %Y") }}.{% else %}Speed has not been measured yet.{% endif %}
-  </p>
+{# One worked line for each kind of difference, taken from the sample day on
+   the Reconcile page, so every figure can be found there too. #}
+<section class="band" aria-labelledby="ways-heading">
+  <h2 id="ways-heading">Eight ways a day goes wrong</h2>
+  <p class="section-intro">One example of each, from the sample day on the Reconcile page.</p>
+  <div class="ledger-box" role="region" tabindex="0" aria-label="Eight ways a day goes wrong, table">
+    <table class="ledger-table">
+      <thead>
+        <tr>
+          <th scope="col">Type</th>
+          <th scope="col" class="num">Bank</th>
+          <th scope="col" class="num">Your records</th>
+          <th scope="col">Why they differ</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, bank, records, why in [
+          ("Card fees", "£355.15", "£360.40", "Bramblecard kept its fee of 1.4% plus 20p."),
+          ("Late payments", "£89.99", "£89.99", "Booked on 11 Nov, arrived on 13 Nov: Otterline pays two working days later."),
+          ("Euro rounding", "£8.73", "£8.71", "A sale of €9.99, changed into pounds: 2p apart from rounding."),
+          ("Bundled payments", "£73.56", "£45.00 and £29.99", "Quillfeather paid two sales as one payment, less its 1.9% fee."),
+          ("Refunds and disputes", "-£34.99", "-£34.99", "The bank shows the refund under the original order, not the refund's own reference."),
+          ("Duplicates", "£89.00", "£89.00 twice", "The same invoice was entered twice."),
+          ("Missing payments", "£25.00", "Not recorded", "Money arrived that nobody entered."),
+          ("Typos", "£14.99", "£41.99", "Two digits were swapped when the invoice was typed in."),
+        ] %}
+        <tr>
+          <th scope="row">{{ name }}</th>
+          <td class="num amount">{{ bank }}</td>
+          <td class="num amount">{{ records }}</td>
+          <td class="wrap">{{ why }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="band" aria-labelledby="audit-heading">
+  <h2 id="audit-heading">Audit summary</h2>
+  <div class="ledger-box" role="region" tabindex="0" aria-label="Audit summary, table">
+    <table class="ledger-table audit-table">
+      <thead>
+        <tr>
+          <th scope="col">Measure</th>
+          <th scope="col" class="num">Result</th>
+          <th scope="col">How it was checked</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Matched exactly right</th>
+          <td class="num amount">{{ accuracy.overall|percent }}</td>
+          <td class="wrap">Every one of {{ "{:,}".format(accuracy.decisions) }} decisions on {{ accuracy.days }} generated test days, marked against the answer key the generator records.</td>
+        </tr>
+        <tr>
+          <th scope="row">On the hardest days</th>
+          <td class="num amount">{{ accuracy.hardest|percent }}</td>
+          <td class="wrap">The Head of Ops days alone, full of typos and look-alike amounts.</td>
+        </tr>
+        {% if benchmark %}
+        <tr>
+          <th scope="row">Payments a second</th>
+          <td class="num amount">{{ "{:,}".format(benchmark.entries_per_second) }}</td>
+          <td class="wrap">Bank and records lines together, at {{ "{:,}".format(benchmark.largest.size) }} a side. The median of five runs on a laptop, {{ benchmark.measured_on.strftime("%d %B %Y") }}.</td>
+        </tr>
+        <tr>
+          <th scope="row">Against checking every pair</th>
+          <td class="num amount">{{ "{:,.0f}".format(benchmark.largest.speedup) }} times faster</td>
+          <td class="wrap">At {{ "{:,}".format(benchmark.largest.size) }} a side, which takes the engine {{ benchmark.largest.engine_seconds|in_seconds }}. Checking every pair is timed on a sample and scaled up.</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+  {% if not benchmark %}<p class="section-intro">Speed has not been measured yet.</p>{% endif %}
 </section>
 
 <section class="band" id="busy-day" aria-labelledby="busy-heading">
   <h2 id="busy-heading">Busy day</h2>
-  <p class="lede lede-short">
-    The Reconcile page shows a dozen payments. This runs about 300 a side, generated fresh,
-    with problems in about 4% of them, as a real day might have. Every figure it shows can be
-    checked: the day has a number you can run again, the engine is marked against the
-    generator's answer key, and the files are there to download.
+  <p class="section-intro section-intro-long">
+    The Reconcile page shows a dozen payments. This runs about 300 a side, generated fresh, with
+    problems in about 4% of them, as a real day might have. Every figure it shows can be checked:
+    the day has a number you can run again, the engine is marked against the generator's answer
+    key, and the files are there to download.
   </p>
-  <form method="post" action="/how-it-works/busy-day" hx-post="/how-it-works/busy-day" hx-target="#busy-result" hx-swap="innerHTML" class="toolbar">
-    <button type="submit">{{ icon("play") }} Run a busy day</button>
+  <form method="post" action="/how-it-works/busy-day" hx-post="/how-it-works/busy-day" hx-target="#busy-result" hx-swap="innerHTML" class="centred-actions">
+    <button type="submit">Run a busy day</button>
     <span class="htmx-indicator status" role="status">Matching…</span>
   </form>
-  <div id="busy-result" class="card busy-result" aria-live="polite">
+  <div id="busy-result" class="busy-result" aria-live="polite">
     {% if busy is defined %}{% include "_busy_day.html" %}{% else %}<p class="choice-hint">Press the button to match a busy day.</p>{% endif %}
   </div>
 </section>
 
 <section class="band" aria-labelledby="race-heading">
   <h2 id="race-heading">Why it is fast: race it</h2>
-  <p class="lede lede-short">
+  <p class="section-intro section-intro-long">
     Checking every pair gets four times slower each time the day doubles in size. The engine
     looks partners up in an index instead, so it only gets about twice as slow.
     {{ tip("growth", "an index", "Like the index at the back of a book: instead of reading every page, you go straight to the right one. Engineers call the two approaches O(n²) and roughly O(n).") }}
   </p>
 
-  <form method="post" action="/how-it-works/race" hx-post="/how-it-works/race" hx-target="#race-results" hx-swap="innerHTML" class="card race-form">
+  <form method="post" action="/how-it-works/race" hx-post="/how-it-works/race" hx-target="#race-results" hx-swap="innerHTML" class="race-form">
     <fieldset>
       <legend>Payments on each side</legend>
       <div class="size-choices">

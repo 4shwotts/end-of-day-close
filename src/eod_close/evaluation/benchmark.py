@@ -10,12 +10,20 @@ entries means about five billion comparisons. Above a threshold it is timed on
 a sample of bank entries and scaled up, and the result is marked as estimated.
 The scaling is linear because each naive scan costs about the same however
 many entries are already claimed (see ``NaiveReconciler.reconcile``).
+
+A single timing of a few milliseconds is at the mercy of whatever else the
+machine is doing, so each approach is run once to warm up (filling caches and
+paying one-off costs such as importing modules) and then several more times,
+and the median is reported. The median ignores the odd stalled run that a
+mean would not.
 """
 
 from __future__ import annotations
 
 import random
+import statistics
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import date
 from typing import Final
@@ -33,6 +41,9 @@ BENCHMARK_DATE: Final = date(2026, 11, 13)
 # Above this many entries, the naive run is sampled rather than run in full.
 NAIVE_FULL_RUN_LIMIT: Final = 2_000
 NAIVE_SAMPLE_SIZE: Final = 200
+
+# Timed runs per approach and size, after one warm-up run; the median is kept.
+TIMED_RUNS: Final = 5
 
 
 def synthetic_day(size: int, seed: int = 0) -> tuple[BankStatement, Ledger]:
@@ -106,27 +117,45 @@ class BenchmarkRow:
         return self.naive_seconds / self.engine_seconds if self.engine_seconds else float("inf")
 
 
-def run_benchmark(size: int, seed: int = 0) -> BenchmarkRow:
+def run_benchmark(size: int, seed: int = 0, runs: int = TIMED_RUNS) -> BenchmarkRow:
     """Time both reconcilers on one synthetic day.
+
+    Each approach runs once untimed, then ``runs`` times; the median time is
+    reported.
 
     Args:
         size: Entries per side.
         seed: Seed for the synthetic data.
+        runs: Timed runs per approach, at least one.
 
     Returns:
-        The timings.
-    """
-    statement, ledger = synthetic_day(size, seed)
+        The median timings.
 
-    started = time.perf_counter()
-    ReconciliationEngine().reconcile(statement, ledger)
-    engine_seconds = time.perf_counter() - started
+    Raises:
+        ValueError: If ``runs`` is less than one.
+    """
+    if runs < 1:
+        raise ValueError("runs must be at least 1")
+    statement, ledger = synthetic_day(size, seed)
+    engine = ReconciliationEngine()
+    engine_seconds = _median_time(lambda: engine.reconcile(statement, ledger), runs)
 
     naive = NaiveReconciler({p.code: p for p in FICTIONAL_PROCESSORS})
     bank_rows = list(statement)
+    ledger_rows = list(ledger)
     estimated = size > NAIVE_FULL_RUN_LIMIT
     sample = bank_rows[:NAIVE_SAMPLE_SIZE] if estimated else bank_rows
-    started = time.perf_counter()
-    naive.reconcile(sample, list(ledger))
-    naive_seconds = (time.perf_counter() - started) * (len(bank_rows) / max(len(sample), 1))
+    sample_seconds = _median_time(lambda: naive.reconcile(sample, ledger_rows), runs)
+    naive_seconds = sample_seconds * (len(bank_rows) / max(len(sample), 1))
     return BenchmarkRow(size, engine_seconds, naive_seconds, estimated)
+
+
+def _median_time(run: Callable[[], object], runs: int) -> float:
+    """Run once to warm up, then ``runs`` more times; return the median time."""
+    run()
+    times = []
+    for _ in range(runs):
+        started = time.perf_counter()
+        run()
+        times.append(time.perf_counter() - started)
+    return statistics.median(times)

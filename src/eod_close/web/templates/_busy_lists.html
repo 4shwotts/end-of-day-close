@@ -11,14 +11,11 @@
 {%- endmacro %}
 <div class="lists-toolbar">
   <nav class="segmented" aria-label="Rows to show">
-    {{ lists_link(base, "show=all", "All", "pill", lists.group is none and lists.show == "all") }}
-    {{ lists_link(base, "show=problems", "Problems", "pill", lists.group is none and lists.show == "problems") }}
+    {{ lists_link(base, "show=all", "All", "pill", lists.show == "all") }}
+    {{ lists_link(base, "show=problems", "Problems", "pill", lists.show == "problems") }}
   </nav>
-  {% if lists.group %}
-  <p class="lists-filter-note" id="busy-group-note">Showing the rows of one problem.</p>
-  {% endif %}
   <nav class="pager" aria-label="Pages of the lists">
-    {% set query = ("group=" ~ lists.group) if lists.group else ("show=" ~ lists.show) %}
+    {% set query = "show=" ~ lists.show %}
     {% if lists.page > 1 %}
     {{ lists_link(base, query ~ "&page=" ~ (lists.page - 1), "Previous", "button button-secondary button-small") }}
     {% else %}
@@ -33,6 +30,6 @@
   </nav>
 </div>
 <div class="lists busy-lists">
-  {{ list_table("bank", lists.bank_rows, lists.bank_count, true) }}
-  {{ list_table("ledger", lists.ledger_rows, lists.ledger_count, true) }}
+  {{ list_table("bank", lists.bank_rows, lists.bank_count, true, lists.focus) }}
+  {{ list_table("ledger", lists.ledger_rows, lists.ledger_count, true, lists.focus) }}
 </div>

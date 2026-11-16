@@ -3,8 +3,8 @@
 //
 // - the workspace: selecting a problem card highlights its rows in both
 //   lists (showing every row and switching the phone's list if needed),
-//   clicking a matched row highlights its partner, the rows' reveal is
-//   staggered, and focus moves to the headline after Match;
+//   clicking a matched row highlights its partner, and focus moves to the
+//   headline after Match;
 // - "Why?" popovers: placed beside their button and kept on screen;
 // - the busy day: opening a problem filters the lists to its rows;
 // - tooltips: Escape dismisses them (WCAG 1.4.13);
@@ -46,15 +46,6 @@
     }
   }
 
-  function prepareWorkspace(workspace) {
-    // Each row's position drives its place in the staggered reveal.
-    workspace.querySelectorAll(".lists tbody").forEach(function (body) {
-      Array.prototype.forEach.call(body.rows, function (row, index) {
-        row.style.setProperty("--i", String(index));
-      });
-    });
-  }
-
   document.addEventListener("click", function (event) {
     var workspace = event.target.closest("[data-workspace]");
     if (!workspace) {
@@ -88,9 +79,9 @@
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   }
 
-  // After HTMX swaps in the matched workspace, set up its rows and move
-  // focus to the headline, so keyboard and screen-reader users land on the
-  // result rather than on a button that no longer exists. This waits for
+  // After HTMX swaps in the matched workspace, move focus to the headline,
+  // so keyboard and screen-reader users land on the result rather than on
+  // a button that no longer exists. This waits for
   // the settle step, and the headline has an ID of its own, because HTMX
   // briefly gives a swapped element the old attributes of any element that
   // shared its ID, which would remove the headline's tabindex.
@@ -99,7 +90,6 @@
     if (!workspace) {
       return;
     }
-    prepareWorkspace(workspace);
     var headline = workspace.querySelector(".result-headline");
     if (headline) {
       headline.focus();
@@ -177,9 +167,11 @@
 
   // ---- Busy day: problem lines -------------------------------------------
   //
-  // Opening a problem line shows its next step and filters the lists below
-  // to its rows, by following the line's own link (which HTMX turns into a
-  // fetch of just the lists). Only one line is open at a time.
+  // Opening a problem line shows its next step; only one is open at a time.
+  // Its "Show its rows in the lists" link opens the lists (they may be
+  // folded away) while HTMX fetches the page holding the problem's rows,
+  // which the server marks with is-flash. Once they arrive, they are
+  // scrolled into view and the first takes keyboard focus.
 
   document.addEventListener(
     "toggle",
@@ -193,17 +185,39 @@
           other.open = false;
         }
       });
-      var fold = document.getElementById("busy-lists-fold");
-      if (fold) {
-        fold.open = true;
-      }
-      var link = line.querySelector("[data-show-rows]");
-      if (link) {
-        link.click();
-      }
     },
     true
   );
+
+  document.addEventListener("click", function (event) {
+    if (!event.target.closest("[data-show-rows]")) {
+      return;
+    }
+    var fold = document.getElementById("busy-lists-fold");
+    if (fold) {
+      fold.open = true;
+    }
+  });
+
+  function bringFlashedRowsIntoView() {
+    var first = document.querySelector("#busy-lists .row.is-flash");
+    if (!first) {
+      return;
+    }
+    first.setAttribute("tabindex", "-1");
+    first.scrollIntoView({ block: "center", behavior: smoothOrNot() });
+    first.focus({ preventScroll: true });
+  }
+
+  document.addEventListener("htmx:afterSettle", function (event) {
+    if (event.target.id === "busy-lists") {
+      bringFlashedRowsIntoView();
+    }
+  });
+
+  // Without JavaScript the link loads the whole page at those rows; with it,
+  // a page loaded that way (or reloaded) still lands on them.
+  document.addEventListener("DOMContentLoaded", bringFlashedRowsIntoView);
 
   // ---- Tooltips -----------------------------------------------------------
 
@@ -292,8 +306,5 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-dropzone]").forEach(setUpZone);
-    // Only a matched workspace has a reveal to stagger (reached without
-    // HTMX when the form posts as a plain page).
-    document.querySelectorAll("[data-workspace].is-reconciled").forEach(prepareWorkspace);
   });
 })();

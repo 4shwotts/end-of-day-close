@@ -137,7 +137,7 @@ class ListPage:
 
     Attributes:
         show: Every row, or only the rows with a problem.
-        group: The one problem whose rows are shown, or None for all of them.
+        focus: The problem whose rows are highlighted on this page, if any.
         page: This page's number, from 1.
         pages: How many pages there are.
         bank_rows: This page's bank rows.
@@ -147,7 +147,7 @@ class ListPage:
     """
 
     show: Show
-    group: str | None
+    focus: str | None
     page: int
     pages: int
     bank_rows: tuple[Row, ...]
@@ -193,7 +193,7 @@ def run_busy_day(seed: int) -> BusyDay:
     )
 
 
-def list_page(workspace: Workspace, page: int, show: Show, group: str | None = None) -> ListPage:
+def list_page(workspace: Workspace, page: int, show: Show, focus: str | None = None) -> ListPage:
     """Cut the two lists into pages, optionally keeping only the problem rows.
 
     Both lists turn the same page together, so page 3 shows the third block
@@ -203,23 +203,47 @@ def list_page(workspace: Workspace, page: int, show: Show, group: str | None = N
         workspace: The matched day.
         page: The page wanted, from 1.
         show: ``"all"`` or ``"problems"``.
-        group: Keep only the rows of this one problem, such as ``"r3"``; it
-            overrides ``show``. An unknown group leaves the lists empty.
+        focus: A problem to bring into view, such as ``"r3"``. The lists
+            switch to the Problems filter and to the page holding that
+            problem's first row, whatever ``show`` and ``page`` say. An
+            unknown problem changes nothing.
 
     Returns:
         The page.
     """
+    if focus is not None and any(
+        r.group == focus for r in workspace.bank_rows + workspace.ledger_rows
+    ):
+        show = "problems"
+        page = _page_holding(workspace, focus)
+    else:
+        focus = None
 
-    def keep(rows: tuple[Row, ...]) -> tuple[Row, ...]:
-        if group is not None:
-            return tuple(row for row in rows if row.group == group)
-        return rows if show == "all" else tuple(row for row in rows if row.status == "review")
-
-    bank, ledger = keep(workspace.bank_rows), keep(workspace.ledger_rows)
+    bank, ledger = _filtered(workspace.bank_rows, show), _filtered(workspace.ledger_rows, show)
     pages = max(1, math.ceil(max(len(bank), len(ledger)) / PAGE_SIZE))
     page = min(max(page, 1), pages)
     window = slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-    return ListPage(show, group, page, pages, bank[window], ledger[window], len(bank), len(ledger))
+    return ListPage(show, focus, page, pages, bank[window], ledger[window], len(bank), len(ledger))
+
+
+def _filtered(rows: tuple[Row, ...], show: Show) -> tuple[Row, ...]:
+    return rows if show == "all" else tuple(row for row in rows if row.status == "review")
+
+
+def _page_holding(workspace: Workspace, group: str) -> int:
+    """The page of the Problems view on which a problem's first row appears.
+
+    A typo has a row on each side, which can sit at different positions in
+    the two lists; the earlier one decides, so at least one row is on the
+    page, and in practice both are, since problems are few.
+    """
+    positions = [
+        index
+        for rows in (workspace.bank_rows, workspace.ledger_rows)
+        for index, row in enumerate(_filtered(rows, "problems"))
+        if row.group == group
+    ]
+    return min(positions) // PAGE_SIZE + 1
 
 
 def answer_key_csv(answer_key: AnswerKey) -> str:

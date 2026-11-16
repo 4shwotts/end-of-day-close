@@ -76,7 +76,7 @@ def test_match_the_sample_day_and_read_what_is_wrong(page: Page, live_server: st
 def test_matched_rows_carry_a_type_and_say_why(page: Page, live_server: str) -> None:
     page.set_viewport_size({"width": 1440, "height": 900})
     match(page, live_server)
-    tags = page.locator(".list-bank .row-matched .tag").all_inner_texts()
+    tags = page.locator(".list-bank .row-matched .mark").all_inner_texts()
     assert {tag.strip() for tag in tags} == {
         "Exact",
         "Fee",
@@ -228,14 +228,22 @@ def test_try_another_day_gives_a_small_day_of_the_same_shape(page: Page, live_se
     assert total == money(page.locator("#status-unexplained").inner_text())
 
 
-def test_reduced_motion_turns_the_reveal_off(browser: Browser, live_server: str) -> None:
+def test_the_stamp_gives_the_real_result(page: Page, live_server: str) -> None:
+    """After Match the stamp lands: red ink and the real figure when the day does not balance."""
+    match(page, live_server)
+    stamp = page.locator("#result-stamp")
+    expect(stamp).to_have_text("Doesn't balance: £91.00")
+    expect(stamp).to_have_class(re.compile("(^| )stamp-bad( |$)"))
+    assert stamp.evaluate("el => getComputedStyle(el).animationName") == "stamp-in"
+
+
+def test_reduced_motion_skips_the_stamp_animation(browser: Browser, live_server: str) -> None:
     context = browser.new_context(reduced_motion="reduce")
     page = context.new_page()
     match(page, live_server)
-    names = page.locator(".is-reconciled .outcome-inner").first.evaluate(
-        "el => getComputedStyle(el).animationName"
-    )
-    assert names == "none"
+    stamp = page.locator("#result-stamp")
+    expect(stamp).to_be_visible()
+    assert stamp.evaluate("el => getComputedStyle(el).animationName") == "none"
     context.close()
 
 

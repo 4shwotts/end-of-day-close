@@ -1,22 +1,22 @@
 {
-  "measured_on": "2026-11-15",
+  "measured_on": "2026-11-16",
   "rows": [
     {
       "size": 1000,
-      "engine_seconds": 0.01478800002951175,
-      "naive_seconds": 0.03310830006375909,
+      "engine_seconds": 0.011890900088474154,
+      "naive_seconds": 0.029013899969868362,
       "naive_estimated": false
     },
     {
       "size": 10000,
-      "engine_seconds": 0.20528280001599342,
-      "naive_seconds": 5.147279996890575,
+      "engine_seconds": 0.14304939995054156,
+      "naive_seconds": 4.462969995802268,
       "naive_estimated": true
     },
     {
       "size": 100000,
-      "engine_seconds": 4.281579899950884,
-      "naive_seconds": 1480.639799963683,
+      "engine_seconds": 3.7771596999373287,
+      "naive_seconds": 1035.8262499794364,
       "naive_estimated": true
     }
   ]

@@ -12,19 +12,18 @@
   <p class="busy-seed" id="busy-seed">Day #{{ busy.seed }}</p>
   <p class="busy-size">{{ "{:,}".format(busy.statement|length) }} bank payments and {{ "{:,}".format(busy.ledger|length) }} lines in your records</p>
   <p class="busy-headline" id="busy-headline">
-    {{ icon("check-circle") }}
     <span>Matched {{ "{:,}".format(busy.matched) }} and found {{ problems|length }} problem{{ "" if problems|length == 1 else "s" }} in {{ busy.seconds|in_seconds }}.</span>
   </p>
-  <p class="busy-rerun"><a href="{{ day_url }}#busy-day">{{ icon("undo") }} Run this exact day again</a></p>
+  <p class="busy-rerun"><a href="{{ day_url }}#busy-day">Run this exact day again</a></p>
 </div>
 
 <div class="busy-section busy-checks">
   <section aria-labelledby="check-heading">
     <h3 id="check-heading">Checked against the answer key</h3>
     <p class="busy-figure" id="busy-marks">
-      Found {{ busy.found }} of {{ busy.planted }} planted problems
-      · {{ busy.false_alarms }} false alarm{{ "" if busy.false_alarms == 1 else "s" }}
-      · {{ busy.missed }} missed
+      Found {{ busy.found }} of {{ busy.planted }} planted problems,
+      with {{ busy.false_alarms }} false alarm{{ "" if busy.false_alarms == 1 else "s" }}
+      and {{ busy.missed }} missed.
     </p>
     <p class="busy-note">The generator records every problem it plants, so the engine's answers can be marked against that answer key, which you can download below.</p>
   </section>

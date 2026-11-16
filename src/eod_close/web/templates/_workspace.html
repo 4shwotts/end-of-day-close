@@ -16,25 +16,31 @@
 {% set w = workspace %}
 <section class="workspace{{ ' is-reconciled' if w.reconciled else '' }}" aria-labelledby="{{ 'result-heading' if w.reconciled else 'status-heading' }}" data-workspace>
   {% if not w.reconciled %}
-  <div class="status-bar card">
+  <div class="status-bar">
     <h2 class="status-line" id="status-heading">Your bank and your records don't quite agree. Press Match to find out why.</h2>
     <form method="post" action="{{ match_url }}" hx-post="{{ match_url }}" hx-target="#workspace" hx-swap="innerHTML">
-      <button type="submit" class="button-large reconcile-button">{{ icon("play") }} Match</button>
+      <button type="submit" class="button-large reconcile-button">Match</button>
       <span class="htmx-indicator status" role="status">Matching…</span>
     </form>
   </div>
   {% else %}
-  <div class="result card">
+  {# The result, and the stamp that lands on it: "Reconciled" when the two
+     sides agree, otherwise "Doesn't balance" with the real figure. The
+     stamp is the page's one automatic animation, and is skipped under
+     reduced motion. #}
+  {% set balanced = w.problems_total.is_zero() %}
+  <div class="result">
     <h2 class="result-headline" id="result-heading" tabindex="-1">{{ w.headline }}</h2>
     <p class="result-difference">
       <span class="amount {{ 'status-bad' if w.problems else 'status-good' }}" id="status-unexplained">{{ w.problems_total }}</span>
       unaccounted for{% if w.problems %}: the total of the problems below.{% else %}: the bank and your records agree.{% endif %}
     </p>
+    <p class="stamp {{ 'stamp-ok' if balanced else 'stamp-bad' }}" id="result-stamp">{% if balanced %}Reconciled{% else %}Doesn't balance: {{ w.problems_total|abs }}{% endif %}</p>
   </div>
 
   {% if w.problems %}
   <section class="problems-section" aria-labelledby="problems-heading">
-    <h3 class="section-title" id="problems-heading">{{ icon("alert") }} Problems found ({{ w.problems|length }})</h3>
+    <h3 class="section-title" id="problems-heading">Problems found ({{ w.problems|length }})</h3>
     <p class="choice-hint">Select a problem to see its rows in both lists.</p>
     <ul class="problems">
       {% for problem in w.problems %}
@@ -75,10 +81,10 @@
 
   <nav class="quick-links" aria-label="More options">
     {% if w.reconciled %}
-    <a href="{{ report_url }}" download>{{ icon("download") }} Download the report (CSV)</a>
-    <a href="{{ day_url }}">{{ icon("undo") }} Start again</a>
+    <a href="{{ report_url }}" download>Download the report (CSV)</a>
+    <a href="{{ day_url }}">Start again</a>
     {% endif %}
-    <a href="/day">{{ icon("layers") }} Try another day</a>
-    <a href="/upload">{{ icon("upload") }} Upload your own files</a>
+    <a href="/day">Try another day</a>
+    <a href="/upload">Upload your own files</a>
   </nav>
 </section>

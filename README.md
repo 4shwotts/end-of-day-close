@@ -117,14 +117,17 @@ same rules but scans the whole ledger for each bank entry:
 
 | Entries per side | Engine | Naive pairwise | Speed-up |
 |---:|---:|---:|---:|
-| 1,000 | 0.015 s | 0.03 s | 2× |
-| 10,000 | 0.21 s | 5.1 s (estimated) | 25× |
-| 100,000 | 4.3 s | 1,481 s (estimated) | 346× |
+| 1,000 | 0.012 s | 0.03 s | 2.4× |
+| 10,000 | 0.14 s | 4.5 s (estimated) | 31× |
+| 100,000 | 3.8 s | 1,036 s (estimated) | 274× |
 
-Naive times above 1,000 entries are extrapolated from a measured sample, since the full
-run would take too long. Times are from one run on a development laptop and will vary;
-the shape matters more than the numbers. The **How it works** page runs the same race
-live and charts it.
+Each time is the median of five runs after one warm-up run, so a single stalled run does
+not decide the result. Naive times above 2,000 entries are extrapolated from a measured
+sample, since the full run would take too long. Times are from a development laptop and
+will vary; the shape matters more than the numbers. Below about 500 entries a side the
+naive approach is the quicker of the two, because the engine first spends a few
+milliseconds building its indexes; that cost pays for itself as the day grows. The
+**How it works** page runs the same race live and charts it.
 
 The How it works page quotes these figures from a saved copy of this run,
 `src/eod_close/evaluation/benchmark_snapshot.json`, refreshed with
@@ -192,6 +195,12 @@ The site also has:
   report are all downloadable. Nothing is cached: each request generates and matches the
   day again.
 
+The look is taken from the bookkeeping ledgers that reconciliation grew out of: ruled
+lines behind the header, green-bar banding on the tables, tractor-feed edges on the lists,
+a pencil tick or a red-ink ring on every line, and a rubber stamp that lands on the result
+("Reconciled", or "Doesn't balance" with the real figure). Dark ("night ledger") is the
+default; a visitor whose system prefers light mode gets the paper version.
+
 The pages are written for anyone, not accountants: they say "your records" rather than
 "ledger" and "Typo" rather than "transposition". One module, `web/wording.py`, holds the
 plain names; the domain, the API and this README keep the precise terms.
@@ -201,8 +210,8 @@ buttons read by CSS, and "Why?" is a native disclosure. The scripts only add the
 cards' highlighting, the reveal after matching, row linking in training, the timer, the streak and the upload drop zones' highlight and file names. They
 are keyboard accessible, meet WCAG AA contrast in light and dark mode (checked with
 axe-core on every page at phone, tablet and desktop widths), and load nothing from another
-site under a strict Content Security Policy. The font (Inter) and the icons are served
-from the app itself.
+site under a strict Content Security Policy. The fonts (Zilla Slab and Public Sans) and
+the icons are served from the app itself.
 
 ## API
 

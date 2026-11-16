@@ -16,6 +16,7 @@ from eod_close.generator import CaseGenerator, Difficulty
 from eod_close.web import pages
 from eod_close.web.app import create_app
 from eod_close.web.report_view import REPORT_COLUMNS
+from eod_close.web.workspace import Workspace, build_workspace, load_sample_day
 
 PAGES = [
     "/",
@@ -118,7 +119,7 @@ def test_closing_an_empty_day_is_not_balanced(client: TestClient) -> None:
 
 def test_race_returns_a_chart_and_a_table(client: TestClient) -> None:
     response = client.post(
-        "/how-it-works/race", data={"size": ["100", "250"]}, headers={"HX-Request": "true"}
+        "/how-it-works/race", data={"size": ["500", "1000"]}, headers={"HX-Request": "true"}
     )
     assert "<svg" in response.text
     assert "<table>" in response.text
@@ -126,7 +127,7 @@ def test_race_returns_a_chart_and_a_table(client: TestClient) -> None:
 
 
 def test_race_without_htmx_returns_the_full_page(client: TestClient) -> None:
-    response = client.post("/how-it-works/race", data={"size": ["100", "250"]})
+    response = client.post("/how-it-works/race", data={"size": ["500", "1000"]})
     assert "<html" in response.text
     assert "<svg" in response.text
 
@@ -255,7 +256,9 @@ def test_a_busy_day_shows_every_checkable_claim(client: TestClient) -> None:
     text = visible_text(html)
     assert "Day #48213" in text
     assert re.search(r"Matched [\d,]+ and found \d+ problems? in [\d.]+ seconds\.", text)
-    assert re.search(r"Found \d+ of \d+ planted problems · \d+ false alarms? · \d+ missed", text)
+    assert re.search(
+        r"Found \d+ of \d+ planted problems, with \d+ false alarms? and \d+ missed\.", text
+    )
     assert "records every problem it plants" in text
     assert re.search(r"Checking every pair [\d.]+ seconds [\d,]+ of [\d,]+", text)
     counted = re.search(r"found (\d+) problem", text)
@@ -297,12 +300,12 @@ def test_busy_day_lists_page_and_filter(client: TestClient) -> None:
     ).text
     assert "row-matched" not in problems
     assert "row-review" in problems
-    one = client.get(
-        "/how-it-works/busy-day/48213/lists?group=r1", headers={"HX-Request": "true"}
+    focused = client.get(
+        "/how-it-works/busy-day/48213/lists?focus=r1", headers={"HX-Request": "true"}
     ).text
-    assert "Showing the rows of one problem." in one
-    assert "row-matched" not in one
-    assert 1 <= one.count('class="row row-review') <= 2
+    assert "row-matched" not in focused, "focusing a problem switches to the Problems filter"
+    assert 1 <= focused.count(" is-flash") <= 2
+    assert 'aria-current="true" href="/how-it-works/busy-day/48213/lists?show=problems' in focused
     first_page = client.get("/how-it-works/busy-day/48213/lists").text
     assert ">Previous</button>" in first_page, "Previous is disabled on page 1"
     whole = client.get("/how-it-works/busy-day/48213/lists?page=2").text
@@ -314,7 +317,7 @@ def test_unknown_busy_day_files_are_not_found(client: TestClient) -> None:
     assert client.get("/how-it-works/busy-day/48213/secrets.csv").status_code == 404
     assert client.get("/how-it-works/busy-day/2000000000").status_code == 404
     assert client.get("/how-it-works/busy-day/1/lists?show=everything").status_code == 422
-    assert client.get("/how-it-works/busy-day/1/lists?group=x").status_code == 422
+    assert client.get("/how-it-works/busy-day/1/lists?focus=x").status_code == 422
 
 
 @pytest.mark.parametrize("name", ["bank", "ledger", "report"])
@@ -461,6 +464,22 @@ def test_the_linked_stylesheet_loads_and_may_be_cached_for_good(client: TestClie
 
 def test_unversioned_static_files_are_checked_every_time(client: TestClient) -> None:
     """The font is fetched by the stylesheet without a version, so it must be revalidated."""
-    response = client.get("/static/fonts/inter-latin-wght.woff2")
+    response = client.get("/static/fonts/public-sans-latin-wght.woff2")
     assert response.status_code == 200
     assert response.headers["cache-control"] == "no-cache"
+
+
+def test_a_day_that_balances_is_stamped_reconciled() -> None:
+    """Every sample day has problems, so the balanced stamp is rendered directly."""
+    statement, ledger, report = load_sample_day()
+    matched = build_workspace(statement, ledger, report)
+    balanced = Workspace(matched.bank_rows, matched.ledger_rows, matched.summary, (), matched.view)
+    html = pages.templates.get_template("_workspace.html").render(
+        workspace=balanced, match_url="/reconcile", report_url="/r.csv", day_url="/"
+    )
+    assert 'class="stamp stamp-ok" id="result-stamp">Reconciled<' in html
+
+
+def test_a_day_that_does_not_balance_is_stamped_with_its_figure(client: TestClient) -> None:
+    html = client.post("/reconcile", headers={"HX-Request": "true"}).text
+    assert 'id="result-stamp">Doesn\'t balance: £91.00<' in html

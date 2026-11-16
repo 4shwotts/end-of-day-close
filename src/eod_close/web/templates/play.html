@@ -1,14 +1,15 @@
 {% extends "base.html" %}
-{% block title %}{{ case.difficulty.label }} · {{ case.business_date.strftime("%d %b %Y") }} · End-of-Day Close{% endblock %}
+{% from "_macros.html" import icon %}
+{% block title %}{{ case.difficulty.label }}, {{ case.business_date.strftime("%d %b %Y") }} – End-of-Day Close{% endblock %}
 {% block body_attrs %} class="wide"{% endblock %}
 {% block content %}
-<h1>{{ case.business_date.strftime("%A %d %B %Y") }}</h1>
-<p class="lede">
-  {{ case.difficulty.label }} · {{ case.bank_statement|length }} bank payments,
-  {{ case.ledger|length }} in your records · day {{ case.seed }}.
-  <span>Time: <span id="timer" role="timer" hidden>0:00</span></span>
-</p>
-{% include "_streak.html" %}
+<div class="intro">
+  <h1>{{ case.business_date.strftime("%A %d %B %Y") }}</h1>
+  <p class="tagline">
+    {{ case.bank_statement|length }} bank payments and {{ case.ledger|length }} in your records.
+    Day {{ case.seed }}.
+  </p>
+</div>
 
 {# Already read on the briefing page, so it starts collapsed here: the
    tables come first while the clock runs. #}
@@ -20,101 +21,121 @@
 <form id="case-form" method="post" action="/play/{{ case.difficulty.value }}/{{ case.seed }}/close">
   <input type="hidden" name="started_at" value="{{ started_at }}">
 
-  <div class="toolbar">
-    <button type="button" id="link-selected" class="button-secondary" hidden>Link selected</button>
-    <button type="button" class="button-secondary"
-            hx-post="/play/{{ case.difficulty.value }}/{{ case.seed }}/check"
-            hx-include="#case-form" hx-target="#progress" hx-swap="innerHTML">Check progress</button>
-    <button type="submit">Close the day</button>
+  {# The game bar stays at the top of the screen while the tables scroll:
+     the clock, the level and the streak, and the controls. The timer is a
+     role="timer", which screen readers do not announce on every tick; game.js
+     starts it and darkens it a little after five and ten minutes. #}
+  <div class="game-bar">
+    <p class="game-clock">
+      {{ icon("clock") }}
+      <span class="visually-hidden">Time taken: </span>
+      <span id="timer" class="timer" role="timer" hidden>0:00</span>
+    </p>
+    <p class="game-badges">
+      <span class="badge">{{ case.difficulty.label }}</span>
+      <span class="badge">Streak <strong id="streak-count">0</strong></span>
+    </p>
+    <div class="game-actions">
+      <button type="button" id="link-selected" class="button-secondary" hidden>Link selected</button>
+      <button type="button" class="button-secondary"
+              hx-post="/play/{{ case.difficulty.value }}/{{ case.seed }}/check"
+              hx-include="#case-form" hx-target="#progress" hx-swap="innerHTML">Check progress</button>
+      <button type="submit">Close the day</button>
+    </div>
   </div>
   <p id="link-status" class="status" role="status" aria-live="polite"></p>
   <div id="progress" class="status" aria-live="polite"></div>
 
+  {# Both tables grow to their full length and the page scrolls; nothing
+     scrolls up and down inside them. They sit side by side from 1280px wide;
+     on a phone, too narrow for any table this wide, each scrolls sideways
+     within its own box. #}
   <div class="panels">
-    <section class="panel" aria-labelledby="bank-heading">
-      <h2 id="bank-heading">Bank statement · {{ case.bank_statement.bank_name }}</h2>
-      <div class="table-scroll" tabindex="0" aria-labelledby="bank-heading">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col"><span class="visually-hidden">Select</span></th>
-              <th scope="col">ID</th>
-              <th scope="col">Date</th>
-              <th scope="col">Reference</th>
-              <th scope="col">From</th>
-              <th scope="col" class="num">Amount</th>
-              <th scope="col">Pair number</th>
-              <th scope="col">If no partner</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for e in case.bank_statement %}
-            <tr>
-              <td><input type="checkbox" class="link-select" value="{{ e.entry_id }}" aria-label="Select {{ e.entry_id }}"></td>
-              <th scope="row">{{ e.entry_id }}</th>
-              <td>{{ e.value_date.strftime("%d %b") }}</td>
-              <td>{{ e.reference or "(none)" }}</td>
-              <td>{{ e.counterparty }}</td>
-              <td class="num">{{ e.amount }}</td>
-              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Pair number for {{ e.entry_id }}"></td>
-              <td>
+    <div class="panel">
+      <h2 id="bank-heading">Bank statement <span class="panel-source">{{ case.bank_statement.bank_name }}</span></h2>
+      <div class="panel-scroll" role="region" tabindex="0" aria-labelledby="bank-heading">
+      <table class="game-table">
+        <thead>
+          <tr>
+            <th scope="col" class="col-select"><span class="visually-hidden">Select</span></th>
+            <th scope="col">ID</th>
+            <th scope="col">Date</th>
+            <th scope="col">Reference</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col">Pair</th>
+            <th scope="col">If no partner</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in case.bank_statement %}
+          <tr>
+            <td class="col-select"><input type="checkbox" class="link-select" value="{{ e.entry_id }}" aria-label="Select {{ e.entry_id }}"></td>
+            <th scope="row">{{ e.entry_id }}</th>
+            <td>{{ e.value_date.strftime("%d %b") }}</td>
+            {# Who sent the money sits under the reference, which keeps the
+               table narrow enough to sit beside the other one. #}
+            <td>{{ e.reference or "(none)" }}<span class="cell-note">From {{ e.counterparty }}</span></td>
+            <td class="num">{{ e.amount }}</td>
+            <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Pair number for {{ e.entry_id }}"></td>
+            <td>
+              <span class="select-wrap">
                 <select name="reason-{{ e.entry_id }}" aria-label="If {{ e.entry_id }} has no partner, why">
                   <option value="">Has a partner</option>
                   {% for r in reasons if r.side is none or r.side.value == "bank" %}
                   <option value="{{ r.value }}">{{ reason_choices[r] }}</option>
                   {% endfor %}
                 </select>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       </div>
-    </section>
+    </div>
 
-    <section class="panel" aria-labelledby="ledger-heading">
-      <h2 id="ledger-heading">Your records · {{ case.ledger.entity_name }}</h2>
-      <div class="table-scroll" tabindex="0" aria-labelledby="ledger-heading">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col"><span class="visually-hidden">Select</span></th>
-              <th scope="col">ID</th>
-              <th scope="col">Booked</th>
-              <th scope="col">Reference</th>
-              <th scope="col">Processor</th>
-              <th scope="col">Kind</th>
-              <th scope="col" class="num">Amount</th>
-              <th scope="col">Pair number</th>
-              <th scope="col">If no partner</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for e in case.ledger %}
-            <tr>
-              <td><input type="checkbox" class="link-select" value="{{ e.entry_id }}" aria-label="Select {{ e.entry_id }}"></td>
-              <th scope="row">{{ e.entry_id }}</th>
-              <td>{{ e.value_date.strftime("%d %b") }}</td>
-              <td>{{ e.reference }}{% if e.original_reference %} <span class="choice-hint">for {{ e.original_reference }}</span>{% endif %}</td>
-              <td>{{ e.processor_code }}</td>
-              <td>{{ "disputed" if e.kind.value == "chargeback" else e.kind.value }}</td>
-              <td class="num">{{ e.amount }}{% if e.original_amount %} <span class="choice-hint">({{ e.original_amount }})</span>{% endif %}</td>
-              <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Pair number for {{ e.entry_id }}"></td>
-              <td>
+    <div class="panel">
+      <h2 id="ledger-heading">Your records <span class="panel-source">{{ case.ledger.entity_name }}</span></h2>
+      <div class="panel-scroll" role="region" tabindex="0" aria-labelledby="ledger-heading">
+      <table class="game-table">
+        <thead>
+          <tr>
+            <th scope="col" class="col-select"><span class="visually-hidden">Select</span></th>
+            <th scope="col">ID</th>
+            <th scope="col">Booked</th>
+            <th scope="col">Reference</th>
+            <th scope="col" class="num">Amount</th>
+            <th scope="col">Pair</th>
+            <th scope="col">If no partner</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for e in case.ledger %}
+          <tr>
+            <td class="col-select"><input type="checkbox" class="link-select" value="{{ e.entry_id }}" aria-label="Select {{ e.entry_id }}"></td>
+            <th scope="row">{{ e.entry_id }}</th>
+            <td>{{ e.value_date.strftime("%d %b") }}</td>
+            {# Under the reference: the processor, and for a refund or dispute
+               the order it reverses. #}
+            <td>{{ e.reference }}<span class="cell-note">{{ e.processor_code }}{% if e.kind.value != "payment" %}, {{ "disputed" if e.kind.value == "chargeback" else e.kind.value }}{% if e.original_reference %} for {{ e.original_reference }}{% endif %}{% endif %}</span></td>
+            <td class="num">{{ e.amount }}{% if e.original_amount %}<span class="cell-note">({{ e.original_amount }})</span>{% endif %}</td>
+            <td><input type="text" class="group-input" id="group-{{ e.entry_id }}" name="group-{{ e.entry_id }}" maxlength="8" aria-label="Pair number for {{ e.entry_id }}"></td>
+            <td>
+              <span class="select-wrap">
                 <select name="reason-{{ e.entry_id }}" aria-label="If {{ e.entry_id }} has no partner, why">
                   <option value="">Has a partner</option>
                   {% for r in reasons if r.side is none or r.side.value == "ledger" %}
                   <option value="{{ r.value }}">{{ reason_choices[r] }}</option>
                   {% endfor %}
                 </select>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
       </div>
-    </section>
+    </div>
   </div>
-
 </form>
 {% endblock %}

@@ -11,11 +11,15 @@ axe finds roughly a third to a half of accessibility problems. The rest
 browser tests and by hand.
 """
 
+import io
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Browser, BrowserContext
+
+from eod_close.csv_format import write_bank_csv, write_ledger_csv
+from eod_close.generator import CaseGenerator, Difficulty
 
 pytestmark = pytest.mark.e2e
 
@@ -110,7 +114,7 @@ def test_busy_day_result_has_no_axe_violations(
 def test_results_and_close_pages_have_no_axe_violations(
     scan_context: BrowserContext, live_server: str
 ) -> None:
-    """The pages reached by posting a form: upload results and a closed training day."""
+    """The page reached by closing a training day, with the engine's full answer."""
     page = scan_context.new_page()
     page.goto(f"{live_server}/play/intern/4/work")
     page.get_by_role("button", name="Close the day").first.click()
@@ -122,3 +126,34 @@ def test_results_and_close_pages_have_no_axe_violations(
     )
     page.close()
     assert found == []
+
+
+def test_long_upload_results_have_no_axe_violations(
+    scan_context: BrowserContext, live_server: str, tmp_path: Path
+) -> None:
+    """A large day's results with every group open, so each scrolling box is scanned."""
+    write_large_day(tmp_path)
+    page = scan_context.new_page()
+    page.goto(f"{live_server}/upload")
+    page.get_by_label("Bank statement (CSV)").set_input_files(tmp_path / "bank.csv")
+    page.get_by_label("Your records (CSV)").set_input_files(tmp_path / "ledger.csv")
+    page.get_by_role("button", name="Match them").click()
+    page.locator("#results #summary").wait_for()
+    page.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")
+    page.add_script_tag(path=AXE)
+    found = page.evaluate(
+        "async rules => (await axe.run(document, {runOnly: rules})).violations.map(v => v.id)",
+        RULES,
+    )
+    page.close()
+    assert found == []
+
+
+def write_large_day(folder: Path) -> None:
+    """Write a Head of Ops day's two files, the size of a busy day."""
+    case = CaseGenerator().generate(1, Difficulty.HEAD_OF_OPS)
+    bank, ledger = io.StringIO(), io.StringIO()
+    write_bank_csv(case.bank_statement, bank)
+    write_ledger_csv(case.ledger, ledger)
+    (folder / "bank.csv").write_text(bank.getvalue(), encoding="utf-8")
+    (folder / "ledger.csv").write_text(ledger.getvalue(), encoding="utf-8")

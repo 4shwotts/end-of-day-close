@@ -1,7 +1,7 @@
 {# The engine's full answer for a training day, folded away on the close
    screen. Long answers are capped on screen; the API returns them in full. #}
 {% set limit = 500 %}
-<div class="table-scroll" role="region" tabindex="0" aria-label="Pairs the engine made">
+<div class="table-scroll long-list" role="region" tabindex="0" aria-label="Pairs the engine made">
   <table>
     <caption>Pairs the engine made{% if report.matches|length > limit %} (first {{ limit }} of {{ report.matches|length }}){% endif %}</caption>
     <thead>
@@ -24,7 +24,7 @@
     </tbody>
   </table>
 </div>
-<div class="table-scroll" role="region" tabindex="0" aria-label="Problems found">
+<div class="table-scroll long-list" role="region" tabindex="0" aria-label="Problems found">
   <table>
     <caption>Problems found{% if report.exceptions|length > limit %} (first {{ limit }} of {{ report.exceptions|length }}){% endif %}</caption>
     <thead>

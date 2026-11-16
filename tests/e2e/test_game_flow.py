@@ -1,11 +1,13 @@
 """Browser tests of upload, training mode, How it works and the busy day, using Playwright."""
 
+import io
 import re
 from pathlib import Path
 
 import pytest
 from playwright.sync_api import Page, expect
 
+from eod_close.csv_format import write_bank_csv, write_ledger_csv
 from eod_close.generator import CaseGenerator, Difficulty
 
 pytestmark = pytest.mark.e2e
@@ -174,3 +176,27 @@ def test_upload_own_files_shows_results_in_place(
     page.get_by_role("button", name="Match them").click()
     expect(page.locator("#results #summary")).to_contain_text("Matched")
     expect(page).to_have_url(f"{live_server}/upload")
+
+
+def test_a_long_group_scrolls_in_its_own_box(page: Page, live_server: str, tmp_path: Path) -> None:
+    """A group of a hundred matches stays a short box, and a shared reason is said once."""
+    case = CaseGenerator().generate(1, Difficulty.HEAD_OF_OPS)
+    bank, ledger = io.StringIO(), io.StringIO()
+    write_bank_csv(case.bank_statement, bank)
+    write_ledger_csv(case.ledger, ledger)
+    (tmp_path / "bank.csv").write_text(bank.getvalue(), encoding="utf-8")
+    (tmp_path / "ledger.csv").write_text(ledger.getvalue(), encoding="utf-8")
+    page.set_viewport_size({"width": 1440, "height": 900})
+    page.goto(f"{live_server}/upload")
+    page.get_by_label("Bank statement (CSV)").set_input_files(tmp_path / "bank.csv")
+    page.get_by_label("Your records (CSV)").set_input_files(tmp_path / "ledger.csv")
+    page.get_by_role("button", name="Match them").click()
+    page.locator("details.fold summary", has_text="Show all").click()
+    exact = page.locator("details.group:not(.fold)", has=page.locator("summary", has_text="Exact"))
+    exact.locator("> summary").click()
+    expect(exact.locator(".group-reason")).to_have_text("Same reference, amount and date.")
+    expect(exact.get_by_role("columnheader", name="Why they match")).to_have_count(0)
+    box = exact.locator(".long-list")
+    sizes = box.evaluate("el => [el.clientHeight, el.scrollHeight]")
+    assert sizes[0] <= 26 * 16, "the box stays about ten rows tall"
+    assert sizes[1] > sizes[0], "the rest of the group scrolls inside it"

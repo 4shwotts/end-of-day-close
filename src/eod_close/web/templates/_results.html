@@ -1,8 +1,10 @@
 {# The results of a reconciliation, shared by the upload page and the harder
    day. One sentence and three numbers say what happened; the problems for a
    person come next, because they are what someone acts on; every match and
-   the money detail are folded away for anyone who wants them. Long groups
-   are capped on screen, and the CSV report always lists everything. #}
+   the money detail are folded away for anyone who wants them. An open group
+   scrolls in its own short box, so a long one never turns the page into an
+   endless list; groups are capped on screen, and the CSV report always
+   lists everything. #}
 {% from "_macros.html" import icon, summary_bar, match_icons, review_icons %}
 {% if error is defined %}
 <p class="error" role="alert">{{ icon("alert") }} {{ error }}</p>
@@ -26,6 +28,7 @@
   {% for label, items in view.review_by_label() %}
   <details class="group"{% if open_review %} open{% endif %}>
     <summary><span class="chip chip-warn">{{ icon(review_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(items|length) }}</span></summary>
+    <div class="long-list" role="region" tabindex="0" aria-label="{{ label }} problems">
     <ul class="review-list">
       {% for item in items[:limit] %}
       <li class="review-item">
@@ -38,6 +41,7 @@
       </li>
       {% endfor %}
     </ul>
+    </div>
     {% if items|length > limit %}<p class="choice-hint">Showing {{ limit }} of {{ items|length }}; the CSV report lists them all.</p>{% endif %}
   </details>
   {% endfor %}
@@ -47,7 +51,12 @@
     {% for label, rows in view.matches_by_label() %}
     <details class="group">
       <summary><span class="chip chip-good">{{ icon(match_icons[label]) }} {{ label }}</span> <span class="count">{{ "{:,}".format(rows|length) }}</span></summary>
-      <div class="table-scroll" role="region" tabindex="0" aria-label="{{ label }} matches">
+      {# When every row gives the same reason, say it once above the table
+         rather than on each of a hundred rows. #}
+      {% set shared = rows|map(attribute="reason")|unique|list %}
+      {% set shared_reason = shared[0] if shared|length == 1 else none %}
+      {% if shared_reason %}<p class="group-reason">{{ shared_reason }}</p>{% endif %}
+      <div class="table-scroll long-list" role="region" tabindex="0" aria-label="{{ label }} matches">
         <table>
           <caption class="visually-hidden">{{ label }} matches</caption>
           <thead>
@@ -56,7 +65,7 @@
               <th scope="col">Your records</th>
               <th scope="col" class="num">Bank amount</th>
               <th scope="col" class="num">Records amount</th>
-              <th scope="col">Why they match</th>
+              {% if not shared_reason %}<th scope="col">Why they match</th>{% endif %}
             </tr>
           </thead>
           <tbody>
@@ -66,7 +75,7 @@
               <td class="wrap-ids">{{ row.ledger_ids|join(", ") }}</td>
               <td class="num">{{ row.bank_amount }}</td>
               <td class="num">{{ row.ledger_amount }}</td>
-              <td class="wrap">{{ row.reason }}</td>
+              {% if not shared_reason %}<td class="wrap">{{ row.reason }}</td>{% endif %}
             </tr>
             {% endfor %}
           </tbody>

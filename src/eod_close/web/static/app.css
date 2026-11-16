@@ -1127,6 +1127,37 @@ details.group[open] {
   padding-bottom: var(--space-3);
 }
 
+/* An open group scrolls inside a box about ten rows tall, with its column
+   headings pinned (thead th is sticky), so a group of a hundred matches
+   stays a box on the page rather than an endless list. */
+.long-list {
+  max-height: 26rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+div.long-list:not(.table-scroll) {
+  padding-right: var(--space-2);
+}
+
+.long-list:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* The reason every row in a group shares, said once above its table. */
+.group-reason {
+  margin: 0 0 var(--space-3);
+  color: var(--text-secondary);
+}
+
+/* Problems sit two to a row on wide screens, which halves a long list. */
+@media (min-width: 1000px) {
+  .long-list .review-list {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
 .review-list {
   list-style: none;
   margin: 0;
@@ -1553,7 +1584,12 @@ details.group[open] {
   }
 }
 
+/* Each list is a column, and its table grows to fill the card, so when one
+   list is shorter than the other its rows spread out instead of leaving an
+   empty band at the bottom of the box. */
 .list {
+  display: flex;
+  flex-direction: column;
   padding: var(--space-3);
   min-width: 0;
 }
@@ -1574,6 +1610,7 @@ details.group[open] {
 /* Three or four short columns fit any screen, so the lists need no scroll
    box; that also keeps a description's tooltip from being clipped. */
 .list table {
+  flex: 1;
   width: 100%;
 }
 

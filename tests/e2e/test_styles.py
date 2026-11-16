@@ -22,6 +22,6 @@ def test_stylesheet_loads_and_is_applied(page: Page, live_server: str) -> None:
     # navigation, the dark page colour, and the workspace's own layout.
     nav_list = page.locator(".site-header nav ul")
     assert nav_list.evaluate("el => getComputedStyle(el).listStyleType") == "none"
-    assert page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(21, 22, 25)"
+    assert page.evaluate("getComputedStyle(document.body).backgroundColor") == "rgb(32, 34, 39)"
     assert page.locator(".status-bar").evaluate("el => getComputedStyle(el).display") == "flex"
     assert page.locator(".lists").evaluate("el => getComputedStyle(el).display") == "grid"

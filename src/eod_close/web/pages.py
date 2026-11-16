@@ -385,6 +385,16 @@ async def close_day(request: Request, difficulty: Difficulty, seed: int) -> HTML
     )
 
 
+@router.get("/play/{difficulty}/{seed}/report.csv")
+def training_day_report(difficulty: Difficulty, seed: int) -> Response:
+    """Download the engine's full answer to a training day, for the close screen."""
+    _check_seed(seed)
+    _, report = load_case(difficulty, seed)
+    return _csv_response(
+        report_csv(build_report_view(report)), f"{difficulty.value}-day-{seed}-engine-report.csv"
+    )
+
+
 def _how_it_works_context() -> dict[str, object]:
     """Build the values the How it works page always shows.
 

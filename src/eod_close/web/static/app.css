@@ -39,10 +39,10 @@
   /* Colour: a dark grey page with lighter grey panels and tables, gold for
      lines and the accent, warm off-white text, green for what reconciles
      and red for problems. */
-  --page: #151619;
-  --surface: #25272c;
-  --surface-raised: #2f3238;
-  --band: #2c2e34;
+  --page: #202227;
+  --surface: #2b2e33;
+  --surface-raised: #34373d;
+  --band: #2b2e33;
   --border: #a2864f;
   --border-strong: #c9a45c;
   --rule-soft: rgba(201, 164, 92, 0.32);
@@ -51,10 +51,10 @@
   --text-secondary: #b5ae9f;
   --accent: #c9a45c;
   --accent-strong: #e3c584;
-  --accent-text: #151619;
+  --accent-text: #202227;
   --accent-soft: rgba(201, 164, 92, 0.13);
   --ink-fill: #c9a45c;
-  --ink-fill-text: #151619;
+  --ink-fill-text: #202227;
   --ink-fill-hover: #ddbb76;
   --good: #93cbae;
   --good-soft: rgba(147, 203, 174, 0.12);
@@ -66,19 +66,23 @@
   /* Chart series: validated categorical slots 1 and 2 for this surface. */
   --series-engine: #3987e5;
   --series-naive: #d95926;
-  --grid: #34373e;
+  --grid: #3a3d44;
 
   /* Type: Marcellus for headings, Public Sans for everything else. */
   --font: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-heading: "Marcellus", "Public Sans", Georgia, serif;
   --font-mono: ui-monospace, "Cascadia Mono", "Segoe UI Mono", Consolas, monospace;
-  --text-xs: 0.8125rem;
-  --text-sm: 0.875rem;
+  --text-xs: 0.875rem;
+  --text-sm: 0.9375rem;
   --text-md: 1rem;
-  --text-lg: 1.125rem;
-  --text-xl: 1.375rem;
-  --text-2xl: 1.75rem;
-  --text-3xl: 2.25rem;
+  --text-body: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+  --text-2xl: 1.875rem;
+  --text-3xl: 2.375rem;
+  /* The statement tables keep these, whatever the rest of the page uses. */
+  --table-text: 1rem;
+  --table-small: 0.875rem;
 
   /* Spacing on a 4px grid. */
   --space-1: 0.25rem;
@@ -176,7 +180,7 @@ body {
   background: var(--page);
   color: var(--text);
   font-family: var(--font);
-  font-size: var(--text-md);
+  font-size: var(--text-body);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
@@ -918,7 +922,8 @@ tbody tr:last-child > * {
 .panel-scroll,
 .ledger-box,
 .timings-box,
-.table-scroll {
+.table-scroll,
+.problem-list {
   /* Native controls (checkboxes, selects) drawn for light paper too. */
   color-scheme: light;
   --surface: #f4f2ec;
@@ -948,16 +953,22 @@ tbody tr:last-child > * {
   border-radius: var(--radius);
 }
 
-/* The header row is pinned while a long table scrolls, so its column names
-   stay in view. It is drawn above the rows (z-index), with an opaque
-   background, so nothing in a row, such as a reference's dotted underline,
-   shows through it. */
 thead th {
   background: var(--surface-raised);
   color: var(--text);
   font-size: var(--text-sm);
   font-weight: 700;
   border-bottom: 2px solid var(--border-strong);
+}
+
+/* In the long tables the header row is pinned while they scroll, so the
+   column names stay in view. It is drawn above the rows (z-index), with an
+   opaque background, so nothing in a row, such as a reference's dotted
+   underline, shows through it. Small tables, such as the scoreboard, keep
+   their header in place. */
+.list-table thead th,
+.ledger-table thead th,
+.long-list thead th {
   position: sticky;
   top: 0;
   z-index: 2;
@@ -1090,7 +1101,7 @@ td.wrap-ids {
 .panel-source {
   font-family: var(--font);
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--text-body);
   font-weight: 500;
 }
 
@@ -1098,7 +1109,7 @@ td.wrap-ids {
    large enough to use comfortably. */
 .game-table {
   width: 100%;
-  font-size: var(--text-md);
+  font-size: var(--table-text);
 }
 
 .game-table th,
@@ -1128,7 +1139,7 @@ td.wrap-ids {
   display: block;
   max-width: 11rem;
   color: var(--text-secondary);
-  font-size: var(--text-sm);
+  font-size: var(--table-small);
   white-space: normal;
 }
 
@@ -1140,7 +1151,7 @@ td.wrap-ids {
 .game-table select {
   min-height: 2.5rem;
   padding: 0.4rem 0.55rem;
-  font-size: var(--text-md);
+  font-size: var(--table-text);
 }
 
 .game-table .link-select {
@@ -2030,12 +2041,17 @@ div.long-list:not(.table-scroll) {
   width: 100%;
   min-width: 18rem;
   table-layout: fixed;
-  font-size: var(--text-md);
+  font-size: var(--table-text);
+}
+
+.list-table thead th,
+.game-table thead th {
+  font-size: var(--table-small);
 }
 
 @media (max-width: 480px) {
   .list-table {
-    font-size: var(--text-sm);
+    font-size: var(--table-small);
   }
 }
 
@@ -2231,7 +2247,7 @@ div.long-list:not(.table-scroll) {
      info button share the column without crowding. */
   .outcome .mark {
     gap: 0.25rem;
-    font-size: var(--text-sm);
+    font-size: var(--table-small);
   }
 
   .outcome .mark-icon {
@@ -2527,7 +2543,7 @@ div.long-list:not(.table-scroll) {
 
 .problem-line > summary {
   display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr) auto;
+  grid-template-columns: 16.5rem minmax(0, 1fr) auto;
   gap: var(--space-3);
   align-items: center;
   padding: var(--space-3) var(--space-4);
@@ -3109,7 +3125,7 @@ details.fold {
     grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas:
       "result result"
-      "problems controls"
+      ". controls"
       "problems lists"
       "links links";
   }
@@ -3118,11 +3134,30 @@ details.fold {
     grid-area: result;
   }
 
+  /* Positioned, like the lists' scroll boxes, so hidden screen-reader text
+     inside a card scrolled out of view stays inside the column instead of
+     lengthening the page. */
   .home .is-reconciled .problems-section {
+    position: relative;
     grid-area: problems;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
     margin: 0;
     overflow-y: auto;
+  }
+
+  /* Cards keep their natural height; spare height is shared among them
+     (align-content: stretch), so on a tall screen the last card ends level
+     with the lists, and on a short one the column scrolls instead. */
+  .home .is-reconciled .problems {
+    flex: 1 0 auto;
+    grid-auto-rows: auto;
+    align-content: stretch;
+  }
+
+  .home .is-reconciled .problems > li {
+    display: flex;
   }
 
   .home .workspace.is-reconciled {
@@ -3157,7 +3192,7 @@ details.fold {
   }
 
   .home .result {
-    padding: var(--space-3) 14rem var(--space-3) var(--space-5);
+    padding: var(--space-3) var(--space-5);
   }
 
   .home .result-headline {
@@ -3169,8 +3204,20 @@ details.fold {
   }
 
   .home .stamp {
-    margin-top: -1.9rem;
+    margin-top: -1.1rem;
+    padding: 0.2rem 0.75rem;
+    border-width: 3px;
     font-size: var(--text-md);
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .home .stamp-line {
+    display: inline;
+  }
+
+  .home .result {
+    padding-right: 17rem;
   }
 
   .home .problems-section .choice-hint {
@@ -3206,6 +3253,7 @@ details.fold {
   }
 
   .home .list-scroll {
+    position: relative;
     min-height: 0;
     overflow-y: auto;
   }
@@ -3231,11 +3279,27 @@ details.fold {
   }
 
   .home .problem {
-    gap: var(--space-1);
-    font-size: var(--text-sm);
+    gap: var(--space-2);
+    padding: var(--space-4);
+  }
+}
+
+/* On a wide screen the one-view page uses more of it, and the problems
+   column widens, so the cards need fewer lines and fit beside the lists. */
+@media (min-width: 1700px) and (min-height: 700px) {
+  .home .site-header-inner,
+  .home main,
+  .home .site-footer,
+  .home .notice {
+    max-width: 1680px;
   }
 
-  .home .problem .mark {
-    font-size: var(--text-sm);
+  .home .workspace.is-reconciled {
+    grid-template-columns: 24rem minmax(0, 1fr);
   }
+}
+
+/* The training close screen: room between the by-type table and its link. */
+.close-download {
+  margin-top: var(--space-4);
 }

@@ -110,7 +110,9 @@ def test_closing_a_perfect_day_shows_it_balanced(client: TestClient) -> None:
     assert "100.0%" in html
     assert "not timed" in html  # a start time of 0 is implausible, so no time is shown
     assert "You vs the engine" in html
-    assert "See every problem explained" in html
+    assert "How you did, by type" in html
+    assert "See every line explained" in html
+    assert 'href="/play/intern/4/report.csv"' in html
 
 
 def test_closing_an_empty_day_is_not_balanced(client: TestClient) -> None:
@@ -495,3 +497,11 @@ def test_the_largest_day_can_be_closed_and_checked(client: TestClient, action: s
     response = client.post(f"/play/head-of-ops/3/{action}", data=data)
     assert response.status_code == 200
     assert "Too many fields" not in response.text
+
+
+def test_a_training_days_engine_answer_downloads(client: TestClient) -> None:
+    response = client.get("/play/intern/4/report.csv")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/csv")
+    assert "intern-day-4-engine-report.csv" in response.headers["content-disposition"]
+    assert response.text.startswith("status,type,bank_entries")

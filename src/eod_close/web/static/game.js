@@ -68,10 +68,12 @@
     }, 1000);
   }
 
-  // Long tables (Senior Analyst and Head of Ops) are shown a page of rows at
-  // a time, with Previous and Next. Rows on other pages are only hidden, so
-  // their pair numbers and choices stay in the form and are sent when the
-  // day is closed. Without this script every row simply shows.
+  // Long tables are shown a page of rows at a time, with Previous and Next:
+  // the training tables at Senior Analyst and Head of Ops, and any table
+  // marked data-paged (its value names the table for screen readers). Rows
+  // on other pages are only hidden, so a training day's pair numbers and
+  // choices stay in the form and are sent when it is closed. Without this
+  // script every row simply shows.
   var PAGE_ROWS = 20;
 
   function pageTable(table) {
@@ -82,7 +84,7 @@
     var pages = Math.ceil(rows.length / PAGE_ROWS);
     var panel = table.closest(".panel");
     var heading = panel ? panel.querySelector("h2") : null;
-    var name = heading ? heading.firstChild.textContent.trim() : "the table";
+    var name = table.dataset.paged || (heading ? heading.firstChild.textContent.trim() : "the table");
 
     var nav = document.createElement("nav");
     nav.className = "pager game-pager";
@@ -99,7 +101,7 @@
     next.className = "button-secondary button-small";
     next.textContent = "Next";
     nav.append(previous, status, next);
-    table.closest(".panel-scroll").before(nav);
+    table.closest(".panel-scroll, .table-scroll").before(nav);
 
     var current = 1;
     function show(page) {
@@ -126,6 +128,6 @@
   document.addEventListener("DOMContentLoaded", function () {
     setUpLinking();
     startTimer();
-    document.querySelectorAll(".game-table").forEach(pageTable);
+    document.querySelectorAll(".game-table, table[data-paged]").forEach(pageTable);
   });
 })();

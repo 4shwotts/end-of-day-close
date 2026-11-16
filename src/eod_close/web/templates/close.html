@@ -55,14 +55,52 @@
   </div>
 </section>
 
-<details class="group fold"{% if score.player_correct < score.planted %} open{% endif %}>
-  <summary><span class="fold-title">See every problem explained ({{ score.items|length }})</span></summary>
-  <div class="table-scroll long-list" role="region" tabindex="0" aria-label="Every problem explained">
-    <table>
-      <caption class="visually-hidden">Every problem in the day, with your answer and the engine's</caption>
+{# How the day went, by kind of line: one short table that answers "where
+   did I go wrong?" at a glance. The line-by-line detail is folded away and
+   shown a page at a time; the engine's full answer is a download rather
+   than more tables on the page. #}
+<section class="band close-breakdown" aria-labelledby="breakdown-heading">
+  <h2 id="breakdown-heading">How you did, by type</h2>
+  <div class="ledger-box" role="region" tabindex="0" aria-label="How you did, by type, table">
+    <table class="ledger-table">
       <thead>
         <tr>
-          <th scope="col">Problem</th>
+          <th scope="col">Type</th>
+          <th scope="col" class="num">Lines</th>
+          <th scope="col" class="num">You got right</th>
+          <th scope="col" class="num">The engine got right</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for kind in kinds %}
+        {% set of_kind = score.items|selectattr("kind", "equalto", kind)|list %}
+        {% if of_kind %}
+        {% set yours = of_kind|selectattr("player_correct")|list|length %}
+        {% set engines = of_kind|selectattr("engine_correct")|list|length %}
+        <tr>
+          <th scope="row">{{ kind_names[kind] }}</th>
+          <td class="num amount">{{ of_kind|length }}</td>
+          <td class="num amount{{ ' result-bad' if yours < of_kind|length else '' }}">{{ yours }}</td>
+          <td class="num amount">{{ engines }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <p class="section-intro close-download">
+    <a href="/play/{{ case.difficulty.value }}/{{ case.seed }}/report.csv" download>Download the engine's full answer (CSV)</a>
+  </p>
+</section>
+
+<details class="group fold close-details">
+  <summary><span class="fold-title">See every line explained ({{ score.items|length }})</span></summary>
+  <div class="table-scroll" role="region" tabindex="0" aria-label="Every line explained">
+    <table class="ledger-table" data-paged="every line">
+      <caption class="visually-hidden">Every line in the day, with your answer and the engine's, the ones you missed first</caption>
+      <thead>
+        <tr>
+          <th scope="col">Type</th>
           <th scope="col">Lines</th>
           <th scope="col">What happened</th>
           <th scope="col">You</th>
@@ -82,10 +120,5 @@
       </tbody>
     </table>
   </div>
-</details>
-
-<details class="group fold">
-  <summary><span class="fold-title">See the engine's full answer</span></summary>
-  {% include "_report_tables.html" %}
 </details>
 {% endblock %}

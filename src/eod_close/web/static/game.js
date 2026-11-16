@@ -1,53 +1,8 @@
-// Progressive enhancement for the game: linking rows, the on-screen timer and
-// the balanced-day streak. Every page works without this file; it only adds
+// Progressive enhancement for the game: linking rows, paging the tables and
+// the on-screen timer. Every page works without this file; it only adds
 // conveniences on top of the plain forms.
 (function () {
   "use strict";
-
-  var STREAK_KEY = "eod-close.streak";
-  var LAST_CASE_KEY = "eod-close.last-case";
-
-  // Storage can be blocked (private windows, strict settings). The streak is
-  // a nicety, so failures are ignored rather than breaking the page.
-  function read(key, fallback) {
-    try {
-      var value = window.localStorage.getItem(key);
-      return value === null ? fallback : value;
-    } catch (error) {
-      return fallback;
-    }
-  }
-
-  function write(key, value) {
-    try {
-      window.localStorage.setItem(key, value);
-    } catch (error) {
-      // Nothing to do: without storage the streak simply is not kept.
-    }
-  }
-
-  function recordClosedDay() {
-    var summary = document.getElementById("close-summary");
-    if (!summary) {
-      return;
-    }
-    var caseId = summary.dataset.caseId;
-    // Refreshing the close page must not count the same day twice.
-    if (read(LAST_CASE_KEY, "") === caseId) {
-      return;
-    }
-    var streak = parseInt(read(STREAK_KEY, "0"), 10) || 0;
-    var balanced = summary.dataset.balanced === "true";
-    write(STREAK_KEY, String(balanced ? streak + 1 : 0));
-    write(LAST_CASE_KEY, caseId);
-  }
-
-  function showStreak() {
-    var counter = document.getElementById("streak-count");
-    if (counter) {
-      counter.textContent = read(STREAK_KEY, "0");
-    }
-  }
 
   function nextGroupNumber() {
     var highest = 0;
@@ -113,10 +68,64 @@
     }, 1000);
   }
 
+  // Long tables (Senior Analyst and Head of Ops) are shown a page of rows at
+  // a time, with Previous and Next. Rows on other pages are only hidden, so
+  // their pair numbers and choices stay in the form and are sent when the
+  // day is closed. Without this script every row simply shows.
+  var PAGE_ROWS = 20;
+
+  function pageTable(table) {
+    var rows = Array.prototype.slice.call(table.tBodies[0].rows);
+    if (rows.length <= PAGE_ROWS) {
+      return;
+    }
+    var pages = Math.ceil(rows.length / PAGE_ROWS);
+    var panel = table.closest(".panel");
+    var heading = panel ? panel.querySelector("h2") : null;
+    var name = heading ? heading.firstChild.textContent.trim() : "the table";
+
+    var nav = document.createElement("nav");
+    nav.className = "pager game-pager";
+    nav.setAttribute("aria-label", "Pages of " + name);
+    var previous = document.createElement("button");
+    previous.type = "button";
+    previous.className = "button-secondary button-small";
+    previous.textContent = "Previous";
+    var status = document.createElement("span");
+    status.className = "pager-status";
+    status.setAttribute("aria-live", "polite");
+    var next = document.createElement("button");
+    next.type = "button";
+    next.className = "button-secondary button-small";
+    next.textContent = "Next";
+    nav.append(previous, status, next);
+    table.closest(".panel-scroll").before(nav);
+
+    var current = 1;
+    function show(page) {
+      current = page;
+      rows.forEach(function (row, index) {
+        row.hidden = Math.floor(index / PAGE_ROWS) + 1 !== page;
+      });
+      var first = (page - 1) * PAGE_ROWS + 1;
+      var last = Math.min(page * PAGE_ROWS, rows.length);
+      status.textContent =
+        "Page " + page + " of " + pages + ", lines " + first + " to " + last + " of " + rows.length;
+      previous.disabled = page === 1;
+      next.disabled = page === pages;
+    }
+    previous.addEventListener("click", function () {
+      show(current - 1);
+    });
+    next.addEventListener("click", function () {
+      show(current + 1);
+    });
+    show(1);
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
-    recordClosedDay();
-    showStreak();
     setUpLinking();
     startTimer();
+    document.querySelectorAll(".game-table").forEach(pageTable);
   });
 })();

@@ -7,7 +7,7 @@
    answer, are folded away below for anyone who wants to learn from them. #}
 {% set won = score.accuracy > score.engine_accuracy %}
 {% set tied = score.accuracy == score.engine_accuracy %}
-<section id="close-summary" data-case-id="{{ case.case_id }}" data-balanced="{{ 'true' if score.balanced else 'false' }}" aria-labelledby="summary-heading">
+<section id="close-summary" aria-labelledby="summary-heading">
   <div class="intro">
     <h1 id="summary-heading">You vs the engine</h1>
     <p class="tagline">
@@ -47,7 +47,6 @@
       {% if score.unassigned_ids %}{{ score.unassigned_ids|length }} {{ "line was" if score.unassigned_ids|length == 1 else "lines were" }} left unpaired.{% endif %}
       {% if score.one_sided_groups %}{{ score.one_sided_groups }} {{ "pair had" if score.one_sided_groups == 1 else "pairs had" }} lines on one side only.{% endif %}
     </p>
-    {% include "_streak.html" %}
   </div>
 
   <div class="start-actions">

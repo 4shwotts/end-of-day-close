@@ -106,7 +106,7 @@ def test_closing_a_perfect_day_shows_it_balanced(client: TestClient) -> None:
         for entry_id in item.bank_ids + item.ledger_ids:
             form[f"group-{entry_id}"] = str(n)
     html = client.post("/play/intern/4/close", data=form).text
-    assert 'data-balanced="true"' in html
+    assert "You closed the day." in html
     assert "100.0%" in html
     assert "not timed" in html  # a start time of 0 is implausible, so no time is shown
     assert "You vs the engine" in html
@@ -115,7 +115,7 @@ def test_closing_a_perfect_day_shows_it_balanced(client: TestClient) -> None:
 
 def test_closing_an_empty_day_is_not_balanced(client: TestClient) -> None:
     html = client.post("/play/intern/4/close", data={"started_at": "x"}).text
-    assert 'data-balanced="false"' in html
+    assert "The day did not balance." in html
 
 
 def test_race_returns_a_chart_and_a_table(client: TestClient) -> None:
@@ -359,16 +359,6 @@ def test_old_arena_address_redirects_to_how_it_works(client: TestClient) -> None
     response = client.get("/arena", follow_redirects=False)
     assert response.status_code == 301
     assert response.headers["location"] == "/how-it-works"
-
-
-@pytest.mark.parametrize(
-    ("path", "has_streak"),
-    [("/", False), ("/upload", False), ("/how-it-works", False), ("/training", True)],
-)
-def test_streak_appears_in_training_mode_only(
-    client: TestClient, path: str, has_streak: bool
-) -> None:
-    assert ('id="streak-count"' in client.get(path).text) is has_streak
 
 
 def test_home_page_does_not_keep_an_earlier_request(client: TestClient) -> None:

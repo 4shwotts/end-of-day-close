@@ -219,26 +219,70 @@ def test_training_tables_stack_with_no_scrollbars_below_1560(
     page.context.close()
 
 
-@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
-def test_changing_the_filter_never_moves_the_page(
+def lists_and_links(page: Page) -> tuple[int, int]:
+    """The lists' height and the links' position, measured from the top of the page.
+
+    Clicking scrolls the filter into view, which would move everything
+    relative to the window, so positions are taken against the page.
+    """
+    found: list[float] = page.evaluate(
+        "() => [document.querySelector('.lists').getBoundingClientRect().height,"
+        " document.querySelector('.quick-links').getBoundingClientRect().top + scrollY]"
+    )
+    return round(found[0]), round(found[1])
+
+
+@pytest.mark.parametrize("width", [1440, 1920])
+def test_on_a_desktop_the_reconcile_page_fits_one_view(
     any_browser: Browser, live_server: str, width: int
 ) -> None:
-    """The lists keep their height, so the links below them never jump up."""
+    """Before and after Match, nothing below the window: the page itself never scrolls."""
     page = open_page(any_browser, width)
+    page.goto(live_server)
+    assert page.evaluate("document.documentElement.scrollHeight <= innerHeight + 1")
+    page.get_by_role("button", name="Match", exact=True).click()
+    expect(page.locator(".result-headline")).to_be_focused()
+    assert page.evaluate("document.documentElement.scrollHeight <= innerHeight + 1")
+    page.context.close()
+
+
+def test_on_a_desktop_changing_the_filter_moves_nothing(
+    any_browser: Browser, live_server: str
+) -> None:
+    """The lists fill a fixed area, so hiding rows leaves everything else in place."""
+    page = open_page(any_browser, 1440)
     matched_reconcile_page(page, live_server)
-    page.evaluate("document.fonts.ready")
-
-    def positions() -> tuple[float, float]:
-        # Measured from the top of the page, not the window: clicking scrolls
-        # the filter into view, which moves everything relative to the window.
-        found: list[float] = page.evaluate(
-            "() => [document.querySelector('.lists').getBoundingClientRect().height,"
-            " document.querySelector('.quick-links').getBoundingClientRect().top + scrollY]"
-        )
-        return round(found[0]), round(found[1])
-
-    before = positions()
+    before = lists_and_links(page)
     for choice in ("Problems", "Matched", "All"):
         page.locator(".filter").get_by_text(choice, exact=True).click()
-        assert positions() == before, choice
+        assert lists_and_links(page) == before, choice
     page.context.close()
+
+
+@pytest.mark.parametrize("width", [390, 820])
+def test_on_smaller_screens_the_lists_fit_what_they_show(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    """No empty band is held open: the lists shrink to the rows a filter leaves."""
+    page = open_page(any_browser, width)
+    matched_reconcile_page(page, live_server)
+    every_row = lists_and_links(page)[0]
+    page.locator(".filter").get_by_text("Problems", exact=True).click()
+    problems_only = lists_and_links(page)[0]
+    assert problems_only < every_row / 2
+    page.locator(".filter").get_by_text("All", exact=True).click()
+    assert lists_and_links(page)[0] == every_row
+    page.context.close()
+
+
+def test_the_lists_resize_smoothly_when_motion_is_allowed(
+    any_browser: Browser, live_server: str
+) -> None:
+    """On a smaller screen a filter change animates the lists' height, never snapping."""
+    context = any_browser.new_context(viewport={"width": 820, "height": 900})
+    page = context.new_page()
+    matched_reconcile_page(page, live_server)
+    page.locator(".filter").get_by_text("Problems", exact=True).click()
+    running = page.evaluate("document.querySelector('.lists').getAnimations().length")
+    assert running == 1
+    context.close()

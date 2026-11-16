@@ -237,11 +237,8 @@ a:hover {
 .amount,
 .num,
 .stat-value,
-.figure-value,
 .count,
-.review-entries,
-.example-line,
-.tile-value {
+.review-entries {
   font-variant-numeric: tabular-nums;
 }
 
@@ -416,25 +413,16 @@ dd {
   padding: 0;
 }
 
-.steps-list,
-.point-list {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 var(--space-4);
-}
-
 .steps-list {
-  counter-reset: step;
+  display: grid;
   gap: var(--space-3);
+  margin: var(--space-3) 0 var(--space-4);
+  counter-reset: step;
 }
 
 .steps-list > li {
-  margin: 0;
-}
-
-.steps-list > li,
-.point-list > li {
   position: relative;
+  margin: 0;
   padding-left: 2.25rem;
 }
 
@@ -521,7 +509,6 @@ dd {
   text-align: center;
 }
 
-
 .centred-actions {
   display: flex;
   flex-wrap: wrap;
@@ -602,10 +589,6 @@ dd {
 .ledger-table td {
   padding: 0.55rem 0.9rem;
   vertical-align: top;
-}
-
-.ledger-table tbody tr:nth-child(odd) {
-  background: var(--band);
 }
 
 .ledger-table tbody th {
@@ -834,18 +817,6 @@ button:disabled:hover {
   color: var(--good);
 }
 
-/* ---- How it works: steps, figures, what it handles -------------------- */
-
-.steps,
-.handles {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-4);
-}
-
-
 /* The figure reads big-number-first, though the markup keeps the term
    before its value as a description list requires. */
 .figure {
@@ -938,14 +909,58 @@ tbody tr:last-child > * {
 }
 
 /* Column headings in sentence case, set off by a ruling-blue line. */
+/* Tables are printed on light paper in both themes: one colour throughout,
+   with thin divider lines and no banding or tinted rows, which keeps long
+   columns of figures easy to read. Each table box redefines the colour
+   tokens, so everything inside it (marks, links, inputs, popovers) follows.
+   Every pair below meets WCAG AA on the paper. */
+.list,
+.panel-scroll,
+.ledger-box,
+.timings-box,
+.table-scroll {
+  /* Native controls (checkboxes, selects) drawn for light paper too. */
+  color-scheme: light;
+  --surface: #f4f2ec;
+  --surface-raised: #f4f2ec;
+  --band: #f4f2ec;
+  --text: #1d1e22;
+  --text-secondary: #57534b;
+  --border: #d8d2c3;
+  --border-strong: #8a7444;
+  --rule-soft: #d8d2c3;
+  --accent: #7a5e22;
+  --accent-strong: #5e4818;
+  --accent-soft: rgba(122, 94, 34, 0.16);
+  --ink-fill: #1d1e22;
+  --ink-fill-text: #f4f2ec;
+  --ink-fill-hover: #34363c;
+  --good: #2d6a4f;
+  --warn: #a8362c;
+  --bad: #a8362c;
+  --focus: #7a5e22;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.panel-scroll {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* The header row is pinned while a long table scrolls, so its column names
+   stay in view. It is drawn above the rows (z-index), with an opaque
+   background, so nothing in a row, such as a reference's dotted underline,
+   shows through it. */
 thead th {
   background: var(--surface-raised);
-  color: var(--text-secondary);
+  color: var(--text);
   font-size: var(--text-sm);
-  font-weight: 600;
-  border-bottom: 1px solid var(--border);
+  font-weight: 700;
+  border-bottom: 2px solid var(--border-strong);
   position: sticky;
   top: 0;
+  z-index: 2;
 }
 
 td.num,
@@ -1091,14 +1106,17 @@ td.wrap-ids {
   padding: 0.55rem 0.45rem;
 }
 
+/* Not pinned: the timer bar is pinned to the top already, and a page of
+   twenty rows keeps the column names close. */
 .game-table thead th {
+  position: static;
   white-space: nowrap;
 }
 
-/* Green-bar banding, as on the other ledgers. */
-.game-table tbody tr:nth-child(odd),
-.rules tbody tr:nth-child(odd) {
-  background: var(--band);
+/* The pages of a long training table, above it. */
+.game-pager {
+  justify-content: flex-end;
+  margin-bottom: var(--space-2);
 }
 
 .game-table .col-select {
@@ -1251,10 +1269,6 @@ td.wrap-ids {
 .verdict {
   font-size: var(--text-lg);
   font-weight: 600;
-}
-
-.streak {
-  color: var(--text-secondary);
 }
 
 .result-good {
@@ -1931,6 +1945,10 @@ div.long-list:not(.table-scroll) {
   margin-top: var(--space-3);
 }
 
+.lists.is-resizing {
+  overflow: clip;
+}
+
 .side-switch {
   display: none;
 }
@@ -1992,11 +2010,6 @@ div.long-list:not(.table-scroll) {
   margin: var(--space-1) 0 var(--space-3);
   font-family: var(--font-heading);
   font-size: var(--text-xl);
-}
-
-/* Green-bar banding, as on continuous stationery: alternate rows tinted. */
-.list-table tbody tr:nth-child(odd) {
-  background: var(--band);
 }
 
 .list-count {
@@ -2248,10 +2261,6 @@ div.long-list:not(.table-scroll) {
    written to outrank the green-bar banding, which would otherwise win. */
 .row-matched {
   color: var(--text-secondary);
-}
-
-.list-table tbody tr.row-review {
-  background: var(--warn-soft);
 }
 
 .list-table tbody tr.is-selected,
@@ -2650,17 +2659,11 @@ div.long-list:not(.table-scroll) {
   margin-top: 0;
 }
 
-/* Inside the busy day's one card the lists are sections, not cards of
-   their own, so they do not lose width to a second border and padding. */
+/* Inside the busy day's card the lists keep their light paper, with less
+   padding, so they do not lose much width to a second box. */
 .busy-lists .list {
-  padding: 0;
-  border: 0;
-  background: none;
+  padding: var(--space-2) var(--space-3) var(--space-3);
   box-shadow: none;
-}
-
-.busy-lists .list-title {
-  margin-left: 0;
 }
 
 /* How it works: the two approaches side by side, and the race sizes in a row. */
@@ -2760,10 +2763,6 @@ details.fold {
   font-size: var(--text-xl);
 }
 
-.chooser-head .badge {
-  margin: 0;
-}
-
 .level-chooser {
   margin: 0;
   padding: 0;
@@ -2800,8 +2799,10 @@ details.fold {
   background: var(--surface);
 }
 
+/* Above the label's stretched overlay, so the radio itself can be clicked. */
 .level-input {
   position: absolute;
+  z-index: 1;
   top: var(--space-4);
   right: var(--space-4);
   width: 1.1rem;
@@ -2857,17 +2858,6 @@ details.fold {
   margin-top: var(--space-6);
 }
 
-.start-row .field {
-  align-items: center;
-  text-align: center;
-  max-width: 20rem;
-  margin: 0;
-}
-
-.start-row .button-large {
-  margin-top: 1.6rem;
-}
-
 /* Training: the you-against-the-engine scoreboard, a small ruled sheet. */
 .scoreboard {
   max-width: 34rem;
@@ -2921,10 +2911,6 @@ details.fold {
   margin: var(--space-4) 0 var(--space-1);
   font-family: var(--font-heading);
   font-size: var(--text-xl);
-}
-
-.scoreboard .badge {
-  margin: var(--space-3) 0 0;
 }
 
 /* The race box holds only the sizes and the button: a centred column with
@@ -3044,4 +3030,212 @@ details.fold {
 
 .rules td {
   white-space: normal;
+}
+
+/* ---- Reconcile on a desktop: the whole page in one view ---------------- */
+
+/* On a screen at least 1360px wide and 700px tall, the Reconcile page fits
+   the window without the page scrolling (the page widens to 1400px there,
+   so both lists keep every column beside the problems): a compact title line, the result
+   bar with its stamp, then the problems in a column beside the two lists,
+   which fill the rest of the height. If a short window cannot show every
+   row, the lists scroll inside their own boxes, with their column names
+   pinned. Phones and tablets keep the ordinary scrolling page. */
+@media (min-width: 1360px) and (min-height: 700px) {
+  .home .site-header-inner,
+  .home main,
+  .home .site-footer,
+  .home .notice {
+    max-width: 1400px;
+  }
+
+  body.home {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  .home main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    padding-top: var(--space-3);
+    padding-bottom: var(--space-3);
+  }
+
+  .home .site-footer {
+    padding-top: var(--space-2);
+    padding-bottom: var(--space-2);
+  }
+
+  .home .intro {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0 var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+
+  .home .intro h1 {
+    font-size: var(--text-2xl);
+  }
+
+  .home .tagline {
+    margin: 0;
+    font-size: var(--text-md);
+  }
+
+  .home #workspace {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .home .workspace {
+    display: grid;
+    flex: 1;
+    min-height: 0;
+    gap: var(--space-3) var(--space-5);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+  }
+
+  /* Matched: the problems in a column on the left, the lists on the right. */
+  .home .workspace.is-reconciled {
+    grid-template-columns: 22rem minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "result result"
+      "problems controls"
+      "problems lists"
+      "links links";
+  }
+
+  .home .is-reconciled .result {
+    grid-area: result;
+  }
+
+  .home .is-reconciled .problems-section {
+    grid-area: problems;
+    min-height: 0;
+    margin: 0;
+    overflow-y: auto;
+  }
+
+  .home .workspace.is-reconciled {
+    grid-template-columns: 18rem minmax(0, 1fr);
+  }
+
+  .home .is-reconciled .list-controls {
+    grid-area: controls;
+  }
+
+  .home .is-reconciled .lists {
+    grid-area: lists;
+  }
+
+  .home .is-reconciled .quick-links {
+    grid-area: links;
+  }
+
+  /* The pieces sit close: the grid's gap does the spacing. */
+  .home .workspace > *,
+  .home .list-controls,
+  .home .lists,
+  .home .quick-links {
+    margin-top: 0;
+  }
+
+  .home .status-bar {
+    flex-direction: row;
+    justify-content: center;
+    gap: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .home .result {
+    padding: var(--space-3) 14rem var(--space-3) var(--space-5);
+  }
+
+  .home .result-headline {
+    font-size: var(--text-xl);
+  }
+
+  .home .result-difference {
+    margin-top: var(--space-1);
+  }
+
+  .home .stamp {
+    margin-top: -1.9rem;
+    font-size: var(--text-md);
+  }
+
+  .home .problems-section .choice-hint {
+    margin-bottom: var(--space-3);
+  }
+
+  /* In the narrow column the heading needs its whole width. */
+  .home .problems-section > .section-title {
+    font-size: var(--text-lg);
+  }
+
+  .home .problems-section > .section-title::before,
+  .home .problems-section > .section-title::after {
+    display: none;
+  }
+
+  .home .problems {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .home .problem {
+    padding: var(--space-3);
+  }
+
+  /* The lists fill the height that is left and scroll inside if they must. */
+  .home .lists {
+    min-height: 0;
+  }
+
+  .home .list {
+    min-height: 0;
+  }
+
+  .home .list-scroll {
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  .home .list-table td,
+  .home .list-table th {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+
+  /* Narrower fixed columns, so the reference keeps its full width beside
+     the problems column. */
+  .home .list-table th.col-date {
+    width: 4.5rem;
+  }
+
+  .home .list-table th.num {
+    width: 6.75rem;
+  }
+
+  .home .list-table.is-reconciled th:last-child {
+    width: 9.5rem;
+  }
+
+  .home .problem {
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+  }
+
+  .home .problem .mark {
+    font-size: var(--text-sm);
+  }
 }

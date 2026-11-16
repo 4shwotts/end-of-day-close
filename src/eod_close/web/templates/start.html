@@ -18,7 +18,6 @@
 <form action="/play" method="get" class="start-form">
   <div class="chooser-head">
     <h2 id="level-heading">Choose your level</h2>
-    <p class="badge">Balanced-day streak <strong id="streak-count">0</strong></p>
   </div>
   <fieldset class="level-chooser">
     <legend class="visually-hidden">Choose your level</legend>
@@ -41,13 +40,10 @@
     </div>
   </fieldset>
 
+  {# Each day is generated from a number, which goes in the day's address
+     (/play/<level>/<number>): that link replays or shares the day, so the
+     form needs no box for it. #}
   <div class="start-row">
-    <div class="field">
-      <label for="seed">Day number (optional)</label>
-      <input type="number" id="seed" name="seed" min="0" max="1000000000" inputmode="numeric"
-             aria-describedby="seed-hint">
-      <span class="choice-hint" id="seed-hint">Leave it empty for a new day. The same number always gives the same day.</span>
-    </div>
     <button type="submit" class="button-large">Start the day</button>
   </div>
 </form>

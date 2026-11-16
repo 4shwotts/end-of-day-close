@@ -15,14 +15,19 @@ pytestmark = pytest.mark.e2e
 SEED = 4
 
 
-def test_play_a_perfect_day_and_extend_the_streak(page: Page, live_server: str) -> None:
-    """Start a day from the menu, link every planted pair, close it, and see the streak go up."""
-    case = CaseGenerator().generate(SEED, Difficulty.INTERN)
+def test_start_the_day_from_the_menu(page: Page, live_server: str) -> None:
+    """The level chooser starts a new day of that level at its own numbered address."""
     page.goto(f"{live_server}/training")
-    page.get_by_label("Intern", exact=True).check()
-    page.get_by_label("Day number (optional)").fill(str(SEED))
+    page.get_by_label("Analyst", exact=True).check()
     page.get_by_role("button", name="Start the day").click()
-    expect(page).to_have_url(re.compile(rf"/play/intern/{SEED}$"))
+    expect(page).to_have_url(re.compile(r"/play/analyst/\d+$"))
+    expect(page.get_by_role("link", name="Start the timer")).to_be_visible()
+
+
+def test_play_a_perfect_day(page: Page, live_server: str) -> None:
+    """Open a numbered day, link every planted pair, close it, and see it balanced."""
+    case = CaseGenerator().generate(SEED, Difficulty.INTERN)
+    page.goto(f"{live_server}/play/intern/{SEED}")
     expect(page.locator("#timer")).to_have_count(0)
     page.get_by_role("link", name="Start the timer").click()
     expect(page).to_have_url(re.compile(rf"/play/intern/{SEED}/work$"))
@@ -40,15 +45,12 @@ def test_play_a_perfect_day_and_extend_the_streak(page: Page, live_server: str) 
     expect(page.get_by_role("heading", level=1)).to_have_text("You vs the engine")
     expect(page.locator("#close-summary")).to_contain_text("You closed the day.")
     expect(page.locator("#close-summary")).to_contain_text("100.0%")
-    expect(page.locator("#streak-count")).to_have_text("1")
 
 
-def test_an_unbalanced_day_resets_the_streak(page: Page, live_server: str) -> None:
+def test_an_empty_day_does_not_balance(page: Page, live_server: str) -> None:
     page.goto(f"{live_server}/play/intern/{SEED + 1}/work")
-    page.evaluate("window.localStorage.setItem('eod-close.streak', '3')")
     page.get_by_role("button", name="Close the day").first.click()
     expect(page.locator("#close-summary")).to_contain_text("The day did not balance.")
-    expect(page.locator("#streak-count")).to_have_text("0")
 
 
 def test_start_page_works_from_the_keyboard(page: Page, live_server: str) -> None:
@@ -78,13 +80,6 @@ def test_how_it_works_draws_the_race_chart_with_htmx(page: Page, live_server: st
 def test_old_arena_link_lands_on_how_it_works(page: Page, live_server: str) -> None:
     page.goto(f"{live_server}/arena")
     expect(page).to_have_url(f"{live_server}/how-it-works")
-
-
-def test_streak_is_shown_in_training_mode_only(page: Page, live_server: str) -> None:
-    page.goto(live_server)
-    expect(page.locator("#streak-count")).to_have_count(0)
-    page.goto(f"{live_server}/training")
-    expect(page.locator("#streak-count")).to_be_visible()
 
 
 def test_drop_zone_shows_the_chosen_file(page: Page, live_server: str, tmp_path: Path) -> None:
@@ -280,3 +275,29 @@ def test_a_long_group_scrolls_in_its_own_box(page: Page, live_server: str, tmp_p
     sizes = box.evaluate("el => [el.clientHeight, el.scrollHeight]")
     assert sizes[0] <= 26 * 16, "the box stays about ten rows tall"
     assert sizes[1] > sizes[0], "the rest of the group scrolls inside it"
+
+
+def test_long_training_tables_are_shown_a_page_at_a_time(page: Page, live_server: str) -> None:
+    """Head of Ops shows twenty lines a page; hidden lines' answers are still sent."""
+    page.set_viewport_size({"width": 1700, "height": 1000})
+    page.goto(f"{live_server}/play/head-of-ops/3/work")
+    bank = page.locator(".panel").first
+    expect(bank.locator("tbody tr:visible")).to_have_count(20)
+    pager = bank.get_by_role("navigation")
+    expect(pager.get_by_role("button", name="Previous")).to_be_disabled()
+    expect(pager).to_contain_text("Page 1 of")
+    first_line = bank.locator("tbody tr").first
+    pager.get_by_role("button", name="Next").click()
+    expect(pager).to_contain_text("Page 2 of")
+    expect(first_line).to_be_hidden()
+    expect(bank.locator("tbody tr:visible")).to_have_count(20)
+    # A pair number typed on page 1 is still in the form once it is hidden.
+    pager.get_by_role("button", name="Previous").click()
+    first_input = first_line.locator(".group-input")
+    first_input.fill("7")
+    pager.get_by_role("button", name="Next").click()
+    sent = page.evaluate(
+        "name => new FormData(document.getElementById('case-form')).get(name)",
+        first_input.get_attribute("name"),
+    )
+    assert sent == "7"

@@ -22,7 +22,7 @@
   <input type="hidden" name="started_at" value="{{ started_at }}">
 
   {# The game bar stays at the top of the screen while the tables scroll:
-     the clock, the level and the streak, and the controls. The timer is a
+     the clock, the level, and the controls. The timer is a
      role="timer", which screen readers do not announce on every tick; game.js
      starts it and darkens it a little after five and ten minutes. #}
   <div class="game-bar">
@@ -33,7 +33,6 @@
     </p>
     <p class="game-badges">
       <span class="badge">{{ case.difficulty.label }}</span>
-      <span class="badge">Streak <strong id="streak-count">0</strong></span>
     </p>
     <div class="game-actions">
       <button type="button" id="link-selected" class="button-secondary" hidden>Link selected</button>

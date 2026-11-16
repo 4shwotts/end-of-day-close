@@ -148,7 +148,7 @@ they are measured from the answer keys when the app first needs them.
 - **One currency per account.** Statements and ledgers are in sterling; only the
   original amount of a foreign sale is in another currency.
 - **No persistence.** Nothing is stored on the server. A day is regenerated from its
-  level and seed, and the streak lives in the browser's local storage.
+  level and seed, and nothing about a visitor is kept anywhere.
 - **Slow first visit.** The live demo's free host sleeps when idle, so the first visit
   after a quiet spell can take up to a minute.
 
@@ -172,8 +172,8 @@ you against the engine on accuracy and time, then every problem explained.
 
 Accuracy is correct decisions divided by the larger of the planted items and the
 decisions you made, so splitting entries into lots of small guesses cannot raise your
-score. Balanced days in a row build a streak. Every day has a number (its seed), so you
-can replay it or send it to someone else.
+score. Every day has a number (its seed) in its address, so you can replay it or send it
+to someone else.
 
 The site also has:
 
@@ -207,7 +207,7 @@ plain names; the domain, the API and this README keep the precise terms.
 
 The pages work without JavaScript; the phone's list switch is a pair of plain radio
 buttons read by CSS, and "Why?" is a native disclosure. The scripts only add the problem
-cards' highlighting, the reveal after matching, row linking in training, the timer, the streak and the upload drop zones' highlight and file names. They
+cards' highlighting, the reveal after matching, row linking in training, the timer, paging the training tables, and the upload drop zones' highlight and file names. They
 are keyboard accessible, meet WCAG AA contrast in light and dark mode (checked with
 axe-core on every page at phone, tablet and desktop widths), and load nothing from another
 site under a strict Content Security Policy. The fonts (Marcellus and Public Sans) and

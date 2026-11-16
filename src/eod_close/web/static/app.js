@@ -46,44 +46,59 @@
     }
   }
 
-  // The lists keep at least the height they have with every row showing,
-  // so choosing Matched or Problems (or the other list, on a phone) hides
-  // rows without the rest of the page jumping. The height only ever grows,
-  // and is measured again when the window changes size.
-  function holdListsHeight(workspace, fresh) {
-    var lists = workspace.querySelector(".lists");
-    var all = workspace.querySelector("#show-all");
-    if (!lists || (all && !all.checked)) {
+  // When the filter (or, on a phone, the list shown) changes, the lists
+  // resize smoothly from their old height to their new one rather than
+  // snapping, so the page below glides instead of jumping. The last height
+  // is kept by a ResizeObserver, which reports after layout: inside the
+  // change handler it still holds the height from before the change. On a
+  // desktop the lists fill a fixed area, their height does not change, and
+  // nothing animates. Under reduced motion they simply resize.
+  var lastHeight = new WeakMap();
+  var watcher =
+    "ResizeObserver" in window
+      ? new ResizeObserver(function (entries) {
+          entries.forEach(function (entry) {
+            lastHeight.set(entry.target, entry.target.getBoundingClientRect().height);
+          });
+        })
+      : null;
+
+  function watchLists(root) {
+    if (!watcher) {
       return;
     }
-    if (fresh) {
-      lists.style.minHeight = "";
-    }
-    var held = parseFloat(lists.style.minHeight) || 0;
-    // The exact, fractional height: rounding it would let the page below
-    // shift by a pixel when rows are hidden.
-    lists.style.minHeight = Math.max(held, lists.getBoundingClientRect().height) + "px";
-  }
-
-  function holdAllListHeights(fresh) {
-    document.querySelectorAll("[data-workspace]").forEach(function (workspace) {
-      holdListsHeight(workspace, fresh);
+    root.querySelectorAll(".workspace .lists").forEach(function (lists) {
+      lastHeight.set(lists, lists.getBoundingClientRect().height);
+      watcher.observe(lists);
     });
   }
 
   document.addEventListener("change", function (event) {
     var workspace = event.target.closest && event.target.closest("[data-workspace]");
-    if (workspace && event.target.name === "side") {
-      holdListsHeight(workspace, false);
+    if (!workspace || (event.target.name !== "show" && event.target.name !== "side")) {
+      return;
     }
-  });
-
-  var resizeTimer = null;
-  window.addEventListener("resize", function () {
-    window.clearTimeout(resizeTimer);
-    resizeTimer = window.setTimeout(function () {
-      holdAllListHeights(true);
-    }, 150);
+    var lists = workspace.querySelector(".lists");
+    var before = lists && lastHeight.get(lists);
+    if (!before || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+    var after = lists.getBoundingClientRect().height;
+    if (Math.abs(after - before) < 1) {
+      return;
+    }
+    // Clipped only while it moves, so rows cannot spill past the box as it
+    // grows, and tooltips near the bottom are not cut off the rest of the time.
+    lists.classList.add("is-resizing");
+    var resize = lists.animate([{ height: before + "px" }, { height: after + "px" }], {
+      duration: 260,
+      easing: "cubic-bezier(0.2, 0.8, 0.3, 1)",
+    });
+    resize.finished
+      .catch(function () {})
+      .then(function () {
+        lists.classList.remove("is-resizing");
+      });
   });
 
   document.addEventListener("click", function (event) {
@@ -130,7 +145,7 @@
     if (!workspace) {
       return;
     }
-    holdListsHeight(workspace, true);
+    watchLists(workspace);
     var headline = workspace.querySelector(".result-headline");
     if (headline) {
       headline.focus();
@@ -347,13 +362,6 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-dropzone]").forEach(setUpZone);
-    holdAllListHeights(true);
-    // The web fonts can arrive after the page is ready and change the rows'
-    // height, so the lists are measured again once they have.
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(function () {
-        holdAllListHeights(true);
-      });
-    }
+    watchLists(document);
   });
 })();

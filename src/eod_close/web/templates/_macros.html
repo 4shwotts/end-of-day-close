@@ -43,7 +43,7 @@
     <span class="stat-value">{{ "{:,}".format(s.matched) }}</span>
   </div>
   <div class="stat {{ 'stat-good' if s.needs_review == 0 else 'stat-warn' }}">
-    <span class="stat-label">{{ icon("alert") }} For a person to check</span>
+    <span class="stat-label">{{ icon("alert") }} Problems found</span>
     <span class="stat-value">{{ "{:,}".format(s.needs_review) }}</span>
   </div>
   <div class="stat">

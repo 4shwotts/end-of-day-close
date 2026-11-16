@@ -1,4 +1,4 @@
-"""Glue between the web layer and the engine: cases, uploads and form parsing.
+"""Glue between the web layer and the engine: cases, uploads, the busy day and forms.
 
 The server keeps no game state. A case is identified by its difficulty and
 seed and regenerated on demand, which is cheap and deterministic, so any
@@ -11,15 +11,19 @@ from __future__ import annotations
 import io
 import time
 from collections.abc import Mapping
+from dataclasses import dataclass
 from functools import lru_cache
 from typing import Final
 
 from eod_close.csv_format import CsvFormatError, read_bank_csv, read_ledger_csv
+from eod_close.domain.processor import FICTIONAL_PROCESSORS
 from eod_close.domain.results import ExceptionReason, ReconciliationReport
 from eod_close.domain.statements import BankStatement, Ledger
 from eod_close.engine import ReconciliationEngine
+from eod_close.evaluation.naive import NaiveReconciler
 from eod_close.game import PlayerAnswers
 from eod_close.generator import Case, CaseGenerator, Difficulty
+from eod_close.web.report_view import build_report_view
 
 # Upload limits protect a small, shared instance. 20,000 rows reconcile in
 # well under a second; 2 MB comfortably holds that many rows of this format.
@@ -49,6 +53,63 @@ def timed_reconcile(statement: BankStatement, ledger: Ledger) -> tuple[Reconcili
     started = time.perf_counter()
     report = _ENGINE.reconcile(statement, ledger)
     return report, time.perf_counter() - started
+
+
+# The busy day uses the hardest level: about 300 payments a side and every
+# kind of problem, the volume a real small business might see.
+BUSY_DAY_DIFFICULTY: Final = Difficulty.HEAD_OF_OPS
+
+
+@dataclass(frozen=True)
+class BusyDay:
+    """The engine's result on one generated busy day, beside the simple approach's.
+
+    Attributes:
+        seed: The day's seed.
+        bank_lines: How many lines the bank statement has.
+        ledger_lines: How many lines your records have.
+        matched: How many matches the engine made.
+        problems: How many problems it found for a person.
+        seconds: How long the engine took.
+        naive_matched: How many pairs checking every pair made on the same
+            day. It knows only exact, card-fee and late payments, and finds
+            no problems at all.
+    """
+
+    seed: int
+    bank_lines: int
+    ledger_lines: int
+    matched: int
+    problems: int
+    seconds: float
+    naive_matched: int
+
+
+def run_busy_day(seed: int) -> BusyDay:
+    """Generate a busy day and reconcile it both ways.
+
+    Not cached: the point is to time the engine live, on a fresh run.
+
+    Args:
+        seed: Chooses the day.
+
+    Returns:
+        Both approaches' results on the day.
+    """
+    case = CaseGenerator().generate(seed, BUSY_DAY_DIFFICULTY)
+    report, seconds = timed_reconcile(case.bank_statement, case.ledger)
+    summary = build_report_view(report).summary
+    naive = NaiveReconciler({p.code: p for p in FICTIONAL_PROCESSORS})
+    pairs = naive.reconcile(list(case.bank_statement), list(case.ledger))
+    return BusyDay(
+        seed=seed,
+        bank_lines=len(case.bank_statement),
+        ledger_lines=len(case.ledger),
+        matched=summary.matched,
+        problems=summary.needs_review,
+        seconds=seconds,
+        naive_matched=len(pairs),
+    )
 
 
 @lru_cache(maxsize=64)

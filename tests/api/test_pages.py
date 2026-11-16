@@ -10,6 +10,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from eod_close.csv_format import write_bank_csv, write_ledger_csv
 from eod_close.evaluation.headline import accuracy_figures, load_benchmark_snapshot
 from eod_close.generator import CaseGenerator, Difficulty
 from eod_close.web import pages
@@ -21,7 +22,7 @@ PAGES = [
     "/upload",
     "/training",
     "/how-it-works",
-    "/sample/1",
+    "/day/1",
     "/play/intern/1",
     "/play/intern/1/work",
 ]
@@ -145,34 +146,87 @@ def report_from_page(html: str) -> list[dict[str, str]]:
     return list(csv.DictReader(io.StringIO(text)))
 
 
-def test_home_page_shows_the_sample_day_ready_to_reconcile(client: TestClient) -> None:
+def test_home_page_shows_the_sample_day_ready_to_match(client: TestClient) -> None:
     html = client.get("/").text
     assert "Match a bank statement against your records and see what doesn't add up." in html
-    assert "Not matched yet" in html
-    assert "24 bank payments" in html
-    assert "26 in your records" in html
+    assert "Your bank and your records don't quite agree. Press Match to find out why." in html
     assert 'hx-post="/reconcile"' in html
-    assert "data-select" not in html, "no outcomes before Reconcile is pressed"
-    for link in ('href="/upload"', 'href="/sample-day/report.csv"', 'href="/sample"'):
+    assert html.count('class="row row-pending"') == 25, "12 bank lines and 13 in your records"
+    assert "Problems found" not in html, "no outcomes before Match is pressed"
+    assert ">ID<" not in html, "date, reference and amount only"
+    assert ">Description<" not in html, "the description shows on hover or focus"
+    assert 'role="tooltip" id="desc-ledger-L02">Web order: oak serving board set<' in html
+    for link in ('href="/upload"', 'href="/day"'):
         assert link in html
+    assert "/sample-day/report.csv" not in html, "the report is offered after matching"
 
 
-def test_reconcile_returns_the_workspace_with_every_outcome(client: TestClient) -> None:
+def test_reconcile_returns_the_headline_and_the_problems(client: TestClient) -> None:
     html = client.post("/reconcile", headers={"HX-Request": "true"}).text
     assert "<html" not in html
-    assert "22 matched" in html
-    assert "3 for a person to check" in html
-    assert re.search(r'id="status-unexplained">-£42.50<', html)
-    assert re.search(r'id="problems-total">-£42.50<', html)
+    assert "Matched 10 payments and found 3 problems" in html
+    assert re.search(r'id="status-unexplained">-£91.00<', html)
+    assert "Problems found (3)" in html
     assert html.count('class="problem"') == 3
+    assert "£25.00 arrived in the bank (INV-40139) but isn&#39;t in your records." in html
     assert 'id="row-bank-B02"' in html
-    assert 'href="#row-ledger-L02"' in html
+    assert html.count("<summary>Why?</summary>") == 21, "every matched row on both sides"
+    assert "Show all matches (10)" in html
+    assert 'href="/sample-day/report.csv"' in html
+    assert "seconds" not in html, "no timing on the Reconcile page"
+    assert "summary-bar" not in html, "no stat cards on the Reconcile page"
 
 
-def test_reconcile_without_htmx_returns_the_whole_page_reconciled(client: TestClient) -> None:
+def test_reconcile_without_htmx_returns_the_whole_page_matched(client: TestClient) -> None:
     html = client.post("/reconcile").text
     assert "<html" in html
-    assert "22 matched" in html
+    assert "Matched 10 payments and found 3 problems" in html
+
+
+def test_another_day_redirects_to_its_own_address(client: TestClient) -> None:
+    response = client.get("/day", follow_redirects=False)
+    assert response.status_code == 303
+    assert re.fullmatch(r"/day/\d+", response.headers["location"])
+
+
+def test_another_day_has_the_sample_day_shape(client: TestClient) -> None:
+    html = client.get("/day/42").text
+    assert 'hx-post="/day/42/reconcile"' in html
+    matched = client.post("/day/42/reconcile", headers={"HX-Request": "true"}).text
+    assert "Matched 10 payments and found 3 problems" in matched
+    assert 'href="/day/42/report.csv"' in matched
+    assert 'href="/day/42"' in matched, "Start again returns to the same day"
+    report = client.get("/day/42/report.csv")
+    assert "day-42-report.csv" in report.headers["content-disposition"]
+
+
+def test_unknown_day_is_not_found(client: TestClient) -> None:
+    assert client.get("/day/2000000000").status_code == 404
+    assert client.post("/day/2000000000/reconcile").status_code == 404
+
+
+def test_old_harder_day_addresses_redirect_to_the_busy_day(client: TestClient) -> None:
+    for path in ("/sample", "/sample/7"):
+        response = client.get(path, follow_redirects=False)
+        assert response.status_code == 301
+        assert response.headers["location"] == "/how-it-works#busy-day"
+
+
+def test_busy_day_matches_about_300_payments_live(client: TestClient) -> None:
+    html = client.post("/how-it-works/busy-day", headers={"HX-Request": "true"}).text
+    assert "<html" not in html
+    found = re.search(r"Matched ([\d,]+) and found ([\d,]+) problems in [\d.]+ seconds", html)
+    assert found, html
+    bank = re.search(r"That day had ([\d,]+) bank payments", html)
+    assert bank
+    assert 250 <= int(bank.group(1).replace(",", "")) <= 350
+    assert "Checking every pair matched only" in html
+
+
+def test_busy_day_without_htmx_returns_the_whole_page(client: TestClient) -> None:
+    html = client.post("/how-it-works/busy-day").text
+    assert "<html" in html
+    assert 'id="busy-headline"' in html
 
 
 @pytest.mark.parametrize("name", ["bank", "ledger", "report"])
@@ -242,7 +296,7 @@ def test_upload_shows_the_summary_and_offers_the_report(client: TestClient) -> N
         headers={"HX-Request": "true"},
     )
     assert 'id="summary"' in response.text
-    assert "For a person to check" in response.text
+    assert "Problems found" in response.text
     assert "<html" not in response.text
     rows = report_from_page(response.text)
     assert rows
@@ -259,29 +313,19 @@ def test_upload_without_htmx_returns_the_upload_page_with_results(client: TestCl
     assert 'id="summary"' in html
 
 
-def test_sample_day_redirects_to_its_own_address(client: TestClient) -> None:
-    response = client.get("/sample", follow_redirects=False)
-    assert response.status_code == 303
-    assert re.fullmatch(r"/sample/\d+", response.headers["location"])
-
-
-def test_sample_day_shows_every_kind_of_result(client: TestClient) -> None:
-    html = client.get("/sample/1").text
-    for label in ("Typo", "Duplicate", "Card fee", "Bundled payment", "Next:"):
+def test_upload_results_show_every_kind_of_result(client: TestClient) -> None:
+    case = CaseGenerator().generate(1, Difficulty.HEAD_OF_OPS)
+    bank, ledger = io.StringIO(), io.StringIO()
+    write_bank_csv(case.bank_statement, bank)
+    write_ledger_csv(case.ledger, ledger)
+    files = {
+        "bank_file": ("b.csv", bank.getvalue().encode()),
+        "ledger_file": ("l.csv", ledger.getvalue().encode()),
+    }
+    html = client.post("/upload", files=files, headers={"HX-Request": "true"}).text
+    for label in ("Typo", "Duplicate", "Card fee", "Bundled payment", "Next:", "Problems found"):
         assert label in html
     assert len(report_from_page(html)) > 100
-
-
-@pytest.mark.parametrize("name", ["bank", "ledger", "report"])
-def test_sample_day_files_download_as_csv(client: TestClient, name: str) -> None:
-    response = client.get(f"/sample/1/{name}.csv")
-    assert response.headers["content-type"].startswith("text/csv")
-    assert f"sample-day-1-{name}.csv" in response.headers["content-disposition"]
-
-
-def test_unknown_sample_day_files_are_not_found(client: TestClient) -> None:
-    assert client.get("/sample/1/secrets.csv").status_code == 404
-    assert client.get("/sample/2000000000").status_code == 404
 
 
 def test_upload_error_is_shown_not_raised(client: TestClient) -> None:

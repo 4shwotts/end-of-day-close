@@ -2,9 +2,9 @@
 {% from "_macros.html" import icon, tip %}
 {% block title %}How it works · End-of-Day Close{% endblock %}
 {% block content %}
-{# Three short answers: what the engine does, how good it is, and why it is
-   fast, with a race to prove the last one. Detail lives in tooltips and the
-   README, not here. #}
+{# Short answers: what the engine does, how good it is, that it copes with
+   a busy day, and why it is fast, with a race to prove the last one. Detail
+   lives in tooltips and the README, not here. #}
 <h1>How it works</h1>
 <p class="lede lede-short">
   The engine pairs up a bank statement with your records, explains every pair, and hands a
@@ -67,6 +67,21 @@
     Accuracy is checked against the known answers for each test day.
     {% if benchmark %}Speed was measured on a laptop on {{ benchmark.measured_on.strftime("%d %B %Y") }}.{% else %}Speed has not been measured yet.{% endif %}
   </p>
+</section>
+
+<section class="band" id="busy-day" aria-labelledby="busy-heading">
+  <h2 id="busy-heading">Busy day</h2>
+  <p class="lede lede-short">
+    The Reconcile page shows a dozen payments. This runs about 300 a side, generated fresh,
+    to show the engine copes with a real day's volume.
+  </p>
+  <form method="post" action="/how-it-works/busy-day" hx-post="/how-it-works/busy-day" hx-target="#busy-result" hx-swap="innerHTML" class="toolbar">
+    <button type="submit">{{ icon("play") }} Run a busy day</button>
+    <span class="htmx-indicator status" role="status">Matching…</span>
+  </form>
+  <div id="busy-result" class="card busy-result" aria-live="polite">
+    {% if busy is defined %}{% include "_busy_day.html" %}{% else %}<p class="choice-hint">Press the button to match a busy day.</p>{% endif %}
+  </div>
 </section>
 
 <section class="band" aria-labelledby="race-heading">

@@ -43,7 +43,9 @@ class DifficultyProfile:
     """How a case at one difficulty level is built.
 
     Attributes:
-        difficulty: The level this profile is for.
+        difficulty: The level this profile is for, or None for a fixed mix
+            of items that is not one of the levels (see
+            ``CaseGenerator.generate_mix``).
         item_count: How many planted items the case contains. A batch is one
             item but several ledger entries, so entry counts are higher.
         weights: Relative likelihood of each kind. Kinds not listed never
@@ -68,7 +70,7 @@ class DifficultyProfile:
             0 to 1.
     """
 
-    difficulty: Difficulty
+    difficulty: Difficulty | None
     item_count: int
     weights: tuple[tuple[K, int], ...]
     max_batch_size: int = 0

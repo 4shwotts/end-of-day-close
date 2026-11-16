@@ -174,23 +174,26 @@ can replay it or send it to someone else.
 
 The site also has:
 
-- **Reconcile (the home page):** a small sample day's bank statement and records side by
-  side. **Match them** tags every pair with its type ("Card fee", "Arrived late"), says
-  how long the engine took, and lists the three payments left for a person, each with a
-  next step. Selecting a tag highlights its partner and says why they match.
-- **Upload your own files**, and **Try a harder day** (a generated Head of Ops day): one
-  sentence and three numbers (matched, for a person to check, time taken), the problems
-  next, and every match folded away.
-- **How it works:** what the engine does, four headline figures, and a live race against
-  checking every pair.
+- **Reconcile (the home page):** a small day, twelve bank payments and thirteen lines in
+  your records, side by side, with one instruction: they don't quite agree, press Match.
+  Match leads with one sentence ("Matched 10 payments and found 3 problems") and the
+  amount unaccounted for, which is the total of the problem cards below it. Each card says
+  what is wrong and what to do, and selecting it highlights its rows in both lists.
+  Matched rows step back with a short type tag and a "Why?". **Try another day**
+  generates a day of the same shape.
+- **Upload your own files:** the same engine on your CSVs, with the problems first and
+  every match folded away.
+- **How it works:** what the engine does, four headline figures, a **busy day** (about
+  300 payments a side, matched live, beside how many the simple approach gets) and a live
+  race against checking every pair.
 
 The pages are written for anyone, not accountants: they say "your records" rather than
 "ledger" and "Typo" rather than "transposition". One module, `web/wording.py`, holds the
 plain names; the domain, the API and this README keep the precise terms.
 
-The pages work without JavaScript; the filter and the phone's list switch are plain radio
-buttons read by CSS. The scripts only add row selection, the reveal after matching, row
-linking, the timer, the streak and the upload drop zones' highlight and file names. They
+The pages work without JavaScript; the phone's list switch is a pair of plain radio
+buttons read by CSS, and "Why?" is a native disclosure. The scripts only add the problem
+cards' highlighting, the reveal after matching, row linking in training, the timer, the streak and the upload drop zones' highlight and file names. They
 are keyboard accessible, meet WCAG AA contrast in light and dark mode (checked with
 axe-core on every page at phone, tablet and desktop widths), and load nothing from another
 site under a strict Content Security Policy. The font (Inter) and the icons are served

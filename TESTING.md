@@ -28,7 +28,7 @@ now guards it.
 | `tests/property/` | Hypothesis properties: invariants that must hold for any input |
 | `tests/accuracy/` | Precision and recall on held-out seeds; fails below the thresholds (marker `accuracy`) |
 | `tests/api/` | The JSON API and the HTML pages, through FastAPI's test client |
-| `tests/e2e/` | The home page's reconcile flow, upload, training mode and How it works in a real Chromium browser with Playwright, including keyboard use, no JavaScript and reduced motion; a check that the stylesheet is applied; and the axe-core accessibility scan (marker `e2e`) |
+| `tests/e2e/` | The Reconcile page's flow (instruction, Match, problem cards, highlighted rows, a total that adds up), upload, the busy day, training mode and How it works in a real Chromium browser with Playwright, including keyboard use, no JavaScript and reduced motion; a check that the stylesheet is applied; and the axe-core accessibility scan (marker `e2e`) |
 
 Branch coverage is about 96%, and the run fails below 90%.
 

@@ -1,0 +1,13 @@
+{# The busy day's result: the engine's matches, problems and live time, then
+   the simple approach's matches on the same day. At this size both are
+   quick, so the honest contrast is what each one gets right; the race
+   below shows how their times grow. #}
+{% from "_macros.html" import icon %}
+<p class="busy-headline" id="busy-headline">
+  {{ icon("check-circle") }}
+  Matched {{ "{:,}".format(busy.matched) }} and found {{ "{:,}".format(busy.problems) }} problems in {{ busy.seconds|in_seconds }}.
+</p>
+<p class="busy-detail">
+  That day had {{ "{:,}".format(busy.bank_lines) }} bank payments and {{ "{:,}".format(busy.ledger_lines) }} lines in your records.
+  Checking every pair matched only {{ "{:,}".format(busy.naive_matched) }} on the same day, and can't say what is wrong with the rest.
+</p>

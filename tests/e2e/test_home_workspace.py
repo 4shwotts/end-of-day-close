@@ -1,4 +1,4 @@
-"""Browser tests of the home page's workspace: reconcile the sample day and explore it."""
+"""Browser tests of the Reconcile page: one instruction, Match, then what is wrong."""
 
 import re
 from decimal import Decimal
@@ -8,136 +8,169 @@ from playwright.sync_api import Browser, Page, expect
 
 pytestmark = pytest.mark.e2e
 
+SELECTED = re.compile(r"\bis-selected\b")
+
 
 def money(text: str) -> Decimal:
-    """Read an amount as shown on the page, such as ``-£42.50`` or ``£1,250.00``."""
+    """Read an amount as shown on the page, such as ``-£91.00`` or ``£1,250.00``."""
     return Decimal(re.sub(r"[^0-9.\-]", "", text))
 
 
-def reconcile(page: Page, live_server: str) -> None:
-    page.goto(live_server)
-    page.get_by_role("button", name="Match them").click()
-    expect(page.locator("#status-matched")).to_be_visible()
+def match(page: Page, url: str) -> None:
+    page.goto(url)
+    page.get_by_role("button", name="Match", exact=True).click()
+    expect(page.locator(".result-headline")).to_be_visible()
 
 
-def test_reconcile_the_sample_day_and_explore_the_result(page: Page, live_server: str) -> None:
-    """Load, reconcile, select a row, read the review panel, and check the figures agree."""
+def test_match_the_sample_day_and_read_what_is_wrong(page: Page, live_server: str) -> None:
+    """Instruction, Match, headline, problem cards, highlighted rows and a total that adds up."""
     page.set_viewport_size({"width": 1440, "height": 900})
     page.goto(live_server)
-    status = page.locator("#status-line")
-    expect(status).to_contain_text("Not matched yet")
-    expect(status).to_contain_text("24 bank payments")
-    expect(status).to_contain_text("26 in your records")
-    expect(page.locator("[data-select]")).to_have_count(0)
+    expect(page.locator("#status-heading")).to_have_text(
+        "Your bank and your records don't quite agree. Press Match to find out why."
+    )
+    expect(page.locator(".list-bank tbody tr")).to_have_count(12)
+    expect(page.locator(".list-ledger tbody tr")).to_have_count(13)
+    expect(page.locator(".list-bank thead th")).to_have_text(["Date", "Reference", "Amount"])
 
-    page.get_by_role("button", name="Match them").click()
-    expect(status).to_contain_text("22 matched")
-    expect(status).to_contain_text("3 for a person to check")
-    expect(status).to_contain_text("seconds")
-    expect(status).to_be_focused()
+    page.get_by_role("button", name="Match", exact=True).click()
+    headline = page.locator(".result-headline")
+    expect(headline).to_have_text("Matched 10 payments and found 3 problems")
+    expect(headline).to_be_focused()
 
-    # Selecting a row highlights its partner on the other side and explains the match.
-    page.locator("#row-bank-B02 [data-select]").click()
-    expect(page.locator("#row-bank-B02")).to_have_class(re.compile(r"\bis-selected\b"))
-    expect(page.locator("#row-ledger-L02")).to_have_class(re.compile(r"\bis-selected\b"))
-    expect(page.locator("#row-bank-B02 [data-select]")).to_have_attribute("aria-pressed", "true")
-    selection = page.locator("#selection")
-    expect(selection).to_contain_text("B02 ↔ L02 · Card fee:")
-    expect(selection).to_contain_text("£5.25 less")
+    # The problems come first, as plain cards with a next step.
+    cards = page.locator(".problem")
+    expect(cards).to_have_count(3)
+    expect(page.locator("#problems-heading")).to_have_text(re.compile(r"Problems found \(3\)"))
+    expect(cards.nth(0)).to_contain_text(
+        "£25.00 arrived in the bank (INV-40139) but isn't in your records."
+    )
+    expect(cards.nth(0)).to_contain_text("Check whether a sale wasn't recorded.")
+    expect(cards.locator(".next-step")).to_have_count(3)
 
-    # The needs-review panel lists each exception with a next step...
-    problems = page.locator(".problem")
-    expect(problems).to_have_count(3)
-    for label in ("Typo", "Duplicate", "Not in your records"):
-        expect(page.locator(".review-panel")).to_contain_text(label)
-    expect(problems.locator(".next-step")).to_have_count(3)
+    # Selecting a card highlights its rows in both lists, and nothing else.
+    typo = page.locator(".problem", has_text="Typo")
+    typo.click()
+    expect(typo).to_have_attribute("aria-pressed", "true")
+    expect(page.locator("#row-bank-B09")).to_have_class(SELECTED)
+    expect(page.locator("#row-ledger-L10")).to_have_class(SELECTED)
+    expect(page.locator(".row.is-selected")).to_have_count(2)
 
-    # ...and their effects add up to the unexplained figure in the status bar.
+    duplicate = page.locator(".problem", has_text="Duplicate")
+    duplicate.click()
+    expect(page.locator("#row-ledger-L13")).to_have_class(SELECTED)
+    expect(page.locator(".row.is-selected")).to_have_count(1)
+    expect(typo).to_have_attribute("aria-pressed", "false")
+
+    # The difference under the headline is the total of the cards.
     effects = [
         Decimal(value)
-        for value in problems.locator("[data-effect]").evaluate_all(
+        for value in cards.locator("[data-effect]").evaluate_all(
             "els => els.map(el => el.dataset.effect)"
         )
     ]
-    unexplained = money(page.locator("#status-unexplained").inner_text())
-    assert sum(effects) == unexplained == money(page.locator("#problems-total").inner_text())
-    assert unexplained == Decimal("-42.50")
+    difference = money(page.locator("#status-unexplained").inner_text())
+    assert sum(effects) == difference == Decimal("-91.00")
 
 
-def test_a_problem_can_be_found_in_the_lists(page: Page, live_server: str) -> None:
-    reconcile(page, live_server)
-    duplicate = page.locator(".problem", has_text="Duplicate")
-    duplicate.get_by_role("button", name="Show in the lists").click()
-    expect(page.locator("#row-ledger-L26")).to_have_class(re.compile(r"\bis-selected\b"))
-    expect(duplicate).to_have_class(re.compile(r"\bis-selected\b"))
-    expect(page.locator("#row-ledger-L26 [data-select]")).to_be_focused()
-
-
-@pytest.mark.parametrize(
-    ("pill", "bank_rows", "ledger_rows"),
-    [("All", 24, 26), ("To check", 2, 2), ("Matched", 22, 24), ("Bundled", 1, 3)],
-)
-def test_the_filter_shows_only_the_chosen_rows(
-    page: Page, live_server: str, pill: str, bank_rows: int, ledger_rows: int
-) -> None:
+def test_matched_rows_carry_a_type_and_say_why(page: Page, live_server: str) -> None:
     page.set_viewport_size({"width": 1440, "height": 900})
-    reconcile(page, live_server)
-    page.locator(".filter").get_by_text(pill, exact=True).click()
-    expect(page.locator(".list-bank .row:visible")).to_have_count(bank_rows)
-    expect(page.locator(".list-ledger .row:visible")).to_have_count(ledger_rows)
+    match(page, live_server)
+    tags = page.locator(".list-bank .row-matched .tag").all_inner_texts()
+    assert {tag.strip() for tag in tags} == {
+        "Exact",
+        "Fee",
+        "Delayed",
+        "Currency",
+        "Batch",
+        "Refund",
+    }
+    fee = page.locator("#row-bank-B02")
+    expect(fee.locator(".why-text")).to_be_hidden()
+    fee.get_by_text("Why?").click()
+    expect(fee.locator(".why-text")).to_contain_text("£5.25 less")
+    expect(page.locator(".row-review .why")).to_have_count(0)
 
 
-def test_the_filter_works_from_the_keyboard(page: Page, live_server: str) -> None:
+def test_every_match_is_listed_once_unfolded(page: Page, live_server: str) -> None:
     page.set_viewport_size({"width": 1440, "height": 900})
-    reconcile(page, live_server)
-    page.locator("#show-all").focus()
-    page.keyboard.press("ArrowRight")
-    expect(page.locator("#show-matched")).to_be_checked()
-    page.keyboard.press("ArrowRight")
-    expect(page.locator("#show-review")).to_be_checked()
-    expect(page.locator(".list-bank .row:visible")).to_have_count(2)
+    match(page, live_server)
+    matches = page.locator(".match-list li")
+    expect(matches.first).to_be_hidden()
+    page.get_by_text("Show all matches (10)").click()
+    expect(matches).to_have_count(10)
+    expect(page.locator(".match-list")).to_contain_text("QFW-PAYOUT-20261112-01 £73.56")
 
 
-def test_on_a_phone_one_list_shows_and_partner_links_switch_it(
-    page: Page, live_server: str
-) -> None:
+def test_the_description_shows_on_hover_and_on_focus(page: Page, live_server: str) -> None:
+    page.goto(live_server)
+    reference = page.locator("#row-ledger-L02 .ref-button")
+    description = page.locator("#desc-ledger-L02")
+    expect(description).to_be_hidden()
+    reference.hover()
+    expect(description).to_have_text("Web order: oak serving board set")
+    page.mouse.move(0, 0)
+    expect(description).to_be_hidden()
+    reference.focus()
+    expect(description).to_be_visible()
+
+
+def test_on_a_phone_selecting_a_card_switches_to_its_list(page: Page, live_server: str) -> None:
     page.set_viewport_size({"width": 390, "height": 844})
-    reconcile(page, live_server)
+    match(page, live_server)
     expect(page.locator(".list-bank")).to_be_visible()
     expect(page.locator(".list-ledger")).to_be_hidden()
-    page.locator("#row-bank-B02 .partner").click()
+    page.locator(".problem", has_text="Duplicate").click()
     expect(page.locator(".list-ledger")).to_be_visible()
-    expect(page.locator("#row-ledger-L02")).to_have_class(re.compile(r"\bis-selected\b"))
+    expect(page.locator("#row-ledger-L13")).to_have_class(SELECTED)
     page.locator(".side-switch").get_by_text("Bank statement").click()
     expect(page.locator(".list-bank")).to_be_visible()
 
 
-def test_reconcile_works_without_javascript(browser: Browser, live_server: str) -> None:
-    """The form posts as a plain page, and partner links still jump to the partner."""
+def test_match_works_without_javascript(browser: Browser, live_server: str) -> None:
+    """The form posts as a plain page and the result is the same."""
     context = browser.new_context(java_script_enabled=False)
     page = context.new_page()
     page.goto(live_server)
-    page.get_by_role("button", name="Match them").click()
-    expect(page.locator("#status-line")).to_contain_text("22 matched")
-    page.locator("#row-bank-B02 .partner").click()
-    expect(page).to_have_url(re.compile(r"#row-ledger-L02$"))
+    page.get_by_role("button", name="Match", exact=True).click()
+    expect(page.locator(".result-headline")).to_have_text(
+        "Matched 10 payments and found 3 problems"
+    )
+    expect(page.locator(".problem")).to_have_count(3)
     context.close()
 
 
-def test_reconcile_from_the_keyboard(page: Page, live_server: str) -> None:
+def test_a_problem_card_works_from_the_keyboard(page: Page, live_server: str) -> None:
     page.goto(live_server)
-    page.get_by_role("button", name="Match them").focus()
+    page.get_by_role("button", name="Match", exact=True).focus()
     page.keyboard.press("Enter")
-    expect(page.locator("#status-line")).to_be_focused()
-    page.locator("#row-bank-B05 [data-select]").focus()
+    expect(page.locator(".result-headline")).to_be_focused()
+    page.locator(".problem", has_text="Typo").focus()
     page.keyboard.press("Enter")
-    expect(page.locator("#selection")).to_contain_text("B05 ↔ L05 · Euro:")
+    expect(page.locator("#row-bank-B09")).to_have_class(SELECTED)
+
+
+def test_try_another_day_gives_a_small_day_of_the_same_shape(page: Page, live_server: str) -> None:
+    page.goto(live_server)
+    page.get_by_role("link", name="Try another day").click()
+    expect(page).to_have_url(re.compile(r"/day/\d+$"))
+    bank_rows = page.locator(".list-bank tbody tr").count()
+    assert 12 <= bank_rows <= 13
+    page.get_by_role("button", name="Match", exact=True).click()
+    expect(page.locator(".result-headline")).to_have_text(
+        "Matched 10 payments and found 3 problems"
+    )
+    effects = page.locator(".problem [data-effect]").evaluate_all(
+        "els => els.map(el => el.dataset.effect)"
+    )
+    total = sum(Decimal(value) for value in effects)
+    assert total == money(page.locator("#status-unexplained").inner_text())
 
 
 def test_reduced_motion_turns_the_reveal_off(browser: Browser, live_server: str) -> None:
     context = browser.new_context(reduced_motion="reduce")
     page = context.new_page()
-    reconcile(page, live_server)
+    match(page, live_server)
     names = page.locator(".is-reconciled .outcome .tag").first.evaluate(
         "el => getComputedStyle(el).animationName"
     )
@@ -156,8 +189,10 @@ def test_tooltips_explain_terms_on_focus(page: Page, live_server: str) -> None:
     expect(tooltip).to_be_hidden()
 
 
-def test_the_report_downloads_from_the_home_page(page: Page, live_server: str) -> None:
+def test_the_report_downloads_after_matching(page: Page, live_server: str) -> None:
     page.goto(live_server)
+    expect(page.get_by_role("link", name="Download the report (CSV)")).to_have_count(0)
+    page.get_by_role("button", name="Match", exact=True).click()
     with page.expect_download() as download_info:
-        page.get_by_role("link", name="Download report (CSV)").click()
+        page.get_by_role("link", name="Download the report (CSV)").click()
     assert download_info.value.suggested_filename == "sample-day-report.csv"

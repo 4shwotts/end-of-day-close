@@ -1,10 +1,9 @@
 {% extends "base.html" %}
-{% from "_macros.html" import icon %}
 {% block title %}End-of-Day Close · Match a bank statement against your records{% endblock %}
 {% block body_attrs %} class="home"{% endblock %}
 {% block content %}
-{# Show, not tell: the page is the tool itself, working on a small sample
-   day. Explanations live on How it works and in tooltips on the tables. #}
+{# Show, not tell: the page is the tool itself, working on a small day.
+   Explanations live on How it works and in tooltips on the lists. #}
 <div class="intro">
   <h1>End-of-Day Close</h1>
   <p class="tagline">Match a bank statement against your records and see what doesn't add up.</p>
@@ -13,10 +12,4 @@
 <div id="workspace">
   {% include "_workspace.html" %}
 </div>
-
-<nav class="quick-links" aria-label="More options">
-  <a href="/upload">{{ icon("upload") }} Upload your own files</a>
-  <a href="/sample-day/report.csv" download>{{ icon("download") }} Download report (CSV)</a>
-  <a href="/sample">{{ icon("layers") }} Try a harder day</a>
-</nav>
 {% endblock %}

@@ -1,4 +1,4 @@
-"""Browser tests of upload, the harder day, training mode and How it works, using Playwright."""
+"""Browser tests of upload, training mode, How it works and the busy day, using Playwright."""
 
 import re
 from pathlib import Path
@@ -122,7 +122,7 @@ def test_drop_zone_accepts_a_dropped_file(page: Page, live_server: str) -> None:
     [
         "/",
         "/upload",
-        "/sample/1",
+        "/day/1",
         "/training",
         "/how-it-works",
         "/play/senior-analyst/1",
@@ -141,27 +141,22 @@ def test_pages_fit_phone_tablet_and_desktop(
     assert overflow <= 0
 
 
-def test_harder_day_from_the_home_page(page: Page, live_server: str) -> None:
-    """Open a harder day, read the headline, unfold the matches and download the report."""
-    page.goto(live_server)
-    page.get_by_role("link", name="Try a harder day").click()
-    expect(page).to_have_url(re.compile(r"/sample/\d+$"))
-    expect(page.locator("#results-heading")).to_contain_text("The engine matched")
-    expect(page.locator("#results-heading")).to_contain_text("seconds")
-    expect(page.locator("#summary")).to_contain_text("For a person to check")
-    expect(page.locator("#summary")).to_contain_text("Time taken")
-    expect(page.get_by_role("columnheader", name="Why they match").first).to_be_hidden()
+def test_busy_day_on_how_it_works(page: Page, live_server: str) -> None:
+    """Run a busy day: the engine's matches, problems and time, beside the simple approach."""
+    page.goto(f"{live_server}/how-it-works")
+    page.get_by_role("button", name="Run a busy day").click()
+    headline = page.locator("#busy-headline")
+    expect(headline).to_have_text(
+        re.compile(r"Matched [\d,]+ and found [\d,]+ problems in .*seconds\.")
+    )
+    expect(page.locator(".busy-detail")).to_contain_text("Checking every pair matched only")
+    expect(page).to_have_url(f"{live_server}/how-it-works")
 
-    page.locator("details.fold summary", has_text="Show all").click()
-    page.locator("details.group summary", has_text="Exact").click()
-    expect(page.get_by_role("columnheader", name="Why they match").first).to_be_visible()
 
-    with page.expect_download() as download_info:
-        page.get_by_role("link", name="Download the report (CSV)").click()
-    download = download_info.value
-    assert download.suggested_filename.endswith("-report.csv")
-    first_line = Path(download.path()).read_text(encoding="utf-8").splitlines()[0]
-    assert first_line.startswith("status,type,bank_entries")
+def test_old_harder_day_links_land_on_the_busy_day(page: Page, live_server: str) -> None:
+    page.goto(f"{live_server}/sample/12")
+    expect(page).to_have_url(f"{live_server}/how-it-works#busy-day")
+    expect(page.get_by_role("heading", name="Busy day")).to_be_visible()
 
 
 def test_upload_own_files_shows_results_in_place(

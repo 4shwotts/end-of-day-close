@@ -53,6 +53,16 @@ _PRICE_POINTS: Final = ("9.99", "14.99", "19.99", "24.99", "29.99", "39.99", "49
 
 _REQUIRED_PROCESSORS: Final = frozenset(p.code for p in FICTIONAL_PROCESSORS)
 
+# A fixed mix is meant to be read at a glance, so it adds none of the
+# ambiguity the harder levels do, and a batch payout covers just two sales.
+_FIXED_MIX_PROFILE: Final = DifficultyProfile(
+    None,
+    item_count=1,
+    weights=((DiscrepancyKind.CLEAN, 1),),
+    max_batch_size=2,
+    max_batches=1,
+)
+
 
 @dataclass(frozen=True)
 class Case:
@@ -126,6 +136,34 @@ class CaseGenerator:
             ledger=ledger,
             answer_key=answer_key,
         )
+
+    def generate_mix(
+        self, seed: int, kinds: Sequence[DiscrepancyKind], name: str
+    ) -> tuple[BankStatement, Ledger, AnswerKey]:
+        """Generate a small day containing exactly the given items.
+
+        The levels choose their items at random, so a small day at any of
+        them might contain no problems at all. A fixed mix guarantees the
+        shape, for example the home page's "another day", which always has
+        one of each kind of problem.
+
+        Args:
+            seed: Any integer. The same seed, kinds and name give the same day.
+            kinds: One entry per planted item; repeat a kind to plant it again.
+            name: Names the mix in the case ID, and keeps its days independent
+                of other mixes' days with the same seed.
+
+        Returns:
+            The bank statement, the ledger and the answer key.
+        """
+        rng = random.Random(f"{seed}:{name}")
+        business_date = add_business_days(
+            _FIRST_BUSINESS_DATE, rng.randrange(_BUSINESS_DAYS_IN_RANGE)
+        )
+        builder = _CaseBuilder(rng, business_date, self._processors, _FIXED_MIX_PROFILE)
+        for kind in kinds:
+            builder.plant(kind)
+        return builder.build(f"EOD-{name}-{seed}")
 
 
 def transpose_adjacent_digits(units: int, position: int) -> int:

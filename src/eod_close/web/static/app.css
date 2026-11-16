@@ -1319,6 +1319,7 @@ details.group[open] {
   font-size: var(--text-lg);
 }
 
+/* Before matching: one instruction and the Match button. */
 .status-bar {
   display: flex;
   flex-wrap: wrap;
@@ -1335,48 +1336,15 @@ details.group[open] {
 }
 
 .status-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
+  flex: 1 1 22rem;
   margin: 0;
   font-size: var(--text-lg);
   font-weight: 600;
-}
-
-/* Focus moves here after Reconcile so screen readers hear the result; the
-   line is not interactive, so it needs no ring. */
-.status-line:focus {
-  outline: none;
-}
-
-.status-item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
-
-a.status-item {
-  text-decoration: none;
-}
-
-a.status-item:hover {
-  text-decoration: underline;
-}
-
-.status-sep,
-.status-pending {
-  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .status-good {
   color: var(--good);
-}
-
-.status-warn,
-a.status-warn:hover {
-  color: var(--warn);
 }
 
 .status-bad {
@@ -1385,20 +1353,118 @@ a.status-warn:hover {
 
 .reconcile-button {
   font-size: var(--text-lg);
-  padding-left: var(--space-6);
-  padding-right: var(--space-6);
+  padding-left: 2.5rem;
+  padding-right: 2.5rem;
 }
 
-.controls {
+/* After matching: the headline, then the problems. */
+.result {
+  padding: var(--space-4) var(--space-5);
+}
+
+.result-headline {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+/* Focus moves here after Match so screen readers hear the result; the
+   heading is not interactive, so it needs no ring. */
+.result-headline:focus {
+  outline: none;
+}
+
+.result-difference {
+  margin: var(--space-1) 0 0;
+  color: var(--text-secondary);
+}
+
+.result-difference .amount {
+  font-weight: 700;
+}
+
+.problems-section {
+  margin-top: var(--space-5);
+}
+
+.problems-section .section-title {
+  margin: 0;
+}
+
+.problems-section .choice-hint {
+  margin: var(--space-1) 0 var(--space-3);
+}
+
+.problems {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Each card is a button, so a keyboard user can select it with Enter; it
+   is styled as a card, not as a button. */
+.problem,
+.problem:hover {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--space-2);
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+}
+
+.problem:hover {
+  border-color: var(--warn);
+}
+
+.problem.is-selected {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.problem-head {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-3);
-  margin: var(--space-4) 0 var(--space-3);
+  gap: var(--space-2);
 }
 
-/* Filter and list switch: radio buttons drawn as pills. The input stays in
+.problem-effect {
+  font-weight: 700;
+}
+
+.problem-what {
+  font-weight: 600;
+}
+
+.problem .next-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+}
+
+.problem .next-step .icon {
+  flex: none;
+  margin-top: 0.15rem;
+  color: var(--accent);
+}
+
+/* The phone's list switch: radio buttons drawn as pills. The input stays in
    the page (visually hidden), so arrow keys and screen readers work as for
    any radio group, and the checked pill shows its state by fill and weight. */
 .pills {
@@ -1410,15 +1476,6 @@ a.status-warn:hover {
   padding: 0;
   border: 0;
   background: none;
-}
-
-.pills legend {
-  float: left;
-  margin-right: var(--space-2);
-  padding: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  font-weight: 600;
 }
 
 .pill-input {
@@ -1461,33 +1518,33 @@ a.status-warn:hover {
   outline-offset: 2px;
 }
 
-.pill-divider {
-  width: 1px;
-  height: 1.5rem;
-  background: var(--border);
-}
-
 /* The two lists sit side by side when there is room. On narrower screens
    one shows at a time and the switch chooses which. */
 .lists {
   display: grid;
   gap: var(--space-4);
   grid-template-columns: minmax(0, 1fr);
+  margin-top: var(--space-5);
 }
 
 .side-switch {
   display: none;
 }
 
-@media (min-width: 1320px) {
+@media (min-width: 1000px) {
   .lists {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
-@media (max-width: 1319.98px) {
+@media (max-width: 999.98px) {
   .side-switch {
     display: flex;
+    margin-top: var(--space-5);
+  }
+
+  .side-switch + .lists {
+    margin-top: var(--space-3);
   }
 
   .workspace:has(#side-bank:checked) .list-ledger,
@@ -1509,29 +1566,63 @@ a.status-warn:hover {
   font-size: var(--text-md);
 }
 
-.list .table-scroll {
-  border: 0;
-  background: none;
+.list-count {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Three or four short columns fit any screen, so the lists need no scroll
+   box; that also keeps a description's tooltip from being clipped. */
+.list table {
+  width: 100%;
 }
 
 .list td,
 .list th {
   padding: 0.5rem 0.55rem;
+  vertical-align: middle;
 }
 
-.row-id {
-  color: var(--text-secondary);
-  font-weight: 500;
+.list tbody th {
+  font-weight: inherit;
 }
 
-.row-desc {
-  max-width: 11rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text-secondary);
+/* A payout reference can be long; let it break rather than widen the table. */
+.row-ref {
+  max-width: 12rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-/* A batch's several partners wrap under its tag rather than widen the table. */
+/* The reference opens the line's description. It reads as text with a
+   dotted underline, the usual sign that more is available on hover. */
+.ref-button,
+.ref-button:hover {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline dotted var(--text-secondary);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+
+/* A description's tooltip opens to the right of its reference, so one near
+   the screen's left edge never spills off it. */
+.tip-ref .tip-text {
+  left: 0;
+  transform: none;
+}
+
+/* Tapping a reference focuses it without :focus-visible, so the
+   description shows on any focus. */
+.tip-ref .ref-button:focus + .tip-text {
+  display: block;
+}
+
 .outcome {
   display: flex;
   flex-wrap: wrap;
@@ -1539,17 +1630,41 @@ a.status-warn:hover {
   gap: var(--space-1) var(--space-2);
 }
 
-/* A payout reference can be long; let it break rather than widen the table. */
-.row-ref {
-  max-width: 9rem;
-  white-space: normal;
-  overflow-wrap: anywhere;
+/* "Why?" opens the match's reason in the row, under the tag. */
+.why summary {
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
 }
 
-/* On a phone the description gives way, so the amount and the outcome fit. */
-@media (max-width: 700px) {
-  .col-desc,
-  .row-desc {
+.why summary::-webkit-details-marker {
+  display: none;
+}
+
+.why summary:hover {
+  text-decoration: underline;
+}
+
+.why[open] {
+  flex-basis: 100%;
+}
+
+.why-text {
+  display: block;
+  max-width: 22rem;
+  margin-top: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+/* On the narrowest phones the date gives way; a delayed match's reason
+   says which days. */
+@media (max-width: 480px) {
+  .col-date,
+  .row-date {
     display: none;
   }
 
@@ -1557,42 +1672,30 @@ a.status-warn:hover {
   .list th {
     padding: 0.45rem 0.35rem;
   }
-}
 
-/* On the narrowest phones the date gives way too; when it matters (a late
-   payment), the selected row's reason says which days. */
-@media (max-width: 480px) {
-  .col-date,
-  .row-date {
-    display: none;
-  }
-
-  /* The tag's word stays; its icon goes, to save width. */
+  /* The tag's word stays; its icon goes, to save width. "Why?" sits under
+     the tag on every row, rather than beside it on some and under it on
+     others. */
   .outcome .tag .icon {
     display: none;
   }
-}
 
-/* When the status line stacks, the separators would dangle at line ends. */
-@media (max-width: 600px) {
-  .status-line {
+  .outcome {
     flex-direction: column;
     align-items: flex-start;
-  }
-
-  .status-sep {
-    display: none;
-  }
-
-  .status-item {
-    white-space: normal;
   }
 }
 
 /* Row states. Each is shown three ways: a tint, a coloured bar on the
-   leading edge, and the tag's icon and word. */
+   leading edge, and the tag's icon and word. Matched rows step back into
+   secondary text so the problems stand out; that colour still meets
+   contrast, where lowering the opacity would not. */
 .row > :first-child {
   box-shadow: inset 3px 0 0 transparent;
+}
+
+.row-matched {
+  color: var(--text-secondary);
 }
 
 .row-matched > :first-child {
@@ -1601,6 +1704,7 @@ a.status-warn:hover {
 
 .row-review {
   background: var(--warn-soft);
+  font-weight: 600;
 }
 
 .row-review > :first-child {
@@ -1610,6 +1714,7 @@ a.status-warn:hover {
 .row.is-selected,
 .row:target {
   background: var(--accent-soft);
+  color: var(--text);
 }
 
 .row.is-selected > :first-child,
@@ -1617,98 +1722,64 @@ a.status-warn:hover {
   box-shadow: inset 4px 0 0 var(--accent);
 }
 
-/* Filter: hide the rows the chosen pill leaves out. */
-.workspace:has(#show-matched:checked) .row:not(.row-matched),
-.workspace:has(#show-review:checked) .row:not(.row-review),
-.workspace:has(#show-exact:checked) .row:not(.tag-exact),
-.workspace:has(#show-fee:checked) .row:not(.tag-fee),
-.workspace:has(#show-delayed:checked) .row:not(.tag-delayed),
-.workspace:has(#show-currency:checked) .row:not(.tag-currency),
-.workspace:has(#show-batch:checked) .row:not(.tag-batch),
-.workspace:has(#show-refund:checked) .row:not(.tag-refund),
-.workspace:has(#show-chargeback:checked) .row:not(.tag-chargeback) {
-  display: none;
+.row[data-group] {
+  cursor: pointer;
 }
 
-/* Tags are small buttons, so a keyboard user can select a row with Enter. */
 .tag {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  min-height: 28px;
-  padding: 0.1rem 0.55rem;
-  border: 1px solid transparent;
+  min-height: 24px;
+  padding: 0.05rem 0.5rem;
   border-radius: 999px;
-  font: inherit;
   font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
-  cursor: pointer;
   color: var(--good);
   background: var(--good-soft);
 }
 
-.tag:hover {
-  color: var(--good);
-  background: var(--good-soft);
-  border-color: var(--good);
-}
-
-.tag-review,
-.tag-review:hover {
+.tag-review {
   color: var(--warn);
   background: var(--warn-soft);
 }
 
-.tag-review:hover {
-  border-color: var(--warn);
+/* Every match, folded away under the lists. */
+.all-matches {
+  margin-top: var(--space-5);
 }
 
-.tag[aria-pressed="true"] {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
-}
-
-span.tag {
-  cursor: default;
-}
-
-.partner {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.partner::before {
-  content: "↔ ";
-}
-
-.partner:hover {
-  color: var(--accent);
-  text-decoration: underline;
-}
-
-.selection {
-  display: flex;
-  align-items: flex-start;
+.match-list {
+  display: grid;
   gap: var(--space-2);
-  min-height: 2.75rem;
-  margin: 0 0 var(--space-3);
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-list li {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.match-list .tag {
+  justify-self: start;
+}
+
+.match-sides {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.match-reason {
+  grid-column: 2;
   color: var(--text-secondary);
-}
-
-.selection .icon {
-  margin-top: 0.2rem;
-  color: var(--accent);
-}
-
-.selection strong {
-  color: var(--text);
+  font-size: var(--text-sm);
 }
 
 /* Tooltips, shown while the small info button is hovered or focused. */
@@ -1758,58 +1829,9 @@ span.tag {
   display: block;
 }
 
-.tip.is-dismissed .tip-text {
+.tip.is-dismissed .tip-text,
+.tip.is-dismissed .ref-button:focus + .tip-text {
   display: none;
-}
-
-/* The needs-review panel. */
-.review-panel {
-  margin-top: var(--space-5);
-  padding: var(--space-4) var(--space-5);
-}
-
-.review-panel .section-title {
-  margin-top: 0;
-}
-
-.review-panel .section-title:focus {
-  outline: none;
-}
-
-.problems {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.problem {
-  padding: var(--space-3) var(--space-4);
-  border-left: 4px solid var(--warn);
-  border-radius: var(--radius-sm);
-  background: var(--surface-raised);
-}
-
-.problem.is-selected {
-  box-shadow: 0 0 0 2px var(--accent);
-}
-
-.problem p {
-  margin: var(--space-1) 0;
-}
-
-.problem-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-}
-
-.problem-ids {
-  font-weight: 600;
-}
-
-.problem-effect {
-  margin-left: auto;
-  font-weight: 700;
 }
 
 .link-button,
@@ -1828,26 +1850,11 @@ span.tag {
   color: var(--accent-strong);
 }
 
-.problems-total {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--border);
-  font-weight: 600;
-}
-
-.problems-total .amount {
-  font-weight: 700;
-}
-
 .quick-links {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-5);
-  margin-top: var(--space-6);
+  margin-top: var(--space-5);
   font-size: var(--text-sm);
 }
 
@@ -1857,7 +1864,35 @@ span.tag {
   gap: var(--space-1);
 }
 
-/* The reveal after Reconcile: each row's outcome fades in a moment after
+/* How it works: the busy day's result. */
+.busy-result {
+  margin-top: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+}
+
+.busy-result p {
+  margin: 0;
+}
+
+.busy-headline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.busy-headline .icon {
+  flex: none;
+  color: var(--good);
+}
+
+.busy-result .busy-detail {
+  margin-top: var(--space-2);
+  color: var(--text-secondary);
+}
+
+/* The reveal after Match: each row's outcome fades in a moment after
    the one above (app.js sets --i), so the eye can follow the matching.
    Turned off entirely when the visitor asks for reduced motion. */
 @keyframes reveal {

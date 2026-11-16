@@ -4,8 +4,14 @@ import pytest
 
 from eod_close.generator import Difficulty
 from eod_close.web import pages
-from eod_close.web.services import engine_seconds, load_case, parse_uploads, timed_reconcile
-from eod_close.web.workspace import SAMPLE_DAY_DIR, load_sample_day, sample_day_seconds
+from eod_close.web.services import (
+    engine_seconds,
+    load_case,
+    parse_uploads,
+    run_busy_day,
+    timed_reconcile,
+)
+from eod_close.web.workspace import SAMPLE_DAY_DIR
 
 
 def test_a_case_keeps_the_time_of_the_run_that_solved_it() -> None:
@@ -15,9 +21,11 @@ def test_a_case_keeps_the_time_of_the_run_that_solved_it() -> None:
     assert engine_seconds(Difficulty.INTERN, 7) == first, "cached with the report, not re-run"
 
 
-def test_the_sample_day_is_timed_once() -> None:
-    load_sample_day()
-    assert sample_day_seconds() == sample_day_seconds() > 0
+def test_the_busy_day_is_timed_live_on_about_300_payments() -> None:
+    busy = run_busy_day(3)
+    assert 250 <= busy.bank_lines <= 350
+    assert 0 < busy.seconds < 5
+    assert busy.matched + busy.problems > busy.naive_matched, "the engine explains more"
 
 
 def test_timing_covers_only_the_engine() -> None:
@@ -25,7 +33,7 @@ def test_timing_covers_only_the_engine() -> None:
         (SAMPLE_DAY_DIR / "bank.csv").read_bytes(), (SAMPLE_DAY_DIR / "ledger.csv").read_bytes()
     )
     report, seconds = timed_reconcile(statement, ledger)
-    assert len(report.matches) == 22
+    assert len(report.matches) == 10
     assert seconds > 0
 
 

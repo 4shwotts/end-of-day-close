@@ -24,7 +24,7 @@
       {# Training also covers the pages of a day in progress (/play/...). #}
       {% set path = request.url.path %}
       {% set sections = [
-        ("/", "Reconcile", path == "/" or path.startswith("/sample")),
+        ("/", "Reconcile", path == "/" or path.startswith("/day")),
         ("/training", "Training mode", path.startswith("/training") or path.startswith("/play")),
         ("/how-it-works", "How it works", path.startswith("/how-it-works")),
       ] %}

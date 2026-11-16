@@ -123,6 +123,17 @@ def test_planted_discrepancies_follow_their_rules(seed: int) -> None:
                 assert len(b) == 1
 
 
+def test_a_fixed_mix_plants_exactly_the_kinds_given() -> None:
+    kinds = [DiscrepancyKind.CLEAN, DiscrepancyKind.BATCH_PAYOUT, DiscrepancyKind.TRANSPOSITION]
+    statement, ledger, key = CaseGenerator().generate_mix(3, kinds, "test")
+    assert Counter(item.kind for item in key.items) == Counter(kinds)
+    batch = next(i for i in key.items if i.kind is DiscrepancyKind.BATCH_PAYOUT)
+    assert len(batch.ledger_ids) == 2, "a fixed mix keeps batches to two sales"
+    assert key.case_id == "EOD-test-3"
+    again = CaseGenerator().generate_mix(3, kinds, "test")
+    assert (list(statement), list(ledger)) == (list(again[0]), list(again[1]))
+
+
 def test_bank_entries_are_dated_on_the_business_day() -> None:
     case = generate(5, Difficulty.SENIOR_ANALYST)
     assert {e.value_date for e in case.bank_statement} == {case.business_date}

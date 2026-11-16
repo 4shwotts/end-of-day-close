@@ -1,9 +1,10 @@
 // Progressive enhancement for the reconcile pages. Every page works without
 // this file; it only adds conveniences on top of the plain HTML:
 //
-// - the workspace: selecting a row highlights its partner and shows why they
-//   match, partner links switch the phone's list when needed, the rows'
-//   reveal is staggered, and focus moves to the result after Reconcile;
+// - the workspace: selecting a problem card highlights its rows in both
+//   lists (switching the phone's list if needed), clicking a matched row
+//   highlights its partner, the rows' reveal is staggered, and focus moves
+//   to the headline after Match;
 // - tooltips: Escape dismisses them (WCAG 1.4.13);
 // - upload drop zones: a highlight while dragging and the chosen file's name.
 (function () {
@@ -21,54 +22,21 @@
     workspace.querySelectorAll(".is-selected").forEach(function (element) {
       element.classList.remove("is-selected");
     });
-    workspace.querySelectorAll("[data-select][aria-pressed=true]").forEach(function (button) {
-      button.setAttribute("aria-pressed", "false");
+    workspace.querySelectorAll(".problem[aria-pressed=true]").forEach(function (card) {
+      card.setAttribute("aria-pressed", "false");
     });
-    var rows = rowsInGroup(workspace, group);
-    if (!rows.length) {
-      return;
-    }
-    rows.forEach(function (row) {
+    rowsInGroup(workspace, group).forEach(function (row) {
       row.classList.add("is-selected");
-      var button = row.querySelector("[data-select]");
-      if (button) {
-        button.setAttribute("aria-pressed", "true");
-      }
     });
-    var problem = workspace.querySelector('.problem[data-group="' + group + '"]');
-    if (problem) {
-      problem.classList.add("is-selected");
+    var card = workspace.querySelector('.problem[data-select-group="' + group + '"]');
+    if (card) {
+      card.classList.add("is-selected");
+      card.setAttribute("aria-pressed", "true");
     }
-    showReason(workspace, rows);
   }
 
-  // "B02 ↔ L02 · Fee: Arrived 1 working day later…", in the live region, so
-  // screen readers hear the same line sighted users see.
-  function showReason(workspace, rows) {
-    var text = workspace.querySelector("[data-selection-text]");
-    if (!text) {
-      return;
-    }
-    var ids = function (side) {
-      return rows
-        .filter(function (row) {
-          return row.id.indexOf("row-" + side + "-") === 0;
-        })
-        .map(function (row) {
-          return row.querySelector(".row-id").textContent;
-        })
-        .join(", ");
-    };
-    var bank = ids("bank");
-    var ledger = ids("ledger");
-    var who = [bank, ledger].filter(Boolean).join(" ↔ ");
-    var strong = document.createElement("strong");
-    strong.textContent = who + " · " + rows[0].dataset.tag + ": ";
-    text.replaceChildren(strong, document.createTextNode(rows[0].dataset.reason));
-  }
-
-  // On a phone only one list shows at a time; following a link to the other
-  // list switches it first, so the highlighted partner is visible.
+  // On a phone only one list shows at a time; selecting a problem switches
+  // to the list holding its first row, so the highlight is visible.
   function showSide(workspace, side) {
     var radio = workspace.querySelector("#side-" + side);
     if (radio && !radio.checked) {
@@ -90,35 +58,21 @@
     if (!workspace) {
       return;
     }
-    var tag = event.target.closest("[data-select]");
-    if (tag) {
-      select(workspace, tag.closest(".row").dataset.group);
-      return;
-    }
-    var fromPanel = event.target.closest("[data-select-group]");
-    if (fromPanel) {
-      var group = fromPanel.dataset.selectGroup;
+    var card = event.target.closest("[data-select-group]");
+    if (card) {
+      var group = card.dataset.selectGroup;
       select(workspace, group);
       var first = rowsInGroup(workspace, group)[0];
       if (first) {
         showSide(workspace, first.id.indexOf("row-ledger-") === 0 ? "ledger" : "bank");
         first.scrollIntoView({ block: "center", behavior: smoothOrNot() });
-        var button = first.querySelector("[data-select]");
-        if (button) {
-          button.focus({ preventScroll: true });
-        }
       }
       return;
     }
-    var partner = event.target.closest(".partner");
-    if (partner) {
-      showSide(workspace, partner.dataset.partnerSide);
-      select(workspace, partner.closest(".row").dataset.group);
-      return;
-    }
-    // A click anywhere else on a row selects it too, for pointer users.
+    // A click on a matched row (outside its own controls) highlights its
+    // partner, for pointer users comparing the two lists.
     var row = event.target.closest(".row[data-group]");
-    if (row && !event.target.closest("a, button, input, label")) {
+    if (row && !event.target.closest("a, button, summary, details")) {
       select(workspace, row.dataset.group);
     }
   });
@@ -127,18 +81,21 @@
     return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
   }
 
-  // After HTMX swaps in the reconciled workspace, set up its rows and move
-  // focus to the status line, so keyboard and screen-reader users land on
-  // the result rather than on a button that no longer exists.
-  document.addEventListener("htmx:afterSwap", function (event) {
+  // After HTMX swaps in the matched workspace, set up its rows and move
+  // focus to the headline, so keyboard and screen-reader users land on the
+  // result rather than on a button that no longer exists. This waits for
+  // the settle step, and the headline has an ID of its own, because HTMX
+  // briefly gives a swapped element the old attributes of any element that
+  // shared its ID, which would remove the headline's tabindex.
+  document.addEventListener("htmx:afterSettle", function (event) {
     var workspace = event.target.querySelector("[data-workspace]");
     if (!workspace) {
       return;
     }
     prepareWorkspace(workspace);
-    var status = workspace.querySelector("#status-line");
-    if (status) {
-      status.focus();
+    var headline = workspace.querySelector(".result-headline");
+    if (headline) {
+      headline.focus();
     }
   });
 
@@ -229,7 +186,7 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll("[data-dropzone]").forEach(setUpZone);
-    // Only a reconciled workspace has a reveal to stagger (reached without
+    // Only a matched workspace has a reveal to stagger (reached without
     // HTMX when the form posts as a plain page).
     document.querySelectorAll("[data-workspace].is-reconciled").forEach(prepareWorkspace);
   });

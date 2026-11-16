@@ -23,7 +23,7 @@ AXE = Path(__file__).parent / "vendor" / "axe-4.10.2.min.js"
 PAGES = [
     "/",
     "/upload",
-    "/sample/1",
+    "/day/1",
     "/training",
     "/play/intern/1",
     "/play/intern/1/work",
@@ -36,7 +36,7 @@ RULES = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"]
 @pytest.fixture(params=["dark", "light"])
 def scan_context(browser: Browser, request: pytest.FixtureRequest) -> Iterator[BrowserContext]:
     # Reduced motion, so the scan sees the settled page: mid-way through the
-    # reveal after Reconcile, fading text would be measured at part opacity.
+    # reveal after Match, fading text would be measured at part opacity.
     context = browser.new_context(
         bypass_csp=True, color_scheme=request.param, reduced_motion="reduce"
     )
@@ -72,18 +72,35 @@ def test_page_has_no_axe_violations(
 def test_reconciled_home_page_has_no_axe_violations(
     scan_context: BrowserContext, live_server: str, width: int
 ) -> None:
-    """The workspace after Reconcile, with a row selected and a tooltip open."""
+    """The workspace after Match: a card selected, a reason open and a description shown."""
     page = scan_context.new_page()
     page.set_viewport_size({"width": width, "height": 900})
     page.goto(live_server)
-    page.get_by_role("button", name="Match them").click()
-    page.locator("#status-matched").wait_for()
-    page.locator("#row-bank-B02 [data-select]").click()
-    page.get_by_role("button", name="What is unaccounted for?").focus()
+    page.get_by_role("button", name="Match", exact=True).click()
+    page.locator(".result-headline").wait_for()
+    page.locator(".problem", has_text="Typo").click()
+    page.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")
+    page.locator("#row-bank-B01 .ref-button").focus()
     page.add_script_tag(path=AXE)
     found = page.evaluate(
         "async rules => (await axe.run(document, {runOnly: rules})).violations"
         ".map(v => `${v.id}: ${v.help} (${v.nodes.length}) e.g. ${v.nodes[0].target}`)",
+        RULES,
+    )
+    page.close()
+    assert found == []
+
+
+def test_busy_day_result_has_no_axe_violations(
+    scan_context: BrowserContext, live_server: str
+) -> None:
+    page = scan_context.new_page()
+    page.goto(f"{live_server}/how-it-works")
+    page.get_by_role("button", name="Run a busy day").click()
+    page.locator("#busy-headline").wait_for()
+    page.add_script_tag(path=AXE)
+    found = page.evaluate(
+        "async rules => (await axe.run(document, {runOnly: rules})).violations.map(v => v.id)",
         RULES,
     )
     page.close()

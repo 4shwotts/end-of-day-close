@@ -1,15 +1,17 @@
 """The server-rendered pages: reconcile, training mode and how it works.
 
-The home page is a small sample day's bank statement and ledger side by
-side, with a Reconcile button that puts the engine's outcome on every row.
-Upload runs the same engine on your own files; a generated harder day shows
-the full results view. Training mode is the game: work a day by hand and
-compare with the engine. How it works explains the approach and races the
-engine against the obvious one.
+The Reconcile page (the home page) is a small day's bank statement and
+records side by side, with a Match button that puts the engine's outcome on
+every row and lists the problems it found. The sample day is fixed; "Try
+another day" generates one of the same shape. Upload runs the same engine on
+your own files. Training mode is the game: work a day by hand and compare
+with the engine. How it works explains the approach, runs a busy day and
+races the engine against the obvious approach.
 
-Pages are Jinja templates. HTMX swaps in partial responses for the
-reconciled workspace, the progress check, the race results and the upload
-results; every form also works as a plain form post without JavaScript.
+Pages are Jinja templates. HTMX swaps in partial responses for the matched
+workspace, the progress check, the busy day, the race results and the
+upload results; every form also works as a plain form post without
+JavaScript.
 """
 
 from __future__ import annotations
@@ -46,14 +48,15 @@ from eod_close.web.services import (
     engine_seconds,
     load_case,
     parse_uploads,
+    run_busy_day,
     timed_reconcile,
 )
 from eod_close.web.wording import KIND_NAMES, MATCH_NAMES, PROBLEM_NAMES, REASON_CHOICES
 from eod_close.web.workspace import (
     build_workspace,
     load_sample_day,
+    load_small_day,
     sample_day_csv,
-    sample_day_seconds,
 )
 
 STATIC_DIR: Final = Path(__file__).parent / "static"
@@ -129,10 +132,6 @@ RACE_SIZES: Final = (100, 250, 500, 1_000, 2_500, 5_000)
 SAMPLE_SEED: Final = 1
 SAMPLE_DIFFICULTY: Final = Difficulty.ANALYST
 
-# "Try a harder day" uses the hardest level, because it is the only one that
-# contains every kind of problem, including possible typos.
-SAMPLE_DAY_DIFFICULTY: Final = Difficulty.HEAD_OF_OPS
-
 # Read-only on purpose: TemplateResponse adds the current request to the
 # context it is given, so passing this mapping itself would keep the first
 # visitor's request and reuse it for every later page (BUG-005). Pages pass
@@ -175,42 +174,58 @@ def _results_context(
     }
 
 
-def _workspace_context(*, reconciled: bool) -> dict[str, object]:
-    """Build the home page's workspace for the fixed sample day.
+def _workspace_context(seed: int | None, *, reconciled: bool) -> dict[str, object]:
+    """Build the Reconcile page's workspace for the sample day or a small day.
 
     Args:
+        seed: The generated small day's seed, or None for the fixed sample day.
         reconciled: Whether to show the engine's outcome on the rows.
 
     Returns:
-        The workspace.
+        The workspace, and the addresses of the day itself, its Match button
+        and its report.
     """
-    statement, ledger, report = load_sample_day()
+    if seed is None:
+        statement, ledger, report = load_sample_day()
+        base = ""
+        report_url = "/sample-day/report.csv"
+    else:
+        _check_seed(seed)
+        statement, ledger, report = load_small_day(seed)
+        base = f"/day/{seed}"
+        report_url = f"{base}/report.csv"
     return {
         "workspace": build_workspace(statement, ledger, report if reconciled else None),
-        "seconds": sample_day_seconds(),
+        "day_url": base or "/",
+        "match_url": f"{base}/reconcile",
+        "report_url": report_url,
     }
+
+
+def _workspace_page(request: Request, seed: int | None, *, reconciled: bool) -> HTMLResponse:
+    # HTMX swaps in just the workspace; without JavaScript the Match form
+    # posts as a plain form and gets the whole page back, already matched.
+    template = "_workspace.html" if reconciled and _is_htmx(request) else "home.html"
+    return templates.TemplateResponse(
+        request, template, _workspace_context(seed, reconciled=reconciled)
+    )
 
 
 @router.get("/", response_class=HTMLResponse)
 def home(request: Request) -> HTMLResponse:
-    """The home page: the sample day's two lists, ready to reconcile."""
-    return templates.TemplateResponse(request, "home.html", _workspace_context(reconciled=False))
+    """The Reconcile page: the sample day's two lists, ready to match."""
+    return _workspace_page(request, None, reconciled=False)
 
 
 @router.post("/reconcile", response_class=HTMLResponse)
 def reconcile_sample_day(request: Request) -> HTMLResponse:
-    """Reconcile the sample day.
-
-    HTMX swaps in just the workspace; without JavaScript the same form posts
-    here and gets the whole page back, already reconciled.
-    """
-    template = "_workspace.html" if _is_htmx(request) else "home.html"
-    return templates.TemplateResponse(request, template, _workspace_context(reconciled=True))
+    """Match the sample day and show what is wrong."""
+    return _workspace_page(request, None, reconciled=True)
 
 
 @router.get("/sample-day/{name}.csv")
 def sample_day_download(name: str) -> Response:
-    """Download the home page's sample day: its bank file, ledger file or report."""
+    """Download the sample day: its bank file, records file or report."""
     if name in ("bank", "ledger"):
         text = sample_day_csv("bank" if name == "bank" else "ledger")
     elif name == "report":
@@ -220,39 +235,37 @@ def sample_day_download(name: str) -> Response:
     return _csv_response(text, f"sample-day-{name}.csv")
 
 
+@router.get("/day")
+def another_day() -> RedirectResponse:
+    """Pick a random small day and redirect to its own, shareable address."""
+    return RedirectResponse(f"/day/{secrets.randbelow(MAX_SEED + 1)}", status_code=303)
+
+
+@router.get("/day/{seed}", response_class=HTMLResponse)
+def small_day(request: Request, seed: int) -> HTMLResponse:
+    """A generated small day, the same shape as the sample day, ready to match."""
+    return _workspace_page(request, seed, reconciled=False)
+
+
+@router.post("/day/{seed}/reconcile", response_class=HTMLResponse)
+def reconcile_small_day(request: Request, seed: int) -> HTMLResponse:
+    """Match a generated small day and show what is wrong."""
+    return _workspace_page(request, seed, reconciled=True)
+
+
+@router.get("/day/{seed}/report.csv")
+def small_day_report(seed: int) -> Response:
+    """Download the engine's report on a generated small day."""
+    _check_seed(seed)
+    text = report_csv(build_report_view(load_small_day(seed)[2]))
+    return _csv_response(text, f"day-{seed}-report.csv")
+
+
 @router.get("/sample")
-def new_sample_day() -> RedirectResponse:
-    """Pick a random sample day and redirect to its own, shareable address."""
-    return RedirectResponse(f"/sample/{secrets.randbelow(MAX_SEED + 1)}", status_code=303)
-
-
-@router.get("/sample/{seed}", response_class=HTMLResponse)
-def sample_day(request: Request, seed: int) -> HTMLResponse:
-    """Reconcile a generated day and show the results."""
-    _check_seed(seed)
-    case, report = load_case(SAMPLE_DAY_DIFFICULTY, seed)
-    context = _results_context(
-        report, f"sample-day-{seed}-report.csv", engine_seconds(SAMPLE_DAY_DIFFICULTY, seed)
-    )
-    context.update(case=case)
-    return templates.TemplateResponse(request, "sample.html", context)
-
-
-@router.get("/sample/{seed}/{name}.csv")
-def sample_day_file(seed: int, name: str) -> Response:
-    """Download a sample day's bank file, ledger file or report."""
-    _check_seed(seed)
-    case, report = load_case(SAMPLE_DAY_DIFFICULTY, seed)
-    buffer = io.StringIO()
-    if name == "bank":
-        write_bank_csv(case.bank_statement, buffer)
-    elif name == "ledger":
-        write_ledger_csv(case.ledger, buffer)
-    elif name == "report":
-        buffer.write(report_csv(build_report_view(report)))
-    else:
-        raise HTTPException(status_code=404)
-    return _csv_response(buffer.getvalue(), f"sample-day-{seed}-{name}.csv")
+@router.get("/sample/{seed}")
+def old_harder_day() -> RedirectResponse:
+    """The large generated day moved to How it works as the busy day."""
+    return RedirectResponse("/how-it-works#busy-day", status_code=301)
 
 
 @router.get("/training", response_class=HTMLResponse)
@@ -357,7 +370,7 @@ def _how_it_works_context() -> dict[str, object]:
 
 @router.get("/how-it-works", response_class=HTMLResponse)
 def how_it_works(request: Request) -> HTMLResponse:
-    """How it works: the steps, the problem types, the figures and the race."""
+    """How it works: the steps, the figures, the busy day and the race."""
     return templates.TemplateResponse(request, "how_it_works.html", _how_it_works_context())
 
 
@@ -365,6 +378,15 @@ def how_it_works(request: Request) -> HTMLResponse:
 def old_arena_page() -> RedirectResponse:
     """The page was called the algorithm arena; old links still work."""
     return RedirectResponse("/how-it-works", status_code=301)
+
+
+@router.post("/how-it-works/busy-day", response_class=HTMLResponse)
+def busy_day(request: Request) -> HTMLResponse:
+    """Generate a busy day, match it live and show the result."""
+    context = _how_it_works_context()
+    context["busy"] = run_busy_day(secrets.randbelow(MAX_SEED + 1))
+    template = "_busy_day.html" if _is_htmx(request) else "how_it_works.html"
+    return templates.TemplateResponse(request, template, context)
 
 
 @router.post("/how-it-works/race", response_class=HTMLResponse)

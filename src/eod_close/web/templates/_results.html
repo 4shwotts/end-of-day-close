@@ -19,9 +19,9 @@
   </h2>
   {{ summary_bar(s, seconds, id="summary") }}
 
-  <h3 id="review-heading" class="section-title">{{ icon("alert") }} For a person to check ({{ "{:,}".format(s.needs_review) }})</h3>
+  <h3 id="review-heading" class="section-title">{{ icon("alert") }} Problems found ({{ "{:,}".format(s.needs_review) }})</h3>
   {% if not view.review %}
-  <p>{{ icon("check") }} Nothing to check: every payment is matched.</p>
+  <p>{{ icon("check") }} No problems found: every payment is matched.</p>
   {% endif %}
   {% for label, items in view.review_by_label() %}
   <details class="group"{% if open_review %} open{% endif %}>

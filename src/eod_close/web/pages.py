@@ -39,7 +39,6 @@ from eod_close.game import score_answers
 from eod_close.generator import Difficulty
 from eod_close.generator.answer_key import DiscrepancyKind
 from eod_close.web.busy_day import (
-    CARDS_SHOWN,
     Show,
     answer_key_csv,
     list_page,
@@ -386,13 +385,16 @@ def old_arena_page() -> RedirectResponse:
     return RedirectResponse("/how-it-works", status_code=301)
 
 
-def _busy_day_context(seed: int, page: int = 1, show: Show = "all") -> dict[str, object]:
+def _busy_day_context(
+    seed: int, page: int = 1, show: Show = "all", group: str | None = None
+) -> dict[str, object]:
     """Generate, match and mark a busy day, and cut its lists to one page.
 
     Args:
         seed: The day's number.
         page: The page of the two lists to show.
         show: Every row, or only the problem rows.
+        group: Show only the rows of this one problem.
 
     Returns:
         The How it works values, plus the day and its lists.
@@ -400,7 +402,7 @@ def _busy_day_context(seed: int, page: int = 1, show: Show = "all") -> dict[str,
     _check_seed(seed)
     busy = run_busy_day(seed)
     context = _how_it_works_context()
-    context.update(busy=busy, lists=list_page(busy.workspace, page, show), cards_shown=CARDS_SHOWN)
+    context.update(busy=busy, lists=list_page(busy.workspace, page, show, group))
     return context
 
 
@@ -428,10 +430,17 @@ def busy_day(request: Request, seed: int) -> HTMLResponse:
 
 @router.get("/how-it-works/busy-day/{seed}/lists", response_class=HTMLResponse)
 def busy_day_lists(
-    request: Request, seed: int, page: Annotated[int, Query(ge=1)] = 1, show: Show = "all"
+    request: Request,
+    seed: int,
+    page: Annotated[int, Query(ge=1)] = 1,
+    show: Show = "all",
+    group: Annotated[str | None, Query(pattern=r"^r\d{1,4}$")] = None,
 ) -> HTMLResponse:
-    """One page of a busy day's two lists; the whole page without JavaScript."""
-    context = _busy_day_context(seed, page, show)
+    """One page of a busy day's two lists; the whole page without JavaScript.
+
+    With ``group``, only one problem's rows, for a problem selected above.
+    """
+    context = _busy_day_context(seed, page, show, group)
     if _is_htmx(request):
         return templates.TemplateResponse(request, "_busy_lists.html", context)
     context["lists_open"] = True

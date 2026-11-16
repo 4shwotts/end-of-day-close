@@ -105,6 +105,7 @@ class Row:
         group: Identifies the match or problem the row belongs to, shared by
             every row in it, so selecting a problem can highlight its rows.
         reason: Why the rows match, or what is wrong, in one sentence.
+        next_step: What to do about a problem row; None for a matched row.
     """
 
     side: Side
@@ -118,6 +119,7 @@ class Row:
     tag: str | None = None
     group: str | None = None
     reason: str | None = None
+    next_step: str | None = None
 
 
 @dataclass(frozen=True)
@@ -207,10 +209,11 @@ def build_workspace(
     items = sorted(view.review, key=lambda item: _CARD_ORDER.index(item.reason_code))
     for number, item in enumerate(items, start=1):
         group = f"r{number}"
-        _mark(rows, group, "review", None, REVIEW_TAGS[item.reason_code], item.reason, item)
         side: Side = "bank" if item.bank_ids else "ledger"
         first = rows[side, (item.bank_ids or item.ledger_ids)[0]]
         what, next_step = _describe(item, first.reference or "no reference")
+        # A problem row's popover says what the card says, in the same words.
+        _mark(rows, group, "review", None, REVIEW_TAGS[item.reason_code], what, item, next_step)
         effect = (item.bank_amount or Money.zero()) - (item.ledger_amount or Money.zero())
         problems.append(Problem(item, group, what, next_step, effect))
     return Workspace(
@@ -334,6 +337,7 @@ def _mark(
     tag: str,
     reason: str,
     ids: _HasIds,
+    next_step: str | None = None,
 ) -> None:
     """Put one match's or problem's outcome on each of its rows, in place."""
     sides: tuple[tuple[Side, tuple[str, ...]], ...] = (
@@ -349,6 +353,7 @@ def _mark(
                 tag=tag,
                 group=group,
                 reason=reason,
+                next_step=next_step,
             )
 
 

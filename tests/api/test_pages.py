@@ -155,7 +155,10 @@ def test_home_page_shows_the_sample_day_ready_to_match(client: TestClient) -> No
     assert "Problems found" not in html, "no outcomes before Match is pressed"
     assert ">ID<" not in html, "date, reference and amount only"
     assert ">Description<" not in html, "the description shows on hover or focus"
-    assert 'role="tooltip" id="desc-ledger-L02">Web order: oak serving board set<' in html
+    assert (
+        'role="tooltip" id="desc-ledger-L02"><strong>ORD-51207</strong><br>'
+        "Web order: oak serving board set<"
+    ) in html
     for link in ('href="/upload"', 'href="/day"'):
         assert link in html
     assert "/sample-day/report.csv" not in html, "the report is offered after matching"
@@ -170,7 +173,11 @@ def test_reconcile_returns_the_headline_and_the_problems(client: TestClient) -> 
     assert html.count('class="problem"') == 3
     assert "£25.00 arrived in the bank (INV-40139) but isn&#39;t in your records." in html
     assert 'id="row-bank-B02"' in html
-    assert html.count("<summary>Why?</summary>") == 21, "every matched row on both sides"
+    assert html.count("popovertarget=") == 25, "every row on both sides explains itself"
+    # Each label appears twice: on the button and on the popover it opens.
+    assert html.count('aria-label="Why was ') == 2 * 21
+    assert html.count('aria-label="What is wrong with ') == 2 * 4
+    assert "Why?" not in html
     assert "Show all matches" not in html, "the lists already show every match"
     assert 'id="show-problems"' in html
     assert 'href="/sample-day/report.csv"' in html
@@ -223,7 +230,7 @@ def without_times(html: str) -> str:
     The sentence comparing the two approaches is chosen by which was faster
     on this run, so it goes too.
     """
-    html = re.sub(r'<p class="choice-hint" id="compare-why">.*?</p>', "", html, flags=re.S)
+    html = re.sub(r'<p class="busy-note" id="compare-why">.*?</p>', "", html, flags=re.S)
     return re.sub(r"(under )?[\d.]+ seconds", "", visible_text(html))
 
 
@@ -251,8 +258,10 @@ def test_a_busy_day_shows_every_checkable_claim(client: TestClient) -> None:
     assert re.search(r"Found \d+ of \d+ planted problems · \d+ false alarms? · \d+ missed", text)
     assert "records every problem it plants" in text
     assert re.search(r"Checking every pair [\d.]+ seconds [\d,]+ of [\d,]+", text)
-    assert html.count('class="problem"') >= 5
-    assert "Show all problems" in text
+    counted = re.search(r"found (\d+) problem", text)
+    assert counted
+    assert html.count('class="problem-line"') == int(counted.group(1))
+    assert "Show all problems" not in text
     for name in ("bank", "ledger", "answer-key", "report"):
         assert f'href="/how-it-works/busy-day/48213/{name}.csv"' in html
     assert "View the two lists" in text
@@ -288,6 +297,14 @@ def test_busy_day_lists_page_and_filter(client: TestClient) -> None:
     ).text
     assert "row-matched" not in problems
     assert "row-review" in problems
+    one = client.get(
+        "/how-it-works/busy-day/48213/lists?group=r1", headers={"HX-Request": "true"}
+    ).text
+    assert "Showing the rows of one problem." in one
+    assert "row-matched" not in one
+    assert 1 <= one.count('class="row row-review') <= 2
+    first_page = client.get("/how-it-works/busy-day/48213/lists").text
+    assert ">Previous</button>" in first_page, "Previous is disabled on page 1"
     whole = client.get("/how-it-works/busy-day/48213/lists?page=2").text
     assert "<html" in whole
     assert 'id="busy-lists-fold" open' in whole
@@ -297,6 +314,7 @@ def test_unknown_busy_day_files_are_not_found(client: TestClient) -> None:
     assert client.get("/how-it-works/busy-day/48213/secrets.csv").status_code == 404
     assert client.get("/how-it-works/busy-day/2000000000").status_code == 404
     assert client.get("/how-it-works/busy-day/1/lists?show=everything").status_code == 422
+    assert client.get("/how-it-works/busy-day/1/lists?group=x").status_code == 422
 
 
 @pytest.mark.parametrize("name", ["bank", "ledger", "report"])

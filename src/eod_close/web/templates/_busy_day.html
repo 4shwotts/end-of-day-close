@@ -1,34 +1,35 @@
 {# The busy day's result, laid out so every claim can be checked: the day's
    number and a link to run it again, the result, its marks against the
-   answer key, the like-for-like comparison, the first problems, the files
-   behind it all, and the two lists themselves. Every figure here is
-   computed on this request; nothing is stored between runs. #}
+   answer key, the like-for-like comparison, every problem, the files
+   behind it all, and the two lists themselves. One card, divided into
+   sections, rather than boxes inside boxes. Every figure here is computed
+   on this request; nothing is stored between runs. #}
 {% from "_macros.html" import icon %}
-{% from "_lists.html" import problem_card %}
+{% from "_lists.html" import problem_line %}
 {% set day_url = "/how-it-works/busy-day/" ~ busy.seed %}
 {% set problems = busy.problems %}
-<div class="busy-head">
-  <p class="busy-seed"><strong id="busy-seed">Day #{{ busy.seed }}</strong> · {{ "{:,}".format(busy.statement|length) }} bank payments and {{ "{:,}".format(busy.ledger|length) }} lines in your records</p>
-  <a href="{{ day_url }}#busy-day">{{ icon("undo") }} Run this exact day again</a>
+<div class="busy-section busy-intro">
+  <p class="busy-seed" id="busy-seed">Day #{{ busy.seed }}</p>
+  <p class="busy-size">{{ "{:,}".format(busy.statement|length) }} bank payments and {{ "{:,}".format(busy.ledger|length) }} lines in your records</p>
+  <p class="busy-headline" id="busy-headline">
+    {{ icon("check-circle") }}
+    <span>Matched {{ "{:,}".format(busy.matched) }} and found {{ problems|length }} problem{{ "" if problems|length == 1 else "s" }} in {{ busy.seconds|in_seconds }}.</span>
+  </p>
+  <p class="busy-rerun"><a href="{{ day_url }}#busy-day">{{ icon("undo") }} Run this exact day again</a></p>
 </div>
 
-<p class="busy-headline" id="busy-headline">
-  {{ icon("check-circle") }}
-  <span>Matched {{ "{:,}".format(busy.matched) }} and found {{ problems|length }} problem{{ "" if problems|length == 1 else "s" }} in {{ busy.seconds|in_seconds }}.</span>
-</p>
-
-<div class="busy-checks">
-  <section class="busy-check card" aria-labelledby="check-heading">
+<div class="busy-section busy-checks">
+  <section aria-labelledby="check-heading">
     <h3 id="check-heading">Checked against the answer key</h3>
     <p class="busy-figure" id="busy-marks">
       Found {{ busy.found }} of {{ busy.planted }} planted problems
       · {{ busy.false_alarms }} false alarm{{ "" if busy.false_alarms == 1 else "s" }}
       · {{ busy.missed }} missed
     </p>
-    <p class="choice-hint">The generator records every problem it plants, so the engine's answers can be marked against that answer key, which you can download below.</p>
+    <p class="busy-note">The generator records every problem it plants, so the engine's answers can be marked against that answer key, which you can download below.</p>
   </section>
 
-  <section class="busy-check card" aria-labelledby="compare-heading">
+  <section aria-labelledby="compare-heading">
     <h3 id="compare-heading">Against checking every pair</h3>
     <table class="busy-compare">
       <caption class="visually-hidden">Both approaches on day #{{ busy.seed }}, each timed at its best of three runs</caption>
@@ -42,7 +43,7 @@
     </table>
     {# Both sentences are true statements about the method; which one shows
        depends on the times just measured, never on a pre-written result. #}
-    <p class="choice-hint" id="compare-why">
+    <p class="busy-note" id="compare-why">
       {% if busy.seconds < busy.naive_seconds %}
       The engine is faster because it looks each payment's partner up in an index, where checking every pair scans all of your records again for every bank line.
       {% else %}
@@ -52,37 +53,28 @@
   </section>
 </div>
 
-<section aria-labelledby="busy-problems-heading">
-  <h3 id="busy-problems-heading">{{ icon("alert") }} Problems found ({{ problems|length }})</h3>
-  <ul class="problems">
-    {% for problem in problems[:cards_shown] %}
-    <li>{{ problem_card(problem, interactive=false) }}</li>
+<section class="busy-section" aria-labelledby="busy-problems-heading">
+  <h3 id="busy-problems-heading">Problems found ({{ problems|length }})</h3>
+  <p class="busy-note">Select a problem to see what to do and to show only its rows in the lists below.</p>
+  <ul class="problem-list">
+    {% for problem in problems %}
+    <li>{{ problem_line(problem, day_url ~ "/lists") }}</li>
     {% endfor %}
   </ul>
-  {% if problems|length > cards_shown %}
-  <details class="group fold busy-more">
-    <summary><span class="fold-title">Show all problems ({{ problems|length }})</span></summary>
-    <ul class="problems">
-      {% for problem in problems[cards_shown:] %}
-      <li>{{ problem_card(problem, interactive=false) }}</li>
-      {% endfor %}
-    </ul>
-  </details>
-  {% endif %}
 </section>
 
-<section aria-labelledby="evidence-heading">
-  <h3 id="evidence-heading">{{ icon("file") }} Check it yourself</h3>
+<section class="busy-section" aria-labelledby="evidence-heading">
+  <h3 id="evidence-heading">Check it yourself</h3>
   <ul class="evidence">
-    <li><a href="{{ day_url }}/bank.csv" download>{{ icon("download") }} Download the bank file</a></li>
-    <li><a href="{{ day_url }}/ledger.csv" download>{{ icon("download") }} Download your records file</a></li>
-    <li><a href="{{ day_url }}/answer-key.csv" download>{{ icon("download") }} Download the answer key</a></li>
-    <li><a href="{{ day_url }}/report.csv" download>{{ icon("download") }} Download the engine's report (CSV)</a></li>
+    <li><a class="button button-secondary" href="{{ day_url }}/bank.csv" download>{{ icon("download") }} Bank file</a></li>
+    <li><a class="button button-secondary" href="{{ day_url }}/ledger.csv" download>{{ icon("download") }} Your records file</a></li>
+    <li><a class="button button-secondary" href="{{ day_url }}/answer-key.csv" download>{{ icon("download") }} Answer key</a></li>
+    <li><a class="button button-secondary" href="{{ day_url }}/report.csv" download>{{ icon("download") }} Engine's report (CSV)</a></li>
   </ul>
 </section>
 
-<details class="group fold" id="busy-lists-fold"{% if lists_open %} open{% endif %}>
-  <summary><span class="fold-title">{{ icon("layers") }} View the two lists</span></summary>
+<details class="busy-section busy-lists-fold" id="busy-lists-fold"{% if lists_open %} open{% endif %}>
+  <summary><h3 class="busy-lists-title">View the two lists</h3></summary>
   <div id="busy-lists" aria-live="polite">
     {% include "_busy_lists.html" %}
   </div>

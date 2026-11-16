@@ -1,0 +1,130 @@
+"""Layout checks in Chromium and WebKit: nothing crosses a border, nothing wraps that shouldn't.
+
+These guard the faults that make a page look unfinished: a table wider than
+its card, a reference or amount broken over two lines, and a popover that
+pushes the table about when it opens. Each runs at phone, tablet and
+desktop widths on the Reconcile results and the busy day.
+"""
+
+from collections.abc import Iterator
+
+import pytest
+from playwright.sync_api import Browser, Page, Playwright, expect
+
+pytestmark = pytest.mark.e2e
+
+WIDTHS = {"phone": 390, "tablet": 820, "desktop": 1440}
+
+# Every box on the page, every table cell, and every reference and amount.
+# A box may not be wider inside than out; the tables' own scroll box is the
+# one place horizontal scrolling is allowed, so it is not checked as a box.
+# A line of text that wraps has more than one distinct line top.
+LAYOUT_FAULTS = """() => {
+  const faults = [];
+  const shown = el => el.getClientRects().length > 0;
+  const name = el => el.id || (el.closest('tr') && el.closest('tr').id) || el.className;
+  for (const box of document.querySelectorAll(
+      '.card, .list, .busy-section, .problem, .problem-line, .lists-toolbar')) {
+    if (shown(box) && box.scrollWidth > box.clientWidth + 1) {
+      faults.push(`box overflows: ${name(box)} (${box.scrollWidth} > ${box.clientWidth})`);
+    }
+  }
+  for (const cell of document.querySelectorAll('.list-table td, .list-table th')) {
+    if (shown(cell) && cell.scrollWidth > cell.clientWidth + 1) {
+      faults.push(`cell overflows: ${name(cell)} ${cell.className}`);
+    }
+  }
+  for (const text of document.querySelectorAll('.list-table td.amount, .list-table .ref-button')) {
+    if (!shown(text)) continue;
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    const lines = new Set([...range.getClientRects()].map(r => Math.round(r.top)));
+    if (lines.size > 1) faults.push(`wraps: ${text.textContent.trim()}`);
+  }
+  return faults;
+}"""
+
+
+@pytest.fixture(scope="module", params=["chromium", "webkit"])
+def any_browser(playwright: Playwright, request: pytest.FixtureRequest) -> Iterator[Browser]:
+    browser = playwright[request.param].launch()
+    yield browser
+    browser.close()
+
+
+def open_page(browser: Browser, width: int) -> Page:
+    context = browser.new_context(viewport={"width": width, "height": 900}, reduced_motion="reduce")
+    return context.new_page()
+
+
+def matched_reconcile_page(page: Page, live_server: str) -> None:
+    page.goto(live_server)
+    page.get_by_role("button", name="Match", exact=True).click()
+    page.locator(".result-headline").wait_for()
+
+
+def busy_day_with_lists(page: Page, live_server: str) -> None:
+    page.goto(f"{live_server}/how-it-works/busy-day/48213")
+    page.get_by_text("View the two lists").click()
+    page.locator("#busy-lists .list-bank tbody tr").first.wait_for()
+
+
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_reconcile_results_fit_their_cards(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    page = open_page(any_browser, width)
+    matched_reconcile_page(page, live_server)
+    assert page.evaluate(LAYOUT_FAULTS) == []
+    if width < 1000:
+        page.locator(".side-switch").get_by_text("Your records").click()
+        assert page.evaluate(LAYOUT_FAULTS) == []
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_busy_day_results_fit_their_cards(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    page = open_page(any_browser, width)
+    busy_day_with_lists(page, live_server)
+    assert page.evaluate(LAYOUT_FAULTS) == []
+    page.locator("#busy-result .problem-line summary").first.click()
+    expect(page.locator("#busy-group-note")).to_be_visible()
+    assert page.evaluate(LAYOUT_FAULTS) == []
+    page.context.close()
+
+
+def test_both_lists_use_the_same_column_widths(any_browser: Browser, live_server: str) -> None:
+    page = open_page(any_browser, 1440)
+    matched_reconcile_page(page, live_server)
+    widths = page.evaluate(
+        "() => [...document.querySelectorAll('.list-table thead tr')].map(row =>"
+        " [...row.cells].map(cell => Math.round(cell.getBoundingClientRect().width)))"
+    )
+    assert len(widths) == 2
+    assert widths[0] == widths[1]
+    page.context.close()
+
+
+@pytest.mark.parametrize("width", WIDTHS.values(), ids=WIDTHS.keys())
+def test_opening_a_popover_never_changes_the_table(
+    any_browser: Browser, live_server: str, width: int
+) -> None:
+    page = open_page(any_browser, width)
+    matched_reconcile_page(page, live_server)
+    table = page.locator(".list-bank table")
+    before = table.bounding_box()
+    for row in ("#row-bank-B02", "#row-bank-B09"):
+        page.locator(f"{row} .why-button").click()
+        popover = page.locator(f"#why-{row.removeprefix('#row-')}")
+        expect(popover).to_be_visible()
+        after = table.bounding_box()
+        assert before is not None
+        assert after is not None
+        assert (after["width"], after["height"]) == (before["width"], before["height"])
+        box = popover.bounding_box()
+        assert box is not None
+        assert box["x"] >= 0
+        assert box["x"] + box["width"] <= width, "the popover stays inside the page"
+    page.context.close()

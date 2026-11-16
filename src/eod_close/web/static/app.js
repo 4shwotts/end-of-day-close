@@ -5,6 +5,8 @@
 //   lists (showing every row and switching the phone's list if needed),
 //   clicking a matched row highlights its partner, the rows' reveal is
 //   staggered, and focus moves to the headline after Match;
+// - "Why?" popovers: placed beside their button and kept on screen;
+// - the busy day: opening a problem filters the lists to its rows;
 // - tooltips: Escape dismisses them (WCAG 1.4.13);
 // - upload drop zones: a highlight while dragging and the chosen file's name.
 (function () {
@@ -103,6 +105,105 @@
       headline.focus();
     }
   });
+
+  // ---- "Why?" popovers ---------------------------------------------------
+  //
+  // The browser's own popover does the work that matters: it opens from its
+  // button by click, tap, Enter or Space, closes on Escape or a click
+  // outside, keeps only one open, and floats above the table so the table
+  // never changes size. This only places it beside its button, flipping
+  // above when there is no room below and keeping it inside the page.
+
+  var GAP = 6;
+  var MARGIN = 8;
+
+  function invokerOf(popover) {
+    return document.querySelector('[popovertarget="' + popover.id + '"]');
+  }
+
+  // Before the popover is drawn it has no size, so its widest possible
+  // width (the CSS max-width) stands in until it can be measured.
+  function place(popover) {
+    var button = invokerOf(popover);
+    if (!button) {
+      return;
+    }
+    var anchor = button.getBoundingClientRect();
+    var width = popover.offsetWidth || Math.min(320, window.innerWidth - 32);
+    var height = popover.offsetHeight;
+    var left = Math.min(anchor.left, window.innerWidth - width - MARGIN);
+    var top = anchor.bottom + GAP;
+    if (top + height > window.innerHeight - MARGIN && anchor.top - GAP - height > MARGIN) {
+      top = anchor.top - GAP - height;
+    }
+    popover.style.left = Math.max(MARGIN, left) + "px";
+    popover.style.top = Math.max(MARGIN, top) + "px";
+  }
+
+  // "beforetoggle" fires before the popover is drawn, so it is placed
+  // beside its button there and never shows anywhere else, even for a
+  // frame; "toggle" fires a moment later, once it has a size, to keep it
+  // on screen.
+  document.addEventListener(
+    "beforetoggle",
+    function (event) {
+      if (event.target.classList.contains("why-popover") && event.newState === "open") {
+        event.target.setAttribute("data-placed", "");
+        place(event.target);
+      }
+    },
+    true
+  );
+  document.addEventListener(
+    "toggle",
+    function (event) {
+      if (event.target.classList.contains("why-popover") && event.newState === "open") {
+        place(event.target);
+      }
+    },
+    true
+  );
+
+  // An open popover follows its button when the page or a list scrolls.
+  ["scroll", "resize"].forEach(function (type) {
+    window.addEventListener(
+      type,
+      function () {
+        document.querySelectorAll(".why-popover:popover-open").forEach(place);
+      },
+      true
+    );
+  });
+
+  // ---- Busy day: problem lines -------------------------------------------
+  //
+  // Opening a problem line shows its next step and filters the lists below
+  // to its rows, by following the line's own link (which HTMX turns into a
+  // fetch of just the lists). Only one line is open at a time.
+
+  document.addEventListener(
+    "toggle",
+    function (event) {
+      var line = event.target;
+      if (!line.classList || !line.classList.contains("problem-line") || !line.open) {
+        return;
+      }
+      document.querySelectorAll(".problem-line[open]").forEach(function (other) {
+        if (other !== line) {
+          other.open = false;
+        }
+      });
+      var fold = document.getElementById("busy-lists-fold");
+      if (fold) {
+        fold.open = true;
+      }
+      var link = line.querySelector("[data-show-rows]");
+      if (link) {
+        link.click();
+      }
+    },
+    true
+  );
 
   // ---- Tooltips -----------------------------------------------------------
 

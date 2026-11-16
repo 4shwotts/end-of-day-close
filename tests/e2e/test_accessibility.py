@@ -77,7 +77,7 @@ def test_page_has_no_axe_violations(
 def test_reconciled_home_page_has_no_axe_violations(
     scan_context: BrowserContext, live_server: str, width: int
 ) -> None:
-    """The workspace after Match: a card selected, a reason open and a description shown."""
+    """The workspace after Match: a card selected, a popover open and a description shown."""
     page = scan_context.new_page()
     page.set_viewport_size({"width": width, "height": 900})
     page.goto(live_server)
@@ -85,6 +85,8 @@ def test_reconciled_home_page_has_no_axe_violations(
     page.locator(".result-headline").wait_for()
     page.locator(".problem", has_text="Typo").click()
     page.evaluate("document.querySelectorAll('details').forEach(d => d.open = true)")
+    page.locator("#row-bank-B09 .why-button").click()
+    page.locator("#why-bank-B09").wait_for()
     page.locator("#row-bank-B01 .ref-button").focus()
     page.add_script_tag(path=AXE)
     found = page.evaluate(

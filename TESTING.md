@@ -28,7 +28,7 @@ now guards it.
 | `tests/property/` | Hypothesis properties: invariants that must hold for any input |
 | `tests/accuracy/` | Precision and recall on held-out seeds; fails below the thresholds (marker `accuracy`) |
 | `tests/api/` | The JSON API and the HTML pages, through FastAPI's test client |
-| `tests/e2e/` | The Reconcile page's flow (instruction, Match, problem cards, highlighted rows, a total that adds up, the filter), upload, the busy day (marks, reruns, downloads, paged lists), training mode and How it works in a real Chromium browser with Playwright, including keyboard use, no JavaScript and reduced motion; a check that the stylesheet is applied; and the axe-core accessibility scan (marker `e2e`) |
+| `tests/e2e/` | The Reconcile page's flow (instruction, Match, problem cards, highlighted rows, a total that adds up, the filter), upload, the busy day (marks, reruns, downloads, paged lists), the row popovers, and layout checks in Chromium and WebKit (no box wider than its card, no reference or amount wrapping, a popover never resizing its table), training mode and How it works in a real Chromium browser with Playwright, including keyboard use, no JavaScript and reduced motion; a check that the stylesheet is applied; and the axe-core accessibility scan (marker `e2e`) |
 
 Branch coverage is about 96%, and the run fails below 90%.
 
@@ -60,9 +60,10 @@ mypy
 pytest --cov
 ```
 
-`mypy` runs in strict mode. The browser tests need Chromium, downloaded once with
-`playwright install chromium`; to run everything else without it, use
-`pytest -m "not e2e"`.
+`mypy` runs in strict mode. The browser tests need Chromium and WebKit, downloaded once
+with `playwright install chromium webkit`; the layout checks in `tests/e2e/test_layout.py`
+run in both, so a table that overflows its card in Safari is caught too. To run everything
+else without the browsers, use `pytest -m "not e2e"`.
 
 Other useful commands:
 

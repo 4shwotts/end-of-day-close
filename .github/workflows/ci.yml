@@ -86,7 +86,7 @@ jobs:
           cache: pip
       - run: pip install -e ".[dev]"
       # --with-deps installs the system libraries Chromium needs on Ubuntu.
-      - run: python -m playwright install --with-deps chromium
+      - run: python -m playwright install --with-deps chromium webkit
       - run: pytest -m e2e
 
   container:

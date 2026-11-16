@@ -85,11 +85,44 @@ def test_matched_rows_carry_a_type_and_say_why(page: Page, live_server: str) -> 
         "Batch",
         "Refund",
     }
-    fee = page.locator("#row-bank-B02")
-    expect(fee.locator(".why-text")).to_be_hidden()
-    fee.get_by_text("Why?").click()
-    expect(fee.locator(".why-text")).to_contain_text("£5.25 less")
-    expect(page.locator(".row-review .why")).to_have_count(0)
+    expect(page.get_by_text("Why?")).to_have_count(0)
+
+
+def test_every_row_explains_itself_in_a_popover(page: Page, live_server: str) -> None:
+    """Open, close and keyboard behaviour of the popover, on a match and on a problem."""
+    page.set_viewport_size({"width": 1440, "height": 900})
+    match(page, live_server)
+    why = page.locator("#row-bank-B02").get_by_role("button", name="Why was ORD-51207 matched?")
+    reason = page.locator("#why-bank-B02")
+    expect(reason).to_be_hidden()
+    why.click()
+    expect(reason).to_be_visible()
+    expect(reason).to_contain_text("£5.25 less")
+
+    # Opening another closes the first: only one is open at a time.
+    wrong = page.locator("#row-bank-B09").get_by_role(
+        "button", name="What is wrong with INV-40125?"
+    )
+    wrong.click()
+    expect(reason).to_be_hidden()
+    problem = page.locator("#why-bank-B09")
+    expect(problem).to_contain_text("two digits look swapped")
+    expect(problem.locator(".next-step")).to_contain_text("Check the invoice")
+
+    # Escape closes it and leaves focus on its button.
+    page.keyboard.press("Escape")
+    expect(problem).to_be_hidden()
+    expect(wrong).to_be_focused()
+
+    # Enter and Space open it from the keyboard; a click outside closes it.
+    page.keyboard.press("Enter")
+    expect(problem).to_be_visible()
+    page.keyboard.press("Escape")
+    page.keyboard.press("Space")
+    expect(problem).to_be_visible()
+    page.mouse.click(5, 5)
+    expect(problem).to_be_hidden()
+    expect(page.locator(".why-popover:popover-open")).to_have_count(0)
 
 
 @pytest.mark.parametrize(
@@ -135,7 +168,8 @@ def test_the_description_shows_on_hover_and_on_focus(page: Page, live_server: st
     description = page.locator("#desc-ledger-L02")
     expect(description).to_be_hidden()
     reference.hover()
-    expect(description).to_have_text("Web order: oak serving board set")
+    expect(description).to_contain_text("ORD-51207")
+    expect(description).to_contain_text("Web order: oak serving board set")
     page.mouse.move(0, 0)
     expect(description).to_be_hidden()
     reference.focus()
@@ -198,7 +232,7 @@ def test_reduced_motion_turns_the_reveal_off(browser: Browser, live_server: str)
     context = browser.new_context(reduced_motion="reduce")
     page = context.new_page()
     match(page, live_server)
-    names = page.locator(".is-reconciled .outcome .tag").first.evaluate(
+    names = page.locator(".is-reconciled .outcome-inner").first.evaluate(
         "el => getComputedStyle(el).animationName"
     )
     assert names == "none"

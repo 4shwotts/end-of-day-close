@@ -49,18 +49,22 @@
     {% if w.reconciled %}
     <fieldset class="pills filter">
       <legend>Show</legend>
-      {% for key, label in [("all", "All"), ("matched", "Matched"), ("problems", "Problems")] %}
-      <input class="pill-input" type="radio" name="show" id="show-{{ key }}" value="{{ key }}"{% if loop.first %} checked{% endif %}>
-      <label class="pill" for="show-{{ key }}">{{ label }}</label>
-      {% endfor %}
+      <span class="segmented">
+        {% for key, label in [("all", "All"), ("matched", "Matched"), ("problems", "Problems")] %}
+        <input class="pill-input" type="radio" name="show" id="show-{{ key }}" value="{{ key }}"{% if loop.first %} checked{% endif %}>
+        <label class="pill" for="show-{{ key }}">{{ label }}</label>
+        {% endfor %}
+      </span>
     </fieldset>
     {% endif %}
     <fieldset class="pills side-switch">
       <legend class="visually-hidden">List to show</legend>
-      <input class="pill-input" type="radio" name="side" id="side-bank" value="bank" checked>
-      <label class="pill" for="side-bank">Bank statement</label>
-      <input class="pill-input" type="radio" name="side" id="side-ledger" value="ledger">
-      <label class="pill" for="side-ledger">Your records</label>
+      <span class="segmented">
+        <input class="pill-input" type="radio" name="side" id="side-bank" value="bank" checked>
+        <label class="pill" for="side-bank">Bank statement</label>
+        <input class="pill-input" type="radio" name="side" id="side-ledger" value="ledger">
+        <label class="pill" for="side-ledger">Your records</label>
+      </span>
     </fieldset>
   </div>
 
